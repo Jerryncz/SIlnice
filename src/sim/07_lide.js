@@ -5,7 +5,8 @@ function dayOf(S){return Math.floor((DAY_START_HOUR+S.time/DAY*24)/24)+1}
 const H2S=h=>h/24*DAY;
 function newDay(S,b){const nonHO=b.workers-b.ho;b.tCommute=Math.ceil(nonHO/2);b.cPer=b.tCommute?nonHO/b.tCommute:0;
   b.tSchool=b.kids>0?Math.ceil(b.kids/3):0;b.kPer=b.tSchool?b.kids/b.tSchool:0;b.tShop=Math.round(b.adults*0.3+S.R()*0.8);
-  b.tSenior=b.seniors>0?Math.ceil(b.seniors/2):0;b.tVisit=S.R()<0.45?1:0}
+  b.tSenior=b.seniors>0?Math.ceil(b.seniors/2):0;b.tVisit=S.R()<0.45?1:0;
+  b.tLeisure=(b.kids>0&&S.R()<0.6?1:0)+(S.R()<0.25+0.05*b.adults?1:0)}
 function entEp(S,x){if(!x||x.dead)return null;if(x.isGate)return {node:x.node};if(!x.access)return null;return x.access}
 function entXY(S,x){if(x.isGate){const n=S.nodes[x.node];return [n.x,n.y]}return [wxOf(x.front),wyOf(x.front)]}
 function entComp(S,x){if(x.isGate)return S.nodes[x.node].comp;return x.access?edgeComp(S,x.access.e):-1}
@@ -71,7 +72,7 @@ function handleArrival(S,tr,mode,c,silent){
   const h=hourOf(S);let dur;
   switch(tr.purpose){case"commute":{const e=15+S.R()*2.5;dur=e>h?e-h:0.4+S.R()*0.6;break}
     case"school":{const e=13+S.R()*2;dur=e>h?e-h:0.3+S.R()*0.4;break}
-    case"senior":dur=1+S.R();break;case"visit":dur=1.5+S.R()*1.5;break;case"tourist":dur=1+S.R()*2;break;
+    case"senior":dur=1+S.R();break;case"visit":dur=1.5+S.R()*1.5;break;case"leisure":dur=0.6+S.R()*1.2;break;case"tourist":dur=1+S.R()*2;break;
     default:dur=to.type==="pub"?1+S.R()*1.5:0.5+S.R()*0.7}
   S.returns.push({tr,mode:mode==="car"&&!silent?"car":"walk"},S.time+H2S(dur))}
 function decPresence(tr){const place=tr.to;if(place.isGate)return;if(tr.purpose==="commute")place.staff-=tr.group;else if(tr.purpose==="school")place.kidsIn-=tr.group;else place.guests-=tr.group}
@@ -100,9 +101,14 @@ function goSchool(S,b){const cid=edgeComp(S,b.access.e);let best=null,bd=30;
   for(const s of S.buildings){if(s.type!=="school"||!s.access||edgeComp(S,s.access.e)!==cid||s.kidsIn>=KIND.school.kids)continue;const d=entDist(S,b,s);if(d<bd){bd=d;best=s}}
   const group=Math.max(1,Math.round(b.kPer));if(!best){if(b.town)b.town.noSchool+=group;return}go(S,b,"school",group,best,walkOr(bd,8))}
 function goShop(S,b,purpose,h){const cid=edgeComp(S,b.access.e);const opts=[];
-  for(const s of S.buildings){const K=KIND[s.type];if(!K||!K.pull||!s.access||edgeComp(S,s.access.e)!==cid)continue;if(K.evening&&h<16&&purpose!=="senior")continue;const d=entDist(S,b,s);
+  for(const s of S.buildings){const K=KIND[s.type];if(!K||!K.pull||!s.access||edgeComp(S,s.access.e)!==cid)continue;if(K.evening&&h<16&&purpose!=="senior")continue;if(K.seniorOnly&&purpose!=="senior")continue;const d=entDist(S,b,s);
     if(purpose==="senior"&&d>15)continue;opts.push({s,d,wt:K.pull/Math.pow(d+8,purpose==="senior"?1.6:0.9)})}
   if(!opts.length)return;const o=pickW(S,opts,q=>q.wt);go(S,b,purpose,purpose==="senior"?1:Math.min(2,b.adults),o.s,walkOr(o.d,purpose==="senior"?6:5),true)}
+// vycházka pěšky: děti na hřiště, dospělí do parku a na náměstí
+function goLeisure(S,b){const cid=edgeComp(S,b.access.e);const kids=b.kids>0&&S.R()<0.6;const opts=[];
+  for(const s of S.buildings){const K=KIND[s.type];if(!K||!K.leisure||!s.access||edgeComp(S,s.access.e)!==cid)continue;if(kids?K.leisure==="adults":K.leisure==="kids")continue;
+    const d=entDist(S,b,s);if(d>9)continue;opts.push({s,d,wt:1/(d+2)})}
+  if(!opts.length)return;const o=pickW(S,opts,q=>q.wt);go(S,b,"leisure",kids?Math.min(2,b.kids):1,o.s,"walk")}
 function goVisit(S,b){const t=b.town;if(!t)return;const cid=edgeComp(S,b.access.e);
   const gates=S.gates.filter(g=>S.nodes[g.node].comp===cid);if(gates.length&&S.R()<0.35){go(S,b,"visit",1,gates[Math.floor(S.R()*gates.length)],"car");return}
   const towns=S.towns.filter(o=>o!==t&&o.comps.has(cid)&&o.accessList.length);if(!towns.length)return;const o=pickW(S,towns,q=>q.pop/Math.pow(Math.hypot(q.cx-t.cx,q.cy-t.cy)+6,1.4));
@@ -115,4 +121,5 @@ function peopleTick(S,dtR){
     if((n=due(S,b.tSchool,h,dh,7,8)))for(let k=0;k<n;k++){b.tSchool--;goSchool(S,b)}
     if((n=due(S,b.tSenior,h,dh,9,12)))for(let k=0;k<n;k++){b.tSenior--;goShop(S,b,"senior",h)}
     if((n=due(S,b.tShop,h,dh,15.5,20.5)))for(let k=0;k<n;k++){b.tShop--;goShop(S,b,"shop",h)}
+    if((n=due(S,b.tLeisure,h,dh,14,19.5)))for(let k=0;k<n;k++){b.tLeisure--;goLeisure(S,b)}
     if((n=due(S,b.tVisit,h,dh,10,19)))for(let k=0;k<n;k++){b.tVisit--;goVisit(S,b)}}}

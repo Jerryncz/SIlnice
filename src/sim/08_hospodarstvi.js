@@ -40,6 +40,15 @@ function serviceCheck(S){
     if(t.pop>=40&&cnt("shop")<Math.max(1,Math.floor(t.pop/130))&&S.R()<0.25){if(b=placeServiceNear(S,"shop",t,t.cx,t.cy,r+1,10,false))addLog(S,t.name+": nový obchod s parkovištěm",b.front)}
     if(t.kids>=20&&!S.buildings.some(s=>s.type==="school"&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<14)&&S.R()<0.3){if(b=placeServiceNear(S,"school",t,t.cx,t.cy,r+2,0,false))addLog(S,t.name+": otevřela se škola",b.front)}
     if(t.pop>=70&&t.jobless>4&&cnt("office")<1+Math.floor(t.pop/120)&&S.R()<0.25){if(b=placeServiceNear(S,"office",t,t.cx,t.cy,r*0.8+1,0,false))addLog(S,t.name+": vyrostla kancelářská budova",b.front)}
+    // vybavenost obce
+    const near=type=>S.buildings.filter(s=>s.type===type&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<=r+4).length;
+    if(t.pop>=25&&t.kids>=8&&near("playground")<1+Math.floor(t.pop/150)&&S.R()<0.25){if(b=placeServiceNear(S,"playground",t,t.cx,t.cy,r,0,false))addLog(S,t.name+": děti mají hřiště",b.front)}
+    if(t.pop>=30&&near("parkland")<1+Math.floor(t.pop/200)&&S.R()<0.2){if(b=placeServiceNear(S,"parkland",t,t.cx,t.cy,r+1,0,false))addLog(S,t.name+": založili park",b.front)}
+    if(t.pop>=40&&near("cafe")<1+Math.floor(t.pop/150)&&S.R()<0.2){if(b=placeServiceNear(S,"cafe",t,t.cx,t.cy,r,5,false))addLog(S,t.name+": otevřela se kavárna",b.front)}
+    if(t.pop>=60&&near("church")<1&&S.R()<0.15){if(b=placeServiceNear(S,"church",t,t.cx,t.cy,r*0.6+1,0,false))addLog(S,t.name+": postavili kostel",b.front)}
+    if(t.pop>=120&&near("square")<1&&S.R()<0.15){if(b=placeServiceNear(S,"square",t,t.cx,t.cy,r*0.5+1.5,0,false))addLog(S,t.name+": má náměstí s pěší zónou",b.front)}
+    // aleje podél ulic a silnic s chodníkem
+    if(t.pop>=50)for(const e of S.edges){if(e.dead||e.alej||!RK[e.kind].walk||!RK[e.kind].side||!RK[e.kind].front)continue;const m=pointAt(e.g,e.g.len/2);if(Math.hypot(m.x-t.cx,m.y-t.cy)<=r)e.alej=true}
     if(t.pop>=90&&!S.buildings.some(s=>s.type==="mall"&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<14)&&S.R()<0.2){if(b=placeServiceNear(S,"mall",t,t.cx,t.cy,r+3,40,true))addLog(S,"U obce "+t.name+" postavili nákupní centrum",b.front)}
     if((t.pop>=150||(t.world&&t.pop>=100))&&!S.buildings.some(s=>s.type==="hyper"&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<25)&&S.R()<0.12){if(b=placeServiceNear(S,"hyper",t,t.cx,t.cy,r+5,30,true))addLog(S,"U obce "+t.name+" vyrostla obchodní zóna",b.front)}}
   for(const s of S.buildings){if(!KIND[s.type]||!KIND[s.type].pull)continue;const over=s.overflow-s.overflowSeen;

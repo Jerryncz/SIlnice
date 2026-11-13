@@ -73,10 +73,26 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
     poli; ve volném terénu 0°, 45°, 90° a celá pole. Shift = volně.
   - Oblouk: začátek, bod, kam oblouk směřuje, konec.
   - Kruh: tah od středu, poloměr libovolný (nejméně 1,5 pole), z libovolného
-    druhu silnice i s pruhy (1–3), i z dálnice.
+    druhu silnice i s pruhy (1–3), i z dálnice; dálnice může do kruhu ústit.
   - Napojit: dva body, mezi nimi plynulá křivka. Bod na boku silnice se
     napojí kolmo, bod na konci silnice pokračuje jejím směrem, volný bod
-    míří k druhému. Tak se dělají připojovací a odbočovací pruhy.
+    míří k druhému.
+  - Odbočka: tah ze silnice (mimo křižovatku). Strana tahu určuje jízdní
+    pás, tah ve směru jízdy udělá **odbočku**, proti směru **nájezd**. Silnice
+    dostane na 4 pole odbočovací (před odbočkou) nebo připojovací (za
+    nájezdem) pruh s náběhem a odbočka se od ní plynule odpojí. Druh odbočky:
+    zvolená Jednosměrka nebo Nájezd, jinak u dálnice Nájezd a u silnice
+    Jednosměrka; počet pruhů podle volby (pruh na hlavní silnici navíc o stejný
+    počet, když se vejde).
+  - Vzor: na rovné dálnici na zemi postaví celou mimoúrovňovou křižovatku
+    se silnicí přes dálnici (druh a pruhy silnice podle volby, dálnice
+    a nájezdy jsou dané):
+    - **Kosodélník**: most přes dálnici, na jeho koncích dvě křižovatky,
+      do každé sjezd a nájezd z dálnice. Potřebuje 20 polí rovné dálnice.
+    - **Čtyřlístek**: čtyři smyčky pro odbočení vlevo a čtyři vnější rampy
+      pro odbočení vpravo, silnice nad dálnicí. Potřebuje 34 polí rovné
+      dálnice a hodně místa kolem.
+    Na silnici přes dálnici má přednost silnice, nájezdy dávají přednost.
   - Konec u jiné silnice ji napojí; kde se nová silnice v téže výšce protne
     s jinou, vznikne křižovatka. Kurzor ukazuje kroužkem, kam se přichytí
     (uzel, nebo bod na silnici – i na konci pruhu, kde se úsek zužuje).
@@ -95,7 +111,9 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
   Most stojí 2,6× (vysoký 4,2×) víc.
 - **Na most ani na rampu se nic nepřipojí** – ani silnice hráče uprostřed
   rampy, ani uličky obcí, ani domy. Silnice se k mostu připojí jen na jeho
-  konci (uzel). Rampa nesmí křížit jinou silnici ve stejné výšce.
+  konci (uzel) nebo uprostřed rovné části mostu (most ve stejné výšce).
+  Rampa nesmí křížit jinou silnici ve stejné výšce. Auta na rampě jsou
+  vidět nad terénem a stín rampy roste s výškou.
 - **Náhled** ukazuje trasu, cenu, nové křižovatky a budovy v cestě. Když se
   silnice nevejde, hra nabídne „Postavit a zbourat“ za cenu silnice
   i bourání; bez potvrzení se nic nezbourá.
@@ -161,7 +179,8 @@ místo.
   místo se ukáže v Co řešit jako „Zablokovaná doprava“. Limit je
   v nastavení (Pravidla): Nikdy, 20 s, 40 s (výchozí), 2 min.
 - **Přechody**: na každém rameni křižovatky, kde je chodník (ne u napojení
-  na dálnici), je přechod sám od sebe. Nástroj **Přechod** (klávesa 4) ho
+  na dálnici), je přechod sám od sebe – když se vejde: rameno musí být
+  dost dlouhé a nesmí se sousedním ramenem svírat úhel menší než asi 50°. Nástroj **Přechod** (klávesa 4) ho
   u křižovatky zruší nebo vrátí a uprostřed úseku přidá nový (10 Kč) nebo
   zruší. Chodec přechází jen po přechodu: počká na mezeru, po 3 s čekání
   si přechod vyžádá a auta mu zastaví.
@@ -172,7 +191,11 @@ místo.
   a má vlastní vjezd. Osada začíná jedním domkem u polní cesty.
 - Domy přibývají podél silnic v okolí obce, nejradši blízko návsi a u rušné
   silnice. Tvary: domek, dvojdomek, dům se zahradou, statky do L, Z a U,
-  ve středu větších obcí bytové domy s podzemní garáží.
+  ve středu větších obcí bytové domy s venkovním stáním před domem (auta
+  obyvatel, kteří jsou doma, na něm stojí).
+- **Budova bez příjezdu zanikne**: když silnice u budovy zmizí nebo se změní
+  na dálnici či nájezd (domy k nim nemají vjezd), budova po 60 s zanikne
+  zdarma a kronika to zapíše.
 - **Uličky**: obec si sama staví uličky (druh Ulička) kolmo od svých silnic
   (3–7 polí), když nemá kde stavět, a průběžně při růstu (asi u každého
   pátého domu). Přednost mají místa uprostřed dlouhých úseků, aby obec
@@ -180,8 +203,22 @@ místo.
   silnici, propojí je a vznikne blok. Uličky nevedou přes vodu ani k mostům.
 - Domy stojí na jemné síti (půl pole): tvar domu je v celých polích, ale
   posunout se dá o půl pole, takže sedí těsně u silnice i na jejím konci.
+- **Vybavenost** vzniká sama podle velikosti obce:
+
+| Stavba | Kdy | Co dělá |
+|---|---|---|
+| Hřiště | od 25 obyvatel a 8 dětí | odpoledne na něj chodí děti pěšky |
+| Park | od 30 obyvatel | odpoledne a večer vycházky dospělých a seniorů |
+| Kavárna (s terasou a parkovištěm) | od 40 obyvatel | zákazníci přes den |
+| Kostel | od 60 obyvatel, jeden na obec | dopoledne tam chodí senioři |
+| Náměstí s pěší zónou (dlažba, kašna) | od 120 obyvatel, ve středu | vycházky pěšky, auta tam nejezdí |
+| Aleje | od 50 obyvatel | stromy podél ulic s chodníkem (jen vzhled) |
+
+  Každý druh vybavenosti (hřiště, park, kavárna, kostel, náměstí) zrychlí
+  růst obce o 6 %, počítají se nejvýš 4. Výběr domu ukáže, co obec má
+  a co jí ještě chybí.
 - **Rychlost růstu** roste s dosahem (lidé z jiných obcí a napojení na svět),
-  se službami a provozem, se stavebním materiálem (řezivo, kámen); klesá se
+  se službami, vybaveností a provozem, se stavebním materiálem (řezivo, kámen); klesá se
   zácpami, se zrušenými cestami a když auta nemůžou vyjet z domů.
 - Výběr domu ukáže, co obec brzdí („Růst obce brzdí: …“).
 
@@ -224,7 +261,11 @@ místo.
 - **Pumpa** u silnice s velkým provozem; auta na ni cestou zajíždějí.
 - **Hospoda** (od 24 obyvatel), **obchod** (od 40), **nákupní centrum**
   (od 90), **obchodní zóna** (od 150, nebo od 100 při napojení na svět).
-  Všechny s parkovištěm s kapacitou.
+  Všechny s parkovištěm.
+- **Parkoviště** má uličku (od vjezdu podél řad míst) a jednotlivá místa.
+  Auto zajede po uličce na volné místo, které si při příjezdu zamluví,
+  a při odjezdu po ní vyjede k silnici. Dvě auta nikdy nestojí na jednom
+  místě. Parkovací dům má víc míst (patra), než je vidět.
 - **Škola** v obci od 20 dětí, když žádná není do 14 polí (150 žáků).
 - **Kanceláře** ve středu obce od 70 obyvatel, když lidé nemají práci.
 - **Statky** (domy do L, Z, U) dávají práci na poli.
@@ -256,12 +297,13 @@ místo.
 - Hra běží přes celou obrazovku; panely plavou nad mapou.
 - Nástroje: Stavět (1), Pruhy (2), Křižovatka (3, klik přepíná pravidlo),
   Přechod (4), Rozdělit (5), Bourat (6), Uzávěra (7, po celých polích),
-  Ruka (8). Tvar silnice A, S, D, F; výška Q/E. Nad nástroji je panel
-  s volbami nástroje (u Stavět druh, pruhy, tvar, výška, Přestavět
-  kliknutím). Vjezdy k domům se kreslí pod silnicí.
+  Ruka (8). Tvar silnice A rovně, S oblouk, D kruh, F napojit, G odbočka,
+  H vzor; výška Q/E. Nad nástroji je panel s volbami nástroje (u Stavět
+  druh, pruhy, tvar, vzor, výška, Přestavět kliknutím). Vjezdy k domům se
+  kreslí pod silnicí.
 - **Nastavení** (v okně Pravidla): po jaké době to zaseknuté auto vzdá;
-  pamatuje si ho prohlížeč.
-  Nad nástroji je panel s druhem silnice, počtem pruhů a výškou.
+  pamatuje si ho prohlížeč. Oddíl **Test** přidá peníze (+10 000 Kč,
+  +100 000 Kč) pro zkoušení; kronika to zapíše.
 - **Co řešit**: nejvýš 8 nejdůležitějších problémů a tipů (červené = blokuje
   dopravu, oranžové = brzdí rozvoj, modré = příležitost), každý s radou;
   klik přenese na místo.
@@ -276,13 +318,15 @@ místo.
 
 - Neukládá rozehranou hru (`napady/ukladani_hry.md`).
 - Nemá železnici, kopce ani typy obcí (`napady/`).
-- Nemá hotové šablony mimoúrovňových křižovatek; staví se z mostů a nájezdů.
+- Má jen dva vzory mimoúrovňových křižovatek (kosodélník, čtyřlístek); jiné
+  se staví z mostů, odboček a nájezdů.
+- Pruhy se nepropojují jednotlivě (odbočka se napojuje na uzel, pruh volí
+  auto samo).
 - Nemá tunely (`napady/tunely.md`).
 - Budovy nejsou natočené podél šikmých silnic; u diagonál zůstávají zubaté
   mezery.
 - Pruh nejde přidat přes křižovatku jedním tahem (tah platí pro jeden úsek).
 - Auta nemění pruh uprostřed úseku; pruh volí při vjezdu na úsek.
-- Chodci nezdržují auta na přechodech.
 - Nemá cíle, úrovně ani konec hry.
 
 ## Jak se tento dokument mění

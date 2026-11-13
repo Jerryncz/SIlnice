@@ -94,6 +94,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
   else if(t.type==="bld"){const b=t.b;if(b.dead)return"";const K=KIND[b.type];
     if(isHome(b)){const tw=b.town;title=b.name;sub="obec "+tw.name+" · "+fmt(tw.pop)+" obyvatel · "+growthLabel(tw);
       rows.push(["Bydlí tu",`${b.kids} dětí, ${b.adults} dospělých, ${b.seniors} seniorů`],["Pracuje z domu",String(b.ho)],["Teď mimo domov",String(Math.max(0,Math.round(b.away)))]);
+      {const have=tw.amen||[];const miss=AMENITIES.filter(k=>!have.includes(k)).map(k=>KIND[k].name.toLowerCase());rows.push(["Vybavenost",have.length?have.map(k=>KIND[k].name.toLowerCase()).join(", "):"žádná"]);if(miss.length&&tw.pop>=25)rows.push(["Ještě chybí",miss.join(", ")])}
       rows.push(["Cesty zdržené o",tw.accessList.length?Math.round(Math.max(0,tw.delay-1)*100)+" %":"–"]);
       if(tw.why&&tw.why.length)why="Růst obce brzdí: "+tw.why.join(", ")+".";else{why="Obec se rozvíjí bez potíží.";ok=true}
       if(!b.access)why="Dům ztratil vjezd na silnici.";}

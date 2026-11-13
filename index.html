@@ -302,6 +302,12 @@ const KIND={
   park:{name:"Parkovací dům",letter:"P",color:"#2b5fa8",cap:20,pay:2,demolish:120,jobs:0},
   office:{name:"Kanceláře",letter:"K",color:"#3f6f9e",slots:4,pay:0,demolish:160,jobsPerTile:10},
   school:{name:"Škola",letter:"Š",color:"#c9952a",slots:2,pay:0,demolish:200,jobs:6,kids:150},
+  // vybavenost obcí (vzniká sama podle velikosti obce); leisure = kdo sem chodí na vycházku
+  playground:{name:"Hřiště",letter:"Hř",color:"#d0943a",slots:0,pay:0,demolish:60,jobs:0,leisure:"kids",amenity:true},
+  parkland:{name:"Park",letter:"Pa",color:"#5f9a52",slots:0,pay:0,demolish:60,jobs:1,leisure:"adults",amenity:true},
+  cafe:{name:"Kavárna",letter:"Ka",color:"#9a5b3f",slots:2,pay:3,pull:4,demolish:120,jobs:3,amenity:true},
+  church:{name:"Kostel",letter:"Ko",color:"#8a8478",slots:2,pay:1,pull:3,seniorOnly:true,demolish:300,jobs:1,amenity:true},
+  square:{name:"Náměstí",letter:"Ná",color:"#b9a98a",slots:0,pay:0,demolish:200,jobs:0,leisure:"all",amenity:true},
   logging:{name:"Těžba dřeva",letter:"D",color:"#55702f",slots:3,pay:0,jobs:6,out:"wood",res:FOREST,demolish:150,industry:true},
   quarry:{name:"Lom",letter:"L",color:"#77736a",slots:3,pay:0,jobs:8,out:"stone",res:ROCK,demolish:150,industry:true},
   mine:{name:"Důl na železo",letter:"Ž",color:"#8a4b3a",slots:3,pay:0,jobs:10,out:"ore",res:ORE,demolish:200,industry:true},
@@ -320,10 +326,11 @@ const HOUSE_SHAPES=[
   {name:"Statek do Z",w:1.2,min:24,cells:[[0,0],[1,0],[1,1],[2,1]]},
   {name:"Statek do U",w:1,min:40,cells:[[0,0],[0,1],[1,1],[2,1],[2,0]]}
 ];
+// bytovky mají před domem venkovní stání (p)
 const FLAT_SHAPES=[
-  {name:"Bytový dům",w:3,cells:[[0,0],[1,0],[0,1],[1,1]]},
-  {name:"Panelový dům",w:2,cells:[[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]]},
-  {name:"Bytový blok",w:1.5,cells:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]]}
+  {name:"Bytový dům",w:3,cells:[[0,0,"p"],[1,0,"p"],[0,1],[1,1]]},
+  {name:"Panelový dům",w:2,cells:[[0,0,"p"],[1,0,"p"],[2,0,"p"],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]]},
+  {name:"Bytový blok",w:1.5,cells:[[0,0,"p"],[1,0,"p"],[0,1],[0,2],[1,1],[1,2]]}
 ];
 const row=(v,n,r)=>Array.from({length:n},(_,u)=>[u,v,r]);
 const SVC_SHAPES={
@@ -335,6 +342,11 @@ const SVC_SHAPES={
   park:[[[0,0,"g"],[1,0,"g"],[0,1,"g"],[1,1,"g"]],[[0,0,"g"],[1,0,"g"],[2,0,"g"]]],
   office:[[...row(0,2,"p"),...row(1,2,"b"),...row(2,2,"b")],[...row(0,3,"p"),...row(1,3,"b")],[[0,0,"p"],[0,1,"b"],[1,1,"b"]]],
   school:[[...row(0,3,"y"),...row(1,3,"b")],[...row(0,2,"y"),...row(1,2,"b")]],
+  playground:[[[0,0,"y"],[1,0,"y"],[0,1,"y"],[1,1,"y"]],[[0,0,"y"],[1,0,"y"]]],
+  parkland:[[...row(0,3,"y"),...row(1,3,"y"),...row(2,3,"y")],[...row(0,2,"y"),...row(1,2,"y"),...row(2,2,"y")],[...row(0,2,"y"),...row(1,2,"y")]],
+  cafe:[[[0,0,"y"],[1,0,"p"],[0,1,"b"],[1,1,"b"]],[[0,0,"y"],[0,1,"b"]]],
+  church:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"],[0,2,"b"],[1,2,"b"]],[[0,0,"y"],[0,1,"b"],[0,2,"b"]]],
+  square:[[...row(0,3,"y"),...row(1,3,"y"),...row(2,3,"y")],[...row(0,3,"y"),...row(1,3,"y")]],
   logging:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"y"]],[[0,0,"y"],[0,1,"b"]]],
   quarry:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]],[[0,0,"y"],[0,1,"b"]]],
   mine:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]],[[0,0,"y"],[0,1,"b"]]],
@@ -1044,7 +1056,11 @@ function leaveBox(S,c){if(!c.conn)return;const n=S.nodes[c.conn.node];const k=n.
 // dojel k cíli: zajede do vjezdu (domy, parkoviště), u hranice mapy rovnou zmizí
 function startEnter(S,c,l){const to=c.trip&&c.trip.to;leaveBox(S,c);
   if(!to||to.isGate||to.dead||to.front===undefined){c.state="arrived";arriveVehicle(S,c);return}
-  const p=lanePose(S,l,c.lane,c.s);c.state="enter";c.t=0;c.ex=p.x;c.ey=p.y;c.eang=p.ang;S.entering.push(c)}
+  const p=lanePose(S,l,c.lane,c.s);c.state="enter";c.t=0;c.ex=p.x;c.ey=p.y;c.eang=p.ang;
+  // na parkoviště: rezervované místo a cesta po uličce
+  const lay=lotLayout(S,to);if(lay){let i=-1;if(isHome(to)){if(to.type==="flat")i=Math.min(lay.spots.length-1,homeCars(to))}else{i=freeSpot(S,to);if(i>=0){to.spotUsed[i]=c;c.spotB=to;c.spot=i}}
+    if(i>=0){c.path=[[p.x,p.y],...spotPath(lay,i)];c.plen=pathLen(c.path);c.ps=0}}
+  S.entering.push(c)}
 function tryExit(S,c){const l=c.links[0];const e=S.edges[l>>1];if(e.dead){killVehicle(S,c);return true}
   const q=e.q[l&1][c.lane];if(!q){killVehicle(S,c);return true}
   for(const o of q){if(o.s>c.s+o.len/2+c.len/2+0.25)continue;if(o.s<c.s-1.1)break;return false}
@@ -1060,7 +1076,9 @@ function updateVehicles(S,dt){
     c.wait+=dt;if(c.firstExit&&c.wait>8){S.exiting.splice(k,1);exitFailed(S,c)}
     else if(!c.firstExit&&lim>0&&c.wait>Math.max(8,lim)){S.exiting.splice(k,1);c.dead=true;c.state="gone";releaseVehicle(S,c)}}
   for(let k=S.entering.length-1;k>=0;k--){const c=S.entering[k];if(c.dead||c.state!=="enter"){S.entering.splice(k,1);continue}
-    c.t+=dt/0.8;if(c.t>=1){S.entering.splice(k,1);arriveVehicle(S,c)}}
+    if(c.path){c.ps+=dt*1.2;c.t=c.ps/c.plen}else c.t+=dt/0.8;if(c.t>=1){S.entering.splice(k,1);arriveVehicle(S,c)}}
+  for(let k=S.unparking.length-1;k>=0;k--){const c=S.unparking[k];if(c.dead||c.state!=="unpark"){S.unparking.splice(k,1);continue}
+    c.ps+=dt*1.2;if(c.ps>=c.plen){S.unparking.splice(k,1);if(c.spotB){releaseSpot(c.spotB,c.spot,c);c.spotB=null}const z=c.path[c.path.length-2]||c.path[c.path.length-1];c.ux=z[0];c.uy=z[1];c.state="exit";c.wait=0;S.exiting.push(c)}}
   for(const e of S.edges){if(e.dead)continue;const len=e.g.len,vb=BASE_SPEED*RK[e.kind].speed*(e.ring?0.75:1);const mb=e.mbusy&&e.mbusy.length?e.mbusy:null;
     for(let d=0;d<2;d++){const lanes=e.q[d];if(!lanes.length)continue;const l=e.id*2+d;const box=S.nodes[d?e.a:e.b].edges.length>=3;const sOut=box?linkOut(S,l):len;
       for(let k=0;k<lanes.length;k++){const q=lanes[k];let leader=null;
@@ -1073,11 +1091,11 @@ function updateVehicles(S,dt){
           c.v=(ns-c.s)/dt;if(c.v<0.1*vt)c.wait+=dt;else if(!leader)c.wait=0;else c.wait=Math.max(0,c.wait-dt);
           c.s=ns;
           if(c.conn&&c.s>=c.conn.s1+c.len/2)leaveBox(S,c);
-          if(lim>0&&c.wait>lim){q.splice(i,1);giveUp(S,c);continue}
+          if(lim>0&&c.wait>lim){(q[i]===c&&q.splice(i,1));giveUp(S,c);continue}
           if(!leader){
-            if(last&&c.s>=c.sEnd-0.03){if(canArrive(S,c)){q.splice(i,1);startEnter(S,c,l);continue}
-              else if(c.wait>4){q.splice(i,1);lotFailed(S,c);continue}}
-            else if(!last&&c.s>=(box?sOut-c.len/2-0.04:len)-0.03){if(tryTransition(S,c,l)){q.splice(i,1);continue}}}
+            if(last&&c.s>=c.sEnd-0.03){if(canArrive(S,c)){(q[i]===c&&q.splice(i,1));startEnter(S,c,l);continue}
+              else if(c.wait>4){(q[i]===c&&q.splice(i,1));lotFailed(S,c);continue}}
+            else if(!last&&c.s>=(box?sOut-c.len/2-0.04:len)-0.03){if(tryTransition(S,c,l)){(q[i]===c&&q.splice(i,1));continue}}}
           leader=c;i++}}}}}
 function killVehicle(S,c){if(c.dead)return;if(c.state==="drive")removeQ(S,c);leaveBox(S,c);c.dead=true;c.state="gone";releaseVehicle(S,c)}
 // poloha startu a cíle auta leží mimo plochu křižovatek
@@ -1193,12 +1211,12 @@ function createBuilding(S,type,town,tiles,front,name){
     born:S.time,dead:false,staff:0,staffInc:0,guests:0,kidsIn:0,away:0};
   let lots=0;
   for(const [j,r] of tiles){if(S.terrain[j]!==GRASS){S.terrain[j]=GRASS;S.dirty.push(j)}S.bld[j]=b;
-    S.role[j]=type==="house"?R_HOUSE:type==="flat"?R_FLAT:ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
+    S.role[j]=type==="house"?R_HOUSE:type==="flat"?(r==="p"?R_LOT:R_FLAT):ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
   const K=KIND[type];
   if(type==="house"){b.pop=housePop(units(b));fillHousehold(S,b)}
-  else if(type==="flat"){b.pop=Math.round(10*units(b));fillHousehold(S,b)}
+  else if(type==="flat"){b.pop=Math.round(10*b.tiles.filter(j=>S.role[j]===R_FLAT).length/4);fillHousehold(S,b)}
   else if(type==="park")b.cap=K.cap;
-  else b.cap=Math.max(Math.round(lots/4*K.slots),type==="office"?Math.round(units(b)*3):0);
+  else b.cap=Math.max(Math.round(lots/4*(K.slots||0)),type==="office"?Math.round(units(b)*3):0);
   b.jobs=jobsOf(b);if(type==="house"&&units(b)>=3)b.jobs=Math.round(units(b)); // statky dávají práci na poli
   if(K&&K.industry){b.stock={};b.inc={};b.out=0;b.prod=0;b.trucks=0;b.work=0;b.short=null;b.res=null;b.resT=-99;b.made=0;b.color=K.color}
   if(isHome(b))newDay(S,b);
@@ -1235,6 +1253,8 @@ function updateTownStats(S){
   for(const t of S.towns){t.accessList=[];t.comps=new Set();let pop=0,tiles=0,kids=0,workers=0;
     for(const b of t.homes){pop+=b.pop;tiles+=units(b);kids+=b.kids;workers+=b.workers-b.ho;if(b.access){t.accessList.push(b);t.comps.add(edgeComp(S,b.access.e))}}
     t.pop=pop;t.tileCount=tiles;t.kids=kids;t.workers=workers;t.world=S.gates.some(g=>t.comps.has(S.nodes[g.node].comp))}}
+const AMENITIES=["playground","parkland","cafe","church","square"];
+function amenityTypes(S,t){const r=townRadius(t)+4;const set=new Set();for(const s of S.buildings){if(!KIND[s.type]||!KIND[s.type].amenity)continue;if(Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<=r)set.add(s.type)}return [...set]}
 function shares(a,b){for(const c of a)if(b.has(c))return true;return false}
 function calcRates(S){
   for(const t of S.towns){t.why=[];
@@ -1243,6 +1263,8 @@ function calcRates(S){
     for(const g of S.gates){const n=S.nodes[g.node];if(!t.comps.has(n.comp))continue;reach+=150/(1+Math.hypot(n.x-t.cx,n.y-t.cy)/40)}
     const r=townRadius(t)+4;let svc=0;for(const s of S.buildings)if(!isHome(s)&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<=r)svc++;
     let rate=0.012+0.012*Math.log2(1+reach/15)+0.005*Math.min(svc,5);
+    // vybavenost: každý druh (hřiště, park, kavárna, kostel, náměstí) zrychlí růst, nejvýš 4 druhy
+    t.amen=amenityTypes(S,t);rate*=1+0.06*Math.min(4,t.amen.length);
     const jam=clamp((t.delay-1.35)/1.2,0,1),cf=clamp(t.cancel/3,0,1),ef=clamp(t.exitFail/2,0,1);
     const jobF=t.workers>0?clamp(1-t.jobless/Math.max(4,t.workers*0.5),0.3,1):1;
     rate*=(1-0.85*jam)*(1-0.6*cf)*(1-0.7*ef)*jobF;rate*=Math.max(0.1,1-t.pop/450);rate*=1+0.4*Math.min(1,t.material/3);
@@ -1317,6 +1339,38 @@ function demolishBuilding(S,b,free){
     if(!t.homes.length){S.towns.splice(S.towns.indexOf(t),1);for(const s of S.buildings)if(s.town===t)s.town=null;addLog(S,t.name+" zanikla, zbourán poslední dům",b.front)}}
   return {ok:true,cost}}
 
+// ---- 06_parkoviste.js ----
+// Parkoviště: ulička (páteř od vjezdu a řady uliček) a jednotlivá místa. Auto zajede po uličce na volné
+// místo a odjíždí zase po ní. Místa se přidělují (b.spotUsed), takže dvě auta nikdy nestojí na jednom.
+
+const isParkRole=(b,r)=>r===R_LOT||r===R_GAR||(r===R_YARD&&KIND[b.type]&&KIND[b.type].industry);
+// rozvržení parkoviště podle vjezdu: místa po buňkách, uličky mezi dvojicemi řad
+function lotLayout(S,b){if(!b.access)return null;const key=b.access.e+":"+b.access.u.toFixed(2);if(b._lk===key)return b.lay;b._lk=key;b.lay=null;
+  const cells=b.tiles.filter(j=>isParkRole(b,S.role[j]));if(!cells.length)return null;
+  const ax=b.access.x,ay=b.access.y;let dx=wxOf(b.front)-ax,dy=wyOf(b.front)-ay;
+  const d=Math.abs(dx)>=Math.abs(dy)?[Math.sign(dx)||1,0]:[0,Math.sign(dy)||1],p=[-d[1],d[0]];
+  const loc=cells.map(j=>{const cx=wxOf(j),cy=wyOf(j);return {j,x:cx,y:cy,dep:Math.round(((cx-ax)*d[0]+(cy-ay)*d[1])*2)/2,lat:Math.round(((cx-ax)*p[0]+(cy-ay)*p[1])*2)/2}});
+  const rows=[...new Set(loc.map(q=>q.dep))].sort((a,b)=>a-b);
+  const aisleOf=new Map();for(let i=0;i<rows.length;i+=2){const a=i+1<rows.length?(rows[i]+rows[i+1])/2:rows[i]-0.25;aisleOf.set(rows[i],a);if(i+1<rows.length)aisleOf.set(rows[i+1],a)}
+  const lats=[...new Set(loc.map(q=>q.lat))];let lat0=lats[0];for(const l of lats)if(Math.abs(l)<Math.abs(lat0))lat0=l;
+  // páteř vede mezi buňkami, ne středem místa
+  lat0+=lat0>=0?-0.25:0.25;
+  const W2=(dep,lat)=>[ax+d[0]*dep+p[0]*lat,ay+d[1]*dep+p[1]*lat];
+  const spots=loc.map(q=>{const a=aisleOf.get(q.dep);const s=q.dep>a?1:-1;return {x:q.x,y:q.y,ang:Math.atan2(d[1]*s,d[0]*s),aisle:a,lat:q.lat}});
+  spots.sort((u,v)=>Math.abs(u.lat-lat0)+u.aisle*0.01-(Math.abs(v.lat-lat0)+v.aisle*0.01));
+  const aisles=[...new Set(spots.map(s=>s.aisle))].map(a=>{const ls=spots.filter(s=>s.aisle===a).map(s=>s.lat);return {a,l0:Math.min(lat0,...ls)-0.2,l1:Math.max(lat0,...ls)+0.2}});
+  const lay={spots,aisles,d,p,lat0,ax,ay,W:W2,first:rows[0]-0.3,last:Math.max(...aisles.map(q=>q.a))};
+  b.lay=lay;if(!b.spotUsed||b.spotUsed.length!==spots.length)b.spotUsed=new Array(spots.length).fill(null);return lay}
+// cesta z vjezdu (bod na silnici) na místo i
+function spotPath(lay,i){const s=lay.spots[i],W=lay.W;return [[lay.ax,lay.ay],W(lay.first,lay.lat0),W(s.aisle,lay.lat0),W(s.aisle,s.lat),[s.x,s.y]]}
+function pathLen(pts){let L=0;for(let k=1;k<pts.length;k++)L+=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]);return L}
+function pathPose(pts,s){for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(s<=l||k===pts.length-1){const t=l?clamp(s/l,0,1):1;return {x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,ang:Math.atan2(b[1]-a[1],b[0]-a[0])}}s-=l}
+  const z=pts[pts.length-1];return {x:z[0],y:z[1],ang:0}}
+function freeSpot(S,b){const lay=lotLayout(S,b);if(!lay)return -1;for(let i=0;i<b.spotUsed.length;i++)if(!b.spotUsed[i])return i;return -1}
+function releaseSpot(b,i,owner){if(b&&b.spotUsed&&i>=0&&i<b.spotUsed.length&&(!owner||b.spotUsed[i]===owner))b.spotUsed[i]=null}
+// místa obsazená u bytovky: auta obyvatel, kteří jsou doma (jen vzhled)
+function homeCars(b){if(b.type!=="flat"||!b.lay)return 0;return Math.min(b.lay.spots.length,Math.round(Math.max(0,b.pop-b.away)/4))}
+
 // ---- 07_lide.js ----
 // Lidé: domácnosti (děti, dospělí, senioři), denní program, cesty pěšky a autem, návraty domů.
 
@@ -1325,7 +1379,8 @@ function dayOf(S){return Math.floor((DAY_START_HOUR+S.time/DAY*24)/24)+1}
 const H2S=h=>h/24*DAY;
 function newDay(S,b){const nonHO=b.workers-b.ho;b.tCommute=Math.ceil(nonHO/2);b.cPer=b.tCommute?nonHO/b.tCommute:0;
   b.tSchool=b.kids>0?Math.ceil(b.kids/3):0;b.kPer=b.tSchool?b.kids/b.tSchool:0;b.tShop=Math.round(b.adults*0.3+S.R()*0.8);
-  b.tSenior=b.seniors>0?Math.ceil(b.seniors/2):0;b.tVisit=S.R()<0.45?1:0}
+  b.tSenior=b.seniors>0?Math.ceil(b.seniors/2):0;b.tVisit=S.R()<0.45?1:0;
+  b.tLeisure=(b.kids>0&&S.R()<0.6?1:0)+(S.R()<0.25+0.05*b.adults?1:0)}
 function entEp(S,x){if(!x||x.dead)return null;if(x.isGate)return {node:x.node};if(!x.access)return null;return x.access}
 function entXY(S,x){if(x.isGate){const n=S.nodes[x.node];return [n.x,n.y]}return [wxOf(x.front),wyOf(x.front)]}
 function entComp(S,x){if(x.isGate)return S.nodes[x.node].comp;return x.access?edgeComp(S,x.access.e):-1}
@@ -1344,10 +1399,14 @@ function startTrip(S,tr){
   clampTrip(S,c);c.lane=chooseLane(S,c,0);
   if(tr.from.isGate){const l=c.links[0];const q=S.edges[l>>1].q[l&1][c.lane];const rear=q[q.length-1];
     if(rear&&rear.s<c.len+0.3){c.dead=true;c.state="gone";return false}c.s=0;q.push(c);c.state="drive";c.sid=S.sid}
-  else S.exiting.push(c);
+  else{const fb=tr.from;let i=tr.spot;if(i===undefined&&isHome(fb)&&fb.type==="flat"&&lotLayout(S,fb))i=homeCars(fb)-1;
+    const lay=i!==undefined&&i>=0?lotLayout(S,fb):null;
+    // vyjetí z místa na parkovišti po uličce, pak čeká u vjezdu jako dřív
+    if(lay&&i<lay.spots.length){c.path=spotPath(lay,i).reverse();c.plen=pathLen(c.path);c.ps=0;c.state="unpark";if(fb.spotUsed&&!isHome(fb)){fb.spotUsed[i]=c;c.spotB=fb;c.spot=i}S.unparking.push(c)}
+    else S.exiting.push(c)}
   if(tr.customer&&tr.to.cap>0&&!tr.reserved){tr.to.incoming++;tr.reserved=true}
   return true}
-function releaseVehicle(S,c){const tr=c.trip;if(!tr)return;
+function releaseVehicle(S,c){if(c.spotB){releaseSpot(c.spotB,c.spot,c);c.spotB=null}const tr=c.trip;if(!tr)return;
   if(tr.reserved){tr.to.incoming--;tr.reserved=false}
   if(tr.cargo&&tr.cargoTo){if(tr.cargoTo.isTown)tr.cargoTo.matInc--;else if(tr.cargoTo.inc)tr.cargoTo.inc[tr.cargo]--;tr.cargoTo=null}
   if(tr.truck&&tr.ind&&tr.ind.trucks!==undefined&&!tr.truckDone){tr.ind.trucks--;tr.truckDone=true}
@@ -1364,7 +1423,7 @@ function lotFailed(S,c){const tr=c.trip,to=tr.to;to.overflow++;to.ofRecent+=1;S.
   const p=homeEp?findPath(S,{e:e.id,u:clamp((l&1)?e.g.len-c.s:c.s,0,e.g.len),dirs:[l&1]},homeEp):null;
   if(!p||p.links[0]!==l){c.dead=true;c.state="gone";if(isHome(tr.home))tr.home.away-=tr.group;tr.handled=true;return}
   c.trip=back;c.goalEp=homeEp;c.links=p.links;c.li=0;const lz=p.links[p.links.length-1];c.sEnd=clamp(p.sEnd,linkIn(S,lz)+0.3,Math.max(linkIn(S,lz)+0.3,linkOut(S,lz)-0.3));if(p.links.length===1)c.sEnd=Math.max(c.sEnd,c.s);c.wait=0;insertQ(e.q[l&1][c.lane],c)}
-function arriveVehicle(S,c){c.dead=true;c.state="gone";handleArrival(S,c.trip,"car",c,false)}
+function arriveVehicle(S,c){c.dead=true;c.state="gone";handleArrival(S,c.trip,"car",c,false);if(c.spotB){releaseSpot(c.spotB,c.spot,c);c.spotB=null}}
 function walkerArrived(S,w,aborted){handleArrival(S,w.trip,"walk",null,aborted)}
 function handleArrival(S,tr,mode,c,silent){
   if(tr.handled)return;tr.handled=true;const to=tr.to;
@@ -1381,23 +1440,26 @@ function handleArrival(S,tr,mode,c,silent){
   if(!silent){S.trips++;const pay=1+Math.floor((c?c.links.length:2)/4);S.money+=pay;S.earned+=pay;
     if(c&&tr.home&&tr.home.town){const t=tr.home.town;const ratio=(S.time-c.start)/Math.max(0.5,c.free);t.delay+=(clamp(ratio,0.5,6)-t.delay)*0.1}
     const K=KIND[to.type];if(K&&K.pay&&tr.customer){S.money+=K.pay;S.earned+=K.pay}}
-  if(mode==="car"&&!silent)to.parked.push({home:tr.home,color:tr.color});
+  if(mode==="car"&&!silent){const pe={home:tr.home,color:tr.color,spot:c&&c.spotB===to?c.spot:undefined};to.parked.push(pe);if(pe.spot!==undefined){to.spotUsed[pe.spot]=pe;c.spotB=null}}
   if(tr.purpose==="commute"){to.staff+=tr.group;to.staffInc-=tr.group}else if(tr.purpose==="school")to.kidsIn+=tr.group;else to.guests+=tr.group;
   to.visits++;
   const h=hourOf(S);let dur;
   switch(tr.purpose){case"commute":{const e=15+S.R()*2.5;dur=e>h?e-h:0.4+S.R()*0.6;break}
     case"school":{const e=13+S.R()*2;dur=e>h?e-h:0.3+S.R()*0.4;break}
-    case"senior":dur=1+S.R();break;case"visit":dur=1.5+S.R()*1.5;break;case"tourist":dur=1+S.R()*2;break;
+    case"senior":dur=1+S.R();break;case"visit":dur=1.5+S.R()*1.5;break;case"leisure":dur=0.6+S.R()*1.2;break;case"tourist":dur=1+S.R()*2;break;
     default:dur=to.type==="pub"?1+S.R()*1.5:0.5+S.R()*0.7}
   S.returns.push({tr,mode:mode==="car"&&!silent?"car":"walk"},S.time+H2S(dur))}
 function decPresence(tr){const place=tr.to;if(place.isGate)return;if(tr.purpose==="commute")place.staff-=tr.group;else if(tr.purpose==="school")place.kidsIn-=tr.group;else place.guests-=tr.group}
 function processReturns(S){let guard=0;
   while(S.returns.size&&S.returns.peekP()<=S.time&&guard++<300){const r=S.returns.pop();const tr=r.tr,place=tr.to,home=tr.home;
     let mode=r.mode,k=-1;if(mode==="car"&&!place.isGate){k=place.parked.findIndex(p=>p.home===home);if(k<0)mode="walk"}
-    const gone=()=>{decPresence(tr);if(k>=0)place.parked.splice(k,1);if(isHome(home))home.away-=tr.group};
+    const pe=k>=0?place.parked[k]:null;
+    const gone=()=>{decPresence(tr);if(k>=0){place.parked.splice(k,1);if(pe&&pe.spot!==undefined)releaseSpot(place,pe.spot,pe)}if(isHome(home))home.away-=tr.group};
     if(!home||home.dead||(!home.isGate&&!home.access)||place.dead){gone();continue}
-    const back={purpose:"return",ret:true,from:place,to:home,home,group:tr.group,mode,color:tr.color};
+    const back={purpose:"return",ret:true,from:place,to:home,home,group:tr.group,mode,color:tr.color,spot:pe&&pe.spot!==undefined?pe.spot:undefined};
+    if(pe&&pe.spot!==undefined)releaseSpot(place,pe.spot,pe);
     if(startTrip(S,back)){decPresence(tr);if(k>=0)place.parked.splice(k,1)}
+    else if(pe&&pe.spot!==undefined&&!place.spotUsed[pe.spot])place.spotUsed[pe.spot]=pe
     else{r.tries=(r.tries||0)+1;if(r.tries<5)S.returns.push(r,S.time+3);else gone()}}}
 function due(S,rem,h,dh,a,b){if(rem<=0||h<a||h>=b)return 0;const exp=rem*dh/Math.max(0.05,b-h);let n=Math.floor(exp);if(S.R()<exp-n)n++;return Math.min(n,rem)}
 function walkOr(d,lim){return d<lim?"walk":"car"}
@@ -1413,9 +1475,14 @@ function goSchool(S,b){const cid=edgeComp(S,b.access.e);let best=null,bd=30;
   for(const s of S.buildings){if(s.type!=="school"||!s.access||edgeComp(S,s.access.e)!==cid||s.kidsIn>=KIND.school.kids)continue;const d=entDist(S,b,s);if(d<bd){bd=d;best=s}}
   const group=Math.max(1,Math.round(b.kPer));if(!best){if(b.town)b.town.noSchool+=group;return}go(S,b,"school",group,best,walkOr(bd,8))}
 function goShop(S,b,purpose,h){const cid=edgeComp(S,b.access.e);const opts=[];
-  for(const s of S.buildings){const K=KIND[s.type];if(!K||!K.pull||!s.access||edgeComp(S,s.access.e)!==cid)continue;if(K.evening&&h<16&&purpose!=="senior")continue;const d=entDist(S,b,s);
+  for(const s of S.buildings){const K=KIND[s.type];if(!K||!K.pull||!s.access||edgeComp(S,s.access.e)!==cid)continue;if(K.evening&&h<16&&purpose!=="senior")continue;if(K.seniorOnly&&purpose!=="senior")continue;const d=entDist(S,b,s);
     if(purpose==="senior"&&d>15)continue;opts.push({s,d,wt:K.pull/Math.pow(d+8,purpose==="senior"?1.6:0.9)})}
   if(!opts.length)return;const o=pickW(S,opts,q=>q.wt);go(S,b,purpose,purpose==="senior"?1:Math.min(2,b.adults),o.s,walkOr(o.d,purpose==="senior"?6:5),true)}
+// vycházka pěšky: děti na hřiště, dospělí do parku a na náměstí
+function goLeisure(S,b){const cid=edgeComp(S,b.access.e);const kids=b.kids>0&&S.R()<0.6;const opts=[];
+  for(const s of S.buildings){const K=KIND[s.type];if(!K||!K.leisure||!s.access||edgeComp(S,s.access.e)!==cid)continue;if(kids?K.leisure==="adults":K.leisure==="kids")continue;
+    const d=entDist(S,b,s);if(d>9)continue;opts.push({s,d,wt:1/(d+2)})}
+  if(!opts.length)return;const o=pickW(S,opts,q=>q.wt);go(S,b,"leisure",kids?Math.min(2,b.kids):1,o.s,"walk")}
 function goVisit(S,b){const t=b.town;if(!t)return;const cid=edgeComp(S,b.access.e);
   const gates=S.gates.filter(g=>S.nodes[g.node].comp===cid);if(gates.length&&S.R()<0.35){go(S,b,"visit",1,gates[Math.floor(S.R()*gates.length)],"car");return}
   const towns=S.towns.filter(o=>o!==t&&o.comps.has(cid)&&o.accessList.length);if(!towns.length)return;const o=pickW(S,towns,q=>q.pop/Math.pow(Math.hypot(q.cx-t.cx,q.cy-t.cy)+6,1.4));
@@ -1428,6 +1495,7 @@ function peopleTick(S,dtR){
     if((n=due(S,b.tSchool,h,dh,7,8)))for(let k=0;k<n;k++){b.tSchool--;goSchool(S,b)}
     if((n=due(S,b.tSenior,h,dh,9,12)))for(let k=0;k<n;k++){b.tSenior--;goShop(S,b,"senior",h)}
     if((n=due(S,b.tShop,h,dh,15.5,20.5)))for(let k=0;k<n;k++){b.tShop--;goShop(S,b,"shop",h)}
+    if((n=due(S,b.tLeisure,h,dh,14,19.5)))for(let k=0;k<n;k++){b.tLeisure--;goLeisure(S,b)}
     if((n=due(S,b.tVisit,h,dh,10,19)))for(let k=0;k<n;k++){b.tVisit--;goVisit(S,b)}}}
 
 // ---- 08_hospodarstvi.js ----
@@ -1473,6 +1541,15 @@ function serviceCheck(S){
     if(t.pop>=40&&cnt("shop")<Math.max(1,Math.floor(t.pop/130))&&S.R()<0.25){if(b=placeServiceNear(S,"shop",t,t.cx,t.cy,r+1,10,false))addLog(S,t.name+": nový obchod s parkovištěm",b.front)}
     if(t.kids>=20&&!S.buildings.some(s=>s.type==="school"&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<14)&&S.R()<0.3){if(b=placeServiceNear(S,"school",t,t.cx,t.cy,r+2,0,false))addLog(S,t.name+": otevřela se škola",b.front)}
     if(t.pop>=70&&t.jobless>4&&cnt("office")<1+Math.floor(t.pop/120)&&S.R()<0.25){if(b=placeServiceNear(S,"office",t,t.cx,t.cy,r*0.8+1,0,false))addLog(S,t.name+": vyrostla kancelářská budova",b.front)}
+    // vybavenost obce
+    const near=type=>S.buildings.filter(s=>s.type===type&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<=r+4).length;
+    if(t.pop>=25&&t.kids>=8&&near("playground")<1+Math.floor(t.pop/150)&&S.R()<0.25){if(b=placeServiceNear(S,"playground",t,t.cx,t.cy,r,0,false))addLog(S,t.name+": děti mají hřiště",b.front)}
+    if(t.pop>=30&&near("parkland")<1+Math.floor(t.pop/200)&&S.R()<0.2){if(b=placeServiceNear(S,"parkland",t,t.cx,t.cy,r+1,0,false))addLog(S,t.name+": založili park",b.front)}
+    if(t.pop>=40&&near("cafe")<1+Math.floor(t.pop/150)&&S.R()<0.2){if(b=placeServiceNear(S,"cafe",t,t.cx,t.cy,r,5,false))addLog(S,t.name+": otevřela se kavárna",b.front)}
+    if(t.pop>=60&&near("church")<1&&S.R()<0.15){if(b=placeServiceNear(S,"church",t,t.cx,t.cy,r*0.6+1,0,false))addLog(S,t.name+": postavili kostel",b.front)}
+    if(t.pop>=120&&near("square")<1&&S.R()<0.15){if(b=placeServiceNear(S,"square",t,t.cx,t.cy,r*0.5+1.5,0,false))addLog(S,t.name+": má náměstí s pěší zónou",b.front)}
+    // aleje podél ulic a silnic s chodníkem
+    if(t.pop>=50)for(const e of S.edges){if(e.dead||e.alej||!RK[e.kind].walk||!RK[e.kind].side||!RK[e.kind].front)continue;const m=pointAt(e.g,e.g.len/2);if(Math.hypot(m.x-t.cx,m.y-t.cy)<=r)e.alej=true}
     if(t.pop>=90&&!S.buildings.some(s=>s.type==="mall"&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<14)&&S.R()<0.2){if(b=placeServiceNear(S,"mall",t,t.cx,t.cy,r+3,40,true))addLog(S,"U obce "+t.name+" postavili nákupní centrum",b.front)}
     if((t.pop>=150||(t.world&&t.pop>=100))&&!S.buildings.some(s=>s.type==="hyper"&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<25)&&S.R()<0.12){if(b=placeServiceNear(S,"hyper",t,t.cx,t.cy,r+5,30,true))addLog(S,"U obce "+t.name+" vyrostla obchodní zóna",b.front)}}
   for(const s of S.buildings){if(!KIND[s.type]||!KIND[s.type].pull)continue;const over=s.overflow-s.overflowSeen;
@@ -1531,7 +1608,7 @@ function createSim(seed){
   const R=mulberry32(seed);
   const S={R,seed,version:GAME_VERSION,terrain:new Uint8Array(N),zone:new Uint8Array(N),role:new Uint8Array(N),bld:new Array(N).fill(null),
     roadCnt:new Uint16Array(N),bridgeCnt:new Uint16Array(N),cellG:new Array(N).fill(null),cellB:new Array(N).fill(null),
-    nodes:[],edges:[],towns:[],buildings:[],cars:[],exiting:[],entering:[],walkers:[],gates:[],returns:new Heap(),reroute:[],rings:[],work:[],zones:[],regrow:[],problems:[],log:[],dirty:[],
+    nodes:[],edges:[],towns:[],buildings:[],cars:[],exiting:[],entering:[],unparking:[],walkers:[],gates:[],returns:new Heap(),reroute:[],rings:[],work:[],zones:[],regrow:[],problems:[],log:[],dirty:[],
     money:2000,time:0,trips:0,transits:0,exported:0,cancelled:0,turnedAway:0,earned:0,income:0,
     netDirty:true,usedNames:new Set(),secAcc:0,svcTick:0,homesteadAcc:0,congTick:0,pTick:0,zoneTick:0,nextId:1,netVer:0,cfg:{stuck:40},stuck:[],stuckN:0,lastJamAny:-99,vid:0,sid:0,curDay:1};
   genTerrain(S);
@@ -1865,13 +1942,27 @@ function drawBuildings(vis){const ins=0.07,z=cam.z;
       else if(r===R_GAR){const q=mergedRect(j,b,ins*0.6);ctx.fillStyle=colors["road-edge"];ctx.fillRect(...q);ctx.fillStyle=colors.lot;ctx.fillRect(q[0]+0.05,q[1]+0.05,q[2]-0.1,q[3]-0.1)}
       else{const q=mergedRect(j,b,0.04);ctx.fillStyle=r===R_YARD?(b.type==="school"?"rgba(201,149,42,.28)":shade(K.color,1.9).replace(/rgb\((\d+),(\d+),(\d+)\)/,(m,a,b2,c)=>`rgba(${a},${b2},${c},.55)`)):colors.lot;ctx.fillRect(...q);
         const x=tx(j)*CS,y=ty(j)*CS;
+        if(r===R_YARD&&AMEN_YARD[b.type]){AMEN_YARD[b.type](j,b,q,x,y,z)}
         if(r===R_LOT&&z>=9){ctx.strokeStyle=colors["lot-line"];ctx.lineWidth=Math.max(0.03,1/z);ctx.beginPath();ctx.moveTo(x+0.02,y+0.06);ctx.lineTo(x+0.02,y+0.44);ctx.stroke()}
         if(r===R_FORE){ctx.fillStyle=colors.canopy;ctx.globalAlpha=0.75;ctx.fillRect(x+0.04,y+0.04,0.42,0.42);ctx.globalAlpha=1;if((tx(j)+ty(j))%2===0){ctx.fillStyle=KIND.gas.color;ctx.fillRect(x+0.2,y+0.12,0.1,0.26)}}
         if(r===R_YARD&&K.out&&z>=10&&j===b.tiles.find(t=>S.role[t]===R_YARD)){const n=Math.min(4,Math.ceil(b.out/2));ctx.fillStyle=GOODS[K.out].color;for(let s=0;s<n;s++)ctx.fillRect(x+0.08+s*0.18,y+0.15,0.13,0.28)}}}
     if(b.type==="flat"&&b.access){const fx=wxOf(b.front),fy=wyOf(b.front);const dx=b.access.x-fx,dy=b.access.y-fy,l=Math.hypot(dx,dy)||1;
       ctx.fillStyle="rgba(10,12,10,.85)";ctx.save();ctx.translate(fx+dx/l*0.16,fy+dy/l*0.16);ctx.rotate(Math.atan2(dy,dx));ctx.fillRect(-0.08,-0.17,0.16,0.34);ctx.restore()}
+    if(b.lay||KIND[b.type]||b.type==="flat")drawLot(b);
     if(K){if(b.type==="park"){const [x,y]=bCenter(b);drawSign(x,y,0.36,colors.sign,"P",true)}
       else{const [x,y]=bCenter(b,r=>r===R_BLD);drawSign(x,y,b.type==="mall"||b.type==="hyper"||b.type==="steel"?0.46:0.36,shade(K.color,0.8),K.letter,false)}}}}
+// plochy vybavenosti: park se stromy, náměstí s dlažbou a kašnou, hřiště, terasa kavárny, zahrada kostela
+const AMEN_YARD={
+  parkland:(j,b,q,x,y,z)=>{ctx.fillStyle="#a9cc94";ctx.fillRect(...q);if((tx(j)+ty(j))%2===0){ctx.fillStyle=colors.tree;ctx.beginPath();ctx.arc(x+0.25+(hash(j,1)-0.5)*0.12,y+0.25+(hash(j,2)-0.5)*0.12,0.17,0,Math.PI*2);ctx.fill()}
+    else if(z>=10){ctx.fillStyle="rgba(240,232,210,.9)";ctx.fillRect(x+0.2,y,0.1,CS)}},
+  square:(j,b,q,x,y,z)=>{ctx.fillStyle="#dcd0b6";ctx.fillRect(...q);if(z>=10){ctx.strokeStyle="rgba(150,135,110,.35)";ctx.lineWidth=0.02;ctx.strokeRect(x+0.02,y+0.02,CS-0.04,CS-0.04)}
+    if(j===b.tiles[Math.floor(b.tiles.length/2)]){const [cx,cy]=bCenter(b);ctx.fillStyle="#9fb7c9";ctx.beginPath();ctx.arc(cx,cy,0.32,0,Math.PI*2);ctx.fill();ctx.fillStyle=colors.water;ctx.beginPath();ctx.arc(cx,cy,0.22,0,Math.PI*2);ctx.fill()}},
+  playground:(j,b,q,x,y,z)=>{ctx.fillStyle="#ead7a6";ctx.fillRect(...q);if(z>=9){const c=["#d0543a","#3a7ad0","#3aa05a"][j%3];ctx.fillStyle=c;ctx.fillRect(x+0.16,y+0.16,0.18,0.18)}},
+  cafe:(j,b,q,x,y,z)=>{ctx.fillStyle="#e3d5c0";ctx.fillRect(...q);if(z>=9){ctx.fillStyle="#9a5b3f";for(const [a,c] of [[0.15,0.15],[0.35,0.35]]){ctx.beginPath();ctx.arc(x+a,y+c,0.07,0,Math.PI*2);ctx.fill()}}},
+  church:(j,b,q,x,y,z)=>{ctx.fillStyle="#b9cfa6";ctx.fillRect(...q)}};
+// aleje: stromy podél chodníků ulic v obcích
+function drawAlleys(list){if(cam.z<6)return;ctx.fillStyle=colors.tree;
+  for(const e of list){if(!e.alej||isRampEdge(S,e))continue;for(let u=0.6;u<e.g.len-0.5;u+=1.1){const p=pointAt(e.g,u);for(const sg of [1,-1]){const o=sg>0?e.er+0.13:-(e.el+0.13);ctx.beginPath();ctx.arc(p.x+p.nx*o,p.y+p.ny*o,0.11,0,Math.PI*2);ctx.fill()}}}}
 function lotSlots(b){const out=[];for(const j of b.tiles){const r=S.role[j];if(r===R_LOT||r===R_YARD||r===R_GAR||r===R_FORE&&(tx(j)+ty(j))%2)out.push([wxOf(j),wyOf(j)])}return out}
 function drawCarAt(x,y,ang,color,truck,cargo){const l=truck?0.62:0.4,w=truck?0.24:0.2;ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.fillStyle=color;ctx.fillRect(-l/2,-w/2,l,w);
   if(truck&&cargo){ctx.fillStyle=GOODS[cargo].color;ctx.fillRect(-l/2+0.03,-w/2+0.03,l*0.6,w-0.06)}
@@ -1879,7 +1970,9 @@ function drawCarAt(x,y,ang,color,truck,cargo){const l=truck?0.62:0.4,w=truck?0.2
 const _p={};
 const doorXY=b=>b&&b.front!==undefined?[wxOf(b.front),wyOf(b.front)]:null;
 function carPose(c){
+  if((c.state==="enter"||c.state==="unpark")&&c.path){const q=pathPose(c.path,c.ps);return {x:q.x,y:q.y,ang:q.ang,lvl:0}}
   if(c.state==="exit"){const l=c.links[0],e=S.edges[l>>1];if(!e||e.dead)return null;const d=l&1;const u=d?e.g.len-c.s:c.s;const p=pointAt(e.g,clamp(u,0,e.g.len),_p);
+    if(c.ux!==undefined)return {x:c.ux,y:c.uy,ang:Math.atan2(p.y-c.uy,p.x-c.ux),lvl:0};
     const dr=doorXY(c.trip&&c.trip.from)||[p.x,p.y];
     return {x:p.x+(dr[0]-p.x)*0.55,y:p.y+(dr[1]-p.y)*0.55,ang:Math.atan2(p.y-dr[1],p.x-dr[0]),lvl:0}}
   if(c.state==="enter"){const dr=doorXY(c.trip&&c.trip.to)||[c.ex,c.ey];const f=Math.min(1,c.t)*0.72;
@@ -1902,8 +1995,15 @@ function drawVehicles(layer){if(cam.z<3)return;
     drawCarAt(q.x,q.y,q.ang,c.trip&&c.trip.truck?"#3b4148":c.color,c.trip&&c.trip.truck,c.trip&&c.trip.cargo)}
   if(layer===0&&cam.z>=8){for(const w of S.walkers){if(w.dead)continue;const q=walkerPose(w);if(!q)continue;const [x,y]=q;if(!inView(x,y,1))continue;
     ctx.fillStyle=w.kid?"#e0752d":w.trip.purpose==="senior"?"#7a6aa8":"#3b4a5a";ctx.beginPath();ctx.arc(x,y,w.kid?0.06:0.075,0,Math.PI*2);ctx.fill()}}}
-function drawParked(x0,y0,x1,y1){if(cam.z<6)return;for(const b of S.buildings){if(!b.parked.length||isHome(b))continue;const x=tx(b.front),y=ty(b.front);if(x<x0-4||x>x1+4||y<y0-4||y>y1+4)continue;
-  const sl=lotSlots(b);if(!sl.length)continue;for(let k=0;k<Math.min(b.parked.length,sl.length);k++){const s=sl[k];drawCarAt(s[0],s[1],Math.PI/2,b.parked[k].color,false,null)}}}
+// zaparkovaná auta na svých místech; u bytovek auta obyvatel, kteří jsou doma
+function drawParked(x0,y0,x1,y1){if(cam.z<6)return;for(const b of S.buildings){const x=tx(b.front),y=ty(b.front);if(x<x0-6||x>x1+6||y<y0-6||y>y1+6)continue;
+  const lay=lotLayout(S,b);if(!lay)continue;
+  if(b.type==="flat"){const n=homeCars(b);const col=b.town?b.town.color:"#888";for(let k=0;k<n;k++){const s=lay.spots[k];drawCarAt(s.x,s.y,s.ang,shade(col,0.75+((k*37)%5)*0.1),false,null)}continue}
+  for(const pe of b.parked){if(pe.spot===undefined)continue;const s=lay.spots[pe.spot];if(s)drawCarAt(s.x,s.y,s.ang,pe.color,false,null)}}}
+// ulička parkoviště: páteř od vjezdu a uličky mezi řadami míst
+function drawLot(b){const lay=lotLayout(S,b);if(!lay||cam.z<7)return;const W=lay.W;ctx.strokeStyle=colors["road-edge"];ctx.globalAlpha=0.38;ctx.lineWidth=0.2;ctx.lineCap="butt";ctx.beginPath();
+  let a=W(lay.first-0.1,lay.lat0),z=W(lay.last,lay.lat0);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1]);
+  for(const q of lay.aisles){a=W(q.a,q.l0);z=W(q.a,q.l1);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}ctx.stroke();ctx.globalAlpha=1;ctx.lineCap="round"}
 function drawZones(x0,y0,x1,y1){if(!zonePattern)return;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=zonePattern;const z=cam.z;
   const c=z*CS;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(S.zone[y*W+x])ctx.fillRect(x*c-cam.x,y*c-cam.y,c,c);ctx.restore()}
 function nightAlpha(){const h=hourOf(S);if(h>=21||h<4.5)return 0.32;if(h>=19)return 0.32*(h-19)/2;if(h<6.5)return 0.32*(6.5-h)/2;return 0}
@@ -1959,7 +2059,7 @@ function render(){
   ctx.setTransform(dpr*z,0,0,dpr*z,-cam.x*dpr,-cam.y*dpr);
   const layers=[[],[],[]];for(const e of S.edges){if(e.dead||!edgeVisible(e))continue;layers[edgeLayer(e)].push(e)}
   const vis=visBuildings(x0,y0,x1,y1);drawDriveways(vis);
-  drawRoadLayer(layers[0],0);drawRings(layers[0]);drawNodes(0);
+  drawRoadLayer(layers[0],0);drawRings(layers[0]);drawNodes(0);drawAlleys(layers[0]);
   drawBuildings(vis);drawParked(x0,y0,x1,y1);drawVehicles(0);
   for(let L=1;L<3;L++){if(!layers[L].length)continue;drawRoadLayer(layers[L],L);drawNodes(L);drawVehicles(L)}
   const na=nightAlpha();if(na>0){ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=na;ctx.fillStyle=colors.night;ctx.fillRect(0,0,vw,vh);ctx.restore();
@@ -2067,6 +2167,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
   else if(t.type==="bld"){const b=t.b;if(b.dead)return"";const K=KIND[b.type];
     if(isHome(b)){const tw=b.town;title=b.name;sub="obec "+tw.name+" · "+fmt(tw.pop)+" obyvatel · "+growthLabel(tw);
       rows.push(["Bydlí tu",`${b.kids} dětí, ${b.adults} dospělých, ${b.seniors} seniorů`],["Pracuje z domu",String(b.ho)],["Teď mimo domov",String(Math.max(0,Math.round(b.away)))]);
+      {const have=tw.amen||[];const miss=AMENITIES.filter(k=>!have.includes(k)).map(k=>KIND[k].name.toLowerCase());rows.push(["Vybavenost",have.length?have.map(k=>KIND[k].name.toLowerCase()).join(", "):"žádná"]);if(miss.length&&tw.pop>=25)rows.push(["Ještě chybí",miss.join(", ")])}
       rows.push(["Cesty zdržené o",tw.accessList.length?Math.round(Math.max(0,tw.delay-1)*100)+" %":"–"]);
       if(tw.why&&tw.why.length)why="Růst obce brzdí: "+tw.why.join(", ")+".";else{why="Obec se rozvíjí bez potíží.";ok=true}
       if(!b.access)why="Dům ztratil vjezd na silnici.";}
