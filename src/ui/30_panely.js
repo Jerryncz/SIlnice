@@ -14,29 +14,37 @@ function updateUI(){
     $("log").innerHTML=S.log.slice(0,50).map((e,k)=>`<li><button data-l="${k}"><span>den ${e.day} ${hhmm(e.hour||0)}</span><span>${esc(e.text)}</span></button></li>`).join("")}
   updateSel();updateOpts()}
 $("problems").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b)return;const p=S.problems[+b.dataset.p];if(p)focusXY(p.x,p.y)});
-$("log").addEventListener("click",e=>{const b=e.target.closest("[data-l]");if(!b)return;const l=S.log[+b.dataset.l];if(l&&l.tile>=0)focusXY(tx(l.tile)+0.5,ty(l.tile)+0.5)});
+$("log").addEventListener("click",e=>{const b=e.target.closest("[data-l]");if(!b)return;const l=S.log[+b.dataset.l];if(l&&l.tile>=0)focusXY(wxOf(l.tile),wyOf(l.tile))});
 
 // ---- volby nástroje ----
-const TOOL_HINT={line:"Táhni po mapě. Silnice se drží 0°, 45° a 90°, Shift = libovolný úhel. Konec u jiné silnice ji napojí, tah po silnici ji přestaví.",
+const SHAPES=[["line","Rovně","A"],["curve","Oblouk","S"],["round","Kruh","D"],["connect","Napojit","F"]];
+const SHAPE_HINT={line:"Táhni po mapě. Ze silnice se úhly drží vůči ní, ve volném terénu 0°, 45° a 90° (Shift = volně). Tah po silnici ji přestaví.",
   curve:"Klikni začátek, pak bod, kterým oblouk směřuje, a konec. Pravý klik zruší.",
   round:"Táhni od středu: velikost kruhu je na tobě. Silnice, které kruh protne, se na něj napojí.",
-  lane:"Klikni na polovinu silnice: přidá pruh v tom směru. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
-  split:"Klikni na silnici: rozdělí úsek, aby šel kus přestavět nebo rozšířit zvlášť. Klik na značku rozdělení úseky zase spojí.",oneway:"Klikni na úsek: obousměrná → jednosměrka → opačný směr → obousměrná.",
+  connect:"Klikni na dvě místa: z boku silnice se napojí kolmo, z konce silnice v jejím směru, mezi nimi plynulá křivka."};
+const TOOL_HINT={lane:"Klikni na polovinu silnice: přidá pruh v tom směru. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
+  split:"Klikni na silnici: rozdělí úsek, aby šel kus přestavět nebo rozšířit zvlášť. Klik na značku rozdělení úseky zase spojí.",
+  cross:"Klikni u křižovatky: přechod přes rameno zruší nebo vrátí. Klik jinde na silnici přidá přechod doprostřed úseku (10 Kč), klik na něj ho zruší.",
   junction:"Klikni na křižovatku: přepíná přednost zprava, hlavní silnici a semafor.",erase:"Táhni přes silnice nebo budovy. Tah začatý na budově bourá budovy (za peníze).",
   zone:"Táhni přes pole, kde se nesmí stavět. Tahem přes šrafy uzávěru zrušíš.",hand:"Táhni mapou, klikni pro výběr."};
-function updateOpts(){const t=UI.tool,K=RK[UI.kind];const key=[t,UI.kind,UI.lanes,UI.level,UI.draw&&UI.draw.r].join("|");if(key===lastOptsKey)return;lastOptsKey=key;
+function updateOpts(){const t=UI.tool,K=RK[UI.kind];const key=[t,UI.kind,UI.lanes,UI.level,UI.shape,UI.rebuild,UI.draw&&UI.draw.r].join("|");if(key===lastOptsKey)return;lastOptsKey=key;
   let html="";
-  if(t==="line"||t==="curve"){
+  if(t==="build"){
     html+=`<div class="grp"><span class="lbl">Druh</span>${ROAD_KINDS.map(k=>`<button data-kind="${k}" aria-pressed="${UI.kind===k}">${RK[k].name}<small>${RK[k].cost} Kč</small></button>`).join("")}</div>`;
     html+=`<div class="grp"><span class="lbl">Pruhy${K.oneway?"":" v každém směru"}</span><button data-lanes="-1" ${UI.lanes<=K.min?"disabled":""}>−</button><span class="num">${UI.lanes}</span><button data-lanes="1" ${UI.lanes>=K.max?"disabled":""}>+</button></div>`;
-    html+=`<div class="grp"><span class="lbl">Výška</span>${LEVEL_NAMES.map((n,k)=>`<button data-level="${k}" aria-pressed="${UI.level===k}">${n}</button>`).join("")}</div>`}
-  html+=`<div class="grp"><span class="hint">${esc(TOOL_HINT[t]||"")}${t==="round"&&UI.draw&&UI.draw.r?" Poloměr "+UI.draw.r.toFixed(1)+" pole.":""}</span></div>`;
+    html+=`<div class="grp"><span class="lbl">Tvar</span>${SHAPES.map(([k,n,h])=>`<button data-shape="${k}" aria-pressed="${!UI.rebuild&&UI.shape===k}">${n}<small>${h}</small></button>`).join("")}</div>`;
+    html+=`<div class="grp"><span class="lbl">Výška</span>${LEVEL_NAMES.map((n,k)=>`<button data-level="${k}" aria-pressed="${UI.level===k}">${n}</button>`).join("")}</div>`;
+    html+=`<div class="grp"><label class="chk"><input type="checkbox" id="rebuildChk" ${UI.rebuild?"checked":""}>Přestavět kliknutím</label></div>`;
+    html+=`<div class="grp"><span class="hint">${esc(UI.rebuild?"Klikni na úsek: změní se na "+K.name.toLowerCase()+" s "+UI.lanes+" "+(UI.lanes===1?"pruhem":"pruhy")+". Kruhový objezd se změní celý.":SHAPE_HINT[UI.shape])}${UI.shape==="round"&&UI.draw&&UI.draw.r?" Poloměr "+UI.draw.r.toFixed(1)+" pole.":""}</span></div>`}
+  else html+=`<div class="grp"><span class="hint">${esc(TOOL_HINT[t]||"")}</span></div>`;
   $("opts").innerHTML=html}
 $("opts").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;
   if(b.dataset.kind){UI.kind=b.dataset.kind;const K=RK[UI.kind];UI.lanes=K.lanes}
   if(b.dataset.lanes){const K=RK[UI.kind];UI.lanes=clamp(UI.lanes+(+b.dataset.lanes),K.min,K.max)}
   if(b.dataset.level)UI.level=+b.dataset.level;
+  if(b.dataset.shape){UI.shape=b.dataset.shape;UI.rebuild=false;UI.draw=null;UI.plan=null}
   lastOptsKey="";updateOpts();refreshPlan()});
+$("opts").addEventListener("change",e=>{if(e.target.id==="rebuildChk"){UI.rebuild=e.target.checked;UI.draw=null;UI.plan=null;lastOptsKey="";updateOpts()}});
 
 // ---- potvrzení ----
 function askConfirm(text,goLabel,onGo){$("confirmText").textContent=text;$("confirmGo").textContent=goLabel;$("confirm").hidden=false;UI.pending=onGo}
@@ -63,10 +71,10 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
     if(e.gateEdge){const g=S.gates.find(g=>S.nodes[g.node].edges.includes(e.id));if(g){title="Dálnice do města "+g.name;rows.push(["Turisté",fmt(g.visitors)],["Vývoz",fmt(g.exported)+" Kč"]);
       if(!S.towns.some(tt=>tt.comps.has(S.nodes[g.node].comp)))why="Zatím vede do prázdna. Na konci ji napoj silnicí, nebo k ní postav nájezd."}}
     if(c>0.75)why="Tvoří se tu kolona. Pomůže pruh navíc, objížďka nebo úprava křižovatky na konci úseku.";
-    if(!e.gateEdge){for(const k of ROAD_KINDS)if(k!==e.kind&&!(e.ring&&(k==="hwy"||k==="ramp")))A(RK[k].name,"kind:"+k,false,e.ring?"Celý kruh změnit na":"Změnit na");
+    if(!e.gateEdge){for(const k of ROAD_KINDS)if(k!==e.kind)A(RK[k].name,"kind:"+k,false,e.ring?"Celý kruh změnit na":"Změnit na");
       if(one){A("Přidat pruh","lane:1",false,"Pruhy");A("Ubrat pruh","lane:-1",false,"Pruhy")}
       else{A("+ oba směry","lane:1",false,"Pruhy");A("− oba směry","lane:-1",false,"Pruhy");A("+ směr "+c0,"lane:1:0",false,"Pruhy");A("− směr "+c0,"lane:-1:0",false,"Pruhy");A("+ směr "+c1,"lane:1:1",false,"Pruhy");A("− směr "+c1,"lane:-1:1",false,"Pruhy")}
-      if(!e.ring)A(one?"Změnit směr / obousměrně":"Jednosměrka","ow",false,"Pruhy")}
+      if(!e.ring&&one)A("Otočit směr","ow",false,"Pruhy")}
     if(!e.gateEdge)A("Zbourat úsek","erase",false,"Úsek")}
   else if(t.type==="node"&&S.nodes[t.id]&&S.nodes[t.id].keep&&S.nodes[t.id].edges.length===2){title="Rozdělení úseku";sub="úseky se samy nespojí, každý jde přestavět zvlášť";A("Spojit úseky","unsplit",false,"Úsek")}
   else if(t.type==="node"){const n=S.nodes[t.id];if(!n||n.dead)return"";
@@ -97,7 +105,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
     A("Zbourat "+fmt(demolishCost(b))+" Kč","demolish",false,"Budova")}
   else if(t.type==="cell"){const i=t.c,k=S.terrain[i];title=["Louka","Voda","Les","Skály","Ložisko železné rudy"][k];if(S.zone[i])sub="stavební uzávěra";
     for(const kk of ["street","road","blvd","hwy"])rows.push([RK[kk].name,fmt(roadCostPerTile(kk,RK[kk].lanes,0)+(k===WATER?(kk==="hwy"?20:8):k!==GRASS?3:0))+" Kč/pole"]);
-    const [tw,d]=nearestTown(S,tx(i)+0.5,ty(i)+0.5);if(tw)rows.push(["Nejbližší obec",tw.name+", "+Math.round(d)+" polí"]);
+    const [tw,d]=nearestTown(S,wxOf(i),wyOf(i));if(tw)rows.push(["Nejbližší obec",tw.name+", "+Math.round(d)+" polí"]);
     if(k===ROCK||k===ORE)why="Silnice sem z obce přivede "+(k===ROCK?"lom":"důl")+".";else if(k===FOREST)why="Silnice k lesu přivede těžbu dřeva.";
     A(S.zone[i]?"Zrušit uzávěru":"Stavební uzávěra","zone:"+(S.zone[i]?0:1),false,"Pole")}
   else return"";

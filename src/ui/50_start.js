@@ -1,5 +1,5 @@
 // Spuštění a hlavní smyčka.
-readColors();resize();fit();setTool("line");
+readColors();resize();fit();applySettings();setTool("build");
 new ResizeObserver(()=>resize()).observe(cv);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",readColors);
 new MutationObserver(readColors).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
