@@ -1,5 +1,5 @@
 # Křižovatky a semafory
-Stav: nápad
+Stav: → ve hře od verze 0.3 (docs/HRA.md kap. 4)
 Zapsáno: 13. 11. 2026
 
 ## Co a proč

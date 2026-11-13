@@ -26,3 +26,4 @@ nebo testů. Nezapracovávají se průběžně – jednou za čas se projdou naj
 | Soubor | Obsah | Stav |
 |---|---|---|
 | `2026-11-13_prototyp.md` | vznik prototypu 0.1 a 0.2, ladění růstu, parkovací domy, OneDrive | čeká |
+| `2026-11-13_verze-0-3.md` | verze 0.3: bugy parkoviště a skrytého okna, ladění tempa růstu a dopravy, nové vzory vykreslování | čeká |

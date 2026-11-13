@@ -30,7 +30,7 @@ Až je rozhodnuto ji dělat: popis se přenese do `docs/HRA.md`, rozhodnutí do
 | Nápad | Stav |
 |---|---|
 | [Ukládání rozehrané hry](ukladani_hry.md) | nápad |
-| [Křižovatky a semafory](krizovatky.md) | nápad |
+| [Křižovatky a semafory](krizovatky.md) | → ve hře od verze 0.3 |
 | [Typy obcí](typy_obci.md) | nápad |
 | [Železnice](zeleznice.md) | nápad |
 | [Terén s kopci](kopce.md) | nápad |

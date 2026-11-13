@@ -3,6 +3,24 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.3.0 – 13. 11. 2026
+
+- Hra přes celou obrazovku, panely plavou nad mapou (R15).
+- Mapa 128 × 80 polí, přibližování a posun myší, šipkami i dotykem (R14).
+- Panel Co řešit s radou a odkazem na místo, výběr s důvodem a tlačítky,
+  kronika s odkazy; zrušen seznam obcí (R16).
+- Dálnice do světa na okrajích mapy: tranzit, turisté, vývoz (R17).
+- Druhy silnic: ulička, silnice, dálnice; 1–3 pruhy v každém směru; mosty
+  i pro dálnice; jednosměrky (R18, R22).
+- Křižovatky: přednost zprava, hlavní silnice (i automaticky podle šířky),
+  semafor řízený frontami, kruhový objezd (R19).
+- Obce si stavějí uličky (R20).
+- Průmysl: těžba dřeva, lom, důl na železo, pila, ocelárna; nákladní auta,
+  stavební materiál pro obce (R21). Nové terény: skály a ruda.
+- Obchodní zóna jako větší obchodní centrum.
+- Ladění: menší počet cest na obyvatele, pomalejší růst, kratší cesty.
+- Oprava: víc aut najednou mohlo vjet na plné parkoviště.
+
 ## 0.2.0 – 13. 11. 2026
 
 - Domy vznikají jen u silnice, každá budova má vjezd (R5).

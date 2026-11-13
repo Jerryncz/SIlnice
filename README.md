@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.2.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.3.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -28,11 +28,16 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 
 | Akce | Ovládání |
 |---|---|
-| Stavět silnici | tah myší nebo prstem, klávesa `1` |
-| Rozšířit silnici | klávesa `2` |
-| Bourat silnice / budovy | klávesa `3` nebo pravé tlačítko myši |
-| Stavební uzávěra | klávesa `4` |
-| Prohlížet | klávesa `5` |
+| Silnice / Dálnice | tah myší nebo prstem, klávesy `1` / `2` |
+| Přidat pruh | klávesa `3`, tah přes silnici (Shift ubere) |
+| Jednosměrka | klávesa `4`, tah ve směru jízdy; klik na jednosměrku ji zruší |
+| Pravidlo křižovatky | klávesa `5`, klik na křižovatku přepíná |
+| Bourat silnice / budovy | klávesa `6` nebo pravé tlačítko myši |
+| Stavební uzávěra | klávesa `7` |
+| Ruka (posun, výběr) | klávesa `8` |
+| Přiblížení | kolečko myši, `+` / `-`, sevření prstů |
+| Posun mapy | prostřední tlačítko, Ruka, šipky, dva prsty |
+| Výběr / zrušení výběru | klik Rukou / `Esc` |
 | Pauza | mezerník |
 | Vytížení silnic | klávesa `V` |
 
@@ -51,6 +56,6 @@ Pravidla světa jsou podrobně v `docs/HRA.md`.
 
 | Co | Verze | Ověřeno |
 |---|---|---|
-| Google Chrome (headless, Linux) | aktuální k 13. 11. 2026 | vykreslení, bez chyb v konzoli |
+| Google Chrome (headless, Linux) | aktuální k 13. 11. 2026 | vykreslení 1440 × 900 a 390 × 800, světlý i tmavý režim, bez chyb v konzoli |
 | Node.js | 22 | `tests/test_simulace.js` |
 | Prohlížeč uživatele (Windows) | – | zatím neověřeno |

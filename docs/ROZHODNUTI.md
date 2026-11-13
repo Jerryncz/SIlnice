@@ -18,3 +18,13 @@ nepřepisuje, ale označí „nahrazeno R<číslo>“ a připíše se nové.
 | R10 | 13. 11. 2026 | Bourání budov je drahé (40–120 Kč za pole), uzávěra je zdarma. | Bourání má být rozhodnutí, ne běžný nástroj; uzávěra je plánování. | Bourání zdarma; uzávěra placená. |
 | R11 | 13. 11. 2026 | Repozitář (`.git`) neleží v OneDrive; v `OneDrive\GIT\Silnice` je jen hratelná kopie. | Synchronizace OneDrive poškozuje git (zkušenost z BIMPOLIS). | Pracovat přímo v OneDrive – zamítnuto. |
 | R12 | 13. 11. 2026 | Způsob práce převzat z BIMPOLIS: HRA.md jako základní dokument, nápady, poznatky, větev + pull request, slučování na „slouč“. | Přání uživatele mít profesionální repozitář s historií rozhodnutí. | – |
+| R13 | 13. 11. 2026 | Všechny změny verze 0.3 v jednom pull requestu. | Volba uživatele. | Tři fáze (rozhraní, silnice, svět) – doporučeno, zamítnuto. |
+| R14 | 13. 11. 2026 | Mapa 128 × 80 polí s přibližováním a posunem. | Volba uživatele; plynulé i na slabším počítači. | 192 × 120, 256 × 160. |
+| R15 | 13. 11. 2026 | Hra přes celou obrazovku, panely uvnitř hry. | Přání uživatele. | Panely kolem mapy (verze 0.2). |
+| R16 | 13. 11. 2026 | Zásada „každá informace vede k akci“: panel Co řešit s radou a odkazem na místo, výběr s důvodem a tlačítky. | Uživateli vadí panely plné čísel, se kterými nejde nic udělat. | Seznam obcí a statistik (verze 0.2) – zrušen. |
+| R17 | 13. 11. 2026 | Vnější svět: tři dálnice z okrajů mapy; tranzit, turisté i vývoz zboží. | Volba uživatele. | Jen tranzit; jen obchod. |
+| R18 | 13. 11. 2026 | Obsazenost silnice se počítá zvlášť pro každý směr jízdy; kapacita = počet pruhů, jednosměrka dvojnásobek. | Nutné pro pruhy a jednosměrky. | Obsazenost pole bez směru (verze 0.2) – nahrazeno. |
+| R19 | 13. 11. 2026 | Křižovatky se skutečným čekáním: přednost zprava, hlavní silnice, semafor podle front, kruhový objezd; pojistka proti zaseknutí (3,5 s). | Volba uživatele. | Jen zpomalení na křižovatce. |
+| R20 | 13. 11. 2026 | Obce si samy stavějí uličky, když nemají kam růst. | Přání uživatele; obec nezamrzne, když hráč nestaví. | Obec čeká na hráče. |
+| R21 | 13. 11. 2026 | Průmysl: těžba dřeva, lom, důl → pila, ocelárna; vzniká, když silnice přivede přístup k surovině a obec v dosahu; potřebuje pracovníky. | Přání uživatele; průmysl vzniká stejně organicky jako obce. | Hráč by průmysl stavěl sám – zamítnuto (R3). |
+| R22 | 13. 11. 2026 | Dálnice nemá vjezdy do budov; domy a služby u ní nevznikají. | Odpovídá skutečnosti, dálnice je pro rychlý průjezd. | – |

@@ -8,14 +8,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: mapa jako hlavní plocha, vpravo kronika a seznam obcí, pod tím pravidla světa. Styl: topografická mapa, modré dopravní značení jako akcent. */
+/* Layout: mapa přes celou obrazovku, ovládání a panely plavou nad ní. Styl: topografická mapa, modré dopravní značení jako akcent. */
 :root{
   --bg:#eceee7; --panel:#f8f9f5; --ink:#1c2420; --muted:#5a655d; --line:#d2d7cb;
   --accent:#1f5fae; --accent-ink:#ffffff;
   --good:#3d8a4e; --warn:#c7821a; --bad:#c03a2b;
   --land:#e2e8d6; --forest:#cddabd; --tree:#a6bd93; --water:#a6c6d8; --water-edge:#86aac0;
-  --road:#fdfcf8; --road-edge:#a3a998; --label:#1c2420; --halo:rgba(226,232,214,.9);
+  --rock:#d3d1c6; --rock-dot:#a19d90; --ore:#dccfc4; --ore-dot:#a8573f; --outside:#cfd5c4;
+  --road:#fdfcf8; --road-edge:#a3a998; --alley:#ece6d6; --hwy:#e9edf2; --hwy-edge:#6f7f93; --mark:#b8973c;
+  --label:#1c2420; --halo:rgba(226,232,214,.9);
   --lot:#c6c9c0; --lot-line:#f6f6f1; --canopy:#f4f1e6; --zone:#c03a2b; --sign:#1f5fae;
+  --hud:rgba(248,249,245,.93); --shadow:0 6px 24px rgba(28,36,32,.14);
   --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -26,8 +29,11 @@
     --accent:#5d9be4; --accent-ink:#0b1320;
     --good:#6dbd7b; --warn:#e2a43c; --bad:#ee6a5a;
     --land:#1b231e; --forest:#1e2a22; --tree:#2b3c30; --water:#14293b; --water-edge:#1f3c55;
-    --road:#858a7d; --road-edge:#0e1310; --label:#e6eae3; --halo:rgba(27,35,30,.9);
+    --rock:#2a2c28; --rock-dot:#4c4e48; --ore:#2c2622; --ore-dot:#8a4a37; --outside:#121714;
+    --road:#858a7d; --road-edge:#0e1310; --alley:#5e5a4f; --hwy:#7b8796; --hwy-edge:#0b1118; --mark:#c9c2a8;
+    --label:#e6eae3; --halo:rgba(27,35,30,.9);
     --lot:#3b403b; --lot-line:#727870; --canopy:#cfcab8; --zone:#ee6a5a; --sign:#3f7fd0;
+    --hud:rgba(25,30,27,.93); --shadow:0 6px 24px rgba(0,0,0,.45);
     color-scheme:dark;
   }
 }
@@ -36,150 +42,190 @@
   --accent:#5d9be4; --accent-ink:#0b1320;
   --good:#6dbd7b; --warn:#e2a43c; --bad:#ee6a5a;
   --land:#1b231e; --forest:#1e2a22; --tree:#2b3c30; --water:#14293b; --water-edge:#1f3c55;
-  --road:#858a7d; --road-edge:#0e1310; --label:#e6eae3; --halo:rgba(27,35,30,.9);
+  --rock:#2a2c28; --rock-dot:#4c4e48; --ore:#2c2622; --ore-dot:#8a4a37; --outside:#121714;
+  --road:#858a7d; --road-edge:#0e1310; --alley:#5e5a4f; --hwy:#7b8796; --hwy-edge:#0b1118; --mark:#c9c2a8;
+  --label:#e6eae3; --halo:rgba(27,35,30,.9);
   --lot:#3b403b; --lot-line:#727870; --canopy:#cfcab8; --zone:#ee6a5a; --sign:#3f7fd0;
+  --hud:rgba(25,30,27,.93); --shadow:0 6px 24px rgba(0,0,0,.45);
   color-scheme:dark;
 }
-html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
-.app{max-width:1260px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:16px}
-.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
-.brand{min-width:0}
-.brand h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4vw,42px);line-height:1;margin:0;letter-spacing:-.02em;text-wrap:balance}
-.brand p{margin:6px 0 0;color:var(--muted);max-width:56ch}
-.stats{display:flex;flex-wrap:wrap;gap:20px}
-.stat{display:flex;flex-direction:column;min-width:64px}
-.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-.stat b{font-family:var(--f-mono);font-weight:500;font-size:20px;font-variant-numeric:tabular-nums}
-.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.seg{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
-.seg button,.btn{font:500 14px var(--f-body);color:var(--ink);background:transparent;border:0;border-radius:7px;padding:7px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
-.seg button:hover,.btn:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}
-.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.seg button small{font-family:var(--f-mono);font-size:11px;opacity:.7}
-.btn{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+html,body{height:100%;margin:0;overflow:hidden}
+[hidden]{display:none!important}
+body{background:var(--outside);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+#game{position:fixed;inset:0;overflow:hidden}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+#map.pan{cursor:grab}
+.hud{position:absolute;z-index:2}
+.card{background:var(--hud);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.tl{top:calc(env(safe-area-inset-top,0px) + 12px);left:max(16px, env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;max-width:calc(100% - 32px)}
+.brand{padding:6px 12px;display:flex;align-items:center}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:18px;letter-spacing:-.01em;white-space:nowrap}
+.stats{display:flex;gap:14px;padding:6px 12px;align-items:center}
+.stat{display:flex;flex-direction:column;line-height:1.15}
+.stat span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.stat b{font-family:var(--f-mono);font-weight:500;font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat small{font-family:var(--f-mono);font-size:11px;color:var(--good)}
+.stat small.neg{color:var(--bad)}
+.seg{display:flex;gap:3px;padding:4px}
+button{font:500 13px var(--f-body);color:var(--ink);background:transparent;border:0;border-radius:8px;padding:6px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.spacer{flex:1}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
-@media (max-width:920px){.layout{grid-template-columns:minmax(0,1fr)}}
-.mapwrap{position:relative;min-width:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--land)}
-canvas{display:block;touch-action:none;cursor:crosshair;max-width:100%}
-.toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:6px 12px;border-radius:8px;font-weight:500;pointer-events:none;white-space:nowrap}
-.side{display:flex;flex-direction:column;gap:12px;min-width:0}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
-.card h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
-#info{min-height:92px}
-#info .title{font-family:var(--f-display);font-weight:600;font-size:17px}
-#info .rows{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin-top:4px}
-#info .rows span{color:var(--muted)}
-#info .rows b{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
-.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
-.legend i{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;color:#fff;font:500 10px var(--f-mono);font-style:normal;margin-right:4px;vertical-align:-3px}
-.legend i.sq{border-radius:3px}
-#towns{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
-#towns li{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:8px;align-items:center}
-#towns .sw{width:10px;height:10px;border-radius:2px}
-#towns .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#towns .pp{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
-.chip{font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;white-space:nowrap;border:1px solid currentColor}
-.chip.good{color:var(--good)} .chip.warn{color:var(--warn)} .chip.bad{color:var(--bad)} .chip.mute{color:var(--muted)}
-#log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow:auto}
-#log li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;font-size:13px}
-#log li span{font-family:var(--f-mono);color:var(--muted);font-size:11px;padding-top:2px;font-variant-numeric:tabular-nums}
-.rules h2{font-family:var(--f-display);font-weight:600;font-size:22px;margin:8px 0 10px}
-.rules .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 24px}
-.rules h3{font-size:14px;margin:0 0 2px;font-weight:600}
-.rules p{margin:0;color:var(--muted);max-width:60ch}
-.hint{color:var(--muted);font-size:13px;margin:0}
+button:disabled{opacity:.45;cursor:default}
+.tr{top:calc(env(safe-area-inset-top,0px) + 12px);right:max(16px, env(safe-area-inset-right,0px));display:flex;flex-direction:column;align-items:flex-end;gap:8px;width:300px;max-width:calc(100% - 32px)}
+.tr .seg{align-self:flex-end}
+details.card{width:100%}
+details.card summary{list-style:none;cursor:pointer;padding:9px 12px;display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translateY(-2px)}
+details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
+.count{font-family:var(--f-mono);background:var(--bad);color:#fff;border-radius:99px;padding:0 7px;font-size:11px;letter-spacing:0}
+.count.zero{background:var(--good)}
+#problems,#log{list-style:none;margin:0;padding:0 8px 8px;display:flex;flex-direction:column;gap:2px;max-height:min(42vh,360px);overflow:auto}
+#problems li button{width:100%;text-align:left;display:grid;grid-template-columns:8px minmax(0,1fr);gap:9px;align-items:start;padding:7px 6px}
+#problems .dot{width:8px;height:8px;border-radius:50%;margin-top:6px}
+#problems .t{font-weight:600;display:block}
+#problems .h{color:var(--muted);font-size:12px;display:block;font-weight:400}
+#problems .empty{padding:4px 6px 8px;color:var(--muted);font-size:13px}
+#log{max-height:min(26vh,220px)}
+#log li button{width:100%;text-align:left;display:grid;grid-template-columns:42px minmax(0,1fr);gap:6px;padding:4px 6px;font-weight:400;font-size:12.5px}
+#log li span:first-child{font-family:var(--f-mono);color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;padding-top:1px}
+.tools{bottom:calc(env(safe-area-inset-bottom,0px) + 12px);left:50%;transform:translateX(-50%);display:flex;gap:3px;padding:5px;max-width:calc(100% - 32px);overflow-x:auto}
+.tools button{flex:none;flex-direction:column;gap:1px;padding:6px 10px;min-width:62px}
+.tools button small{font-family:var(--f-mono);font-size:10px;opacity:.7;white-space:nowrap}
+.tools .sep{width:1px;background:var(--line);margin:4px 3px;flex:none}
+.sel{left:max(16px, env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 86px);width:320px;max-width:calc(100% - 32px);padding:11px 13px}
+.sel h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:16px;line-height:1.25;text-wrap:balance}
+.sel .sub{color:var(--muted);font-size:12px;margin-top:1px}
+.sel .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;margin-top:7px;font-size:13px}
+.sel .rows span{color:var(--muted)}
+.sel .rows b{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+.sel .why{margin:7px 0 0;font-size:13px;padding:6px 8px;border-radius:8px;background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.sel .why.ok{background:color-mix(in srgb,var(--good) 14%,transparent)}
+.sel .acts{display:flex;flex-wrap:wrap;gap:4px;margin-top:9px}
+.sel .acts button{border:1px solid var(--line);background:var(--panel);font-size:12.5px;padding:5px 9px}
+.sel .acts button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+.sel .pin{float:right;color:var(--muted);font-size:11px}
+.toast{left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:7px 13px;border-radius:9px;font-weight:500;pointer-events:none;white-space:nowrap;z-index:5;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
+.modal{position:absolute;inset:0;z-index:10;background:rgba(10,14,12,.45);display:grid;place-items:center;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+.modal .card{max-width:760px;width:100%;max-height:85vh;overflow:auto;padding:20px 22px;background:var(--panel)}
+.modal h2{font-family:var(--f-display);font-weight:800;font-size:24px;margin:0 0 4px}
+.modal .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 22px;margin-top:12px}
+.modal h3{font-size:14px;margin:0 0 2px}
+.modal p{margin:0;color:var(--muted);font-size:13px}
+.modal .keys{margin-top:14px;font-size:13px;color:var(--muted)}
+.modal .close{float:right;border:1px solid var(--line)}
+@media (max-width:760px){
+  .tr{width:auto;left:max(16px, env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 112px);align-items:stretch}
+  .tr .seg{align-self:flex-end}
+  .brand{display:none}
+  .sel{width:auto;right:max(16px, env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 82px);max-height:38vh;overflow:auto}
+  .tools{left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));transform:none;max-width:none}
+  #chron{display:none}
+}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
-
 </head>
 <body>
-<div class="app">
-  <header class="top">
-    <div class="brand">
-      <h1>Osady a cesty</h1>
-      <p>Stavíš jen silnice. Domy, pumpy, hospody, parkoviště i nové vesnice vznikají samy podle toho, kudy a kolik se jezdí.</p>
-    </div>
-    <div class="stats" aria-live="polite">
-      <div class="stat"><span>Pokladna</span><b id="sMoney">0</b></div>
+<div id="game">
+  <canvas id="map" aria-label="Mapa krajiny se silnicemi a obcemi"></canvas>
+
+  <div class="hud tl">
+    <div class="card brand"><b>Osady a cesty</b></div>
+    <div class="card stats" aria-live="polite">
+      <div class="stat"><span>Pokladna</span><b id="sMoney">0</b><small id="sIncome"></small></div>
       <div class="stat"><span>Obyvatel</span><b id="sPop">0</b></div>
-      <div class="stat"><span>Obcí</span><b id="sTowns">0</b></div>
-      <div class="stat"><span>Aut</span><b id="sCars">0</b></div>
       <div class="stat"><span>Den</span><b id="sDay">1</b></div>
     </div>
-  </header>
-
-  <div class="bar">
-    <div class="seg" role="group" aria-label="Nástroj">
-      <button id="tRoad" data-tool="road" aria-pressed="true">Silnice <small>10 Kč</small></button>
-      <button id="tUp" data-tool="upgrade" aria-pressed="false">Rozšířit <small>30 Kč</small></button>
-      <button id="tErase" data-tool="erase" aria-pressed="false">Bourat</button>
-      <button id="tZone" data-tool="zone" aria-pressed="false">Uzávěra</button>
-      <button id="tLook" data-tool="look" aria-pressed="false">Prohlížet</button>
+    <div class="card seg" role="group" aria-label="Rychlost">
+      <button data-speed="0" aria-pressed="false">Pauza</button>
+      <button data-speed="1" aria-pressed="true">1×</button>
+      <button data-speed="3" aria-pressed="false">3×</button>
+      <button data-speed="6" aria-pressed="false">6×</button>
     </div>
-    <div class="seg" role="group" aria-label="Rychlost">
-      <button id="sp0" data-speed="0" aria-pressed="false">Pauza</button>
-      <button id="sp1" data-speed="1" aria-pressed="true">1×</button>
-      <button id="sp3" data-speed="3" aria-pressed="false">3×</button>
-      <button id="sp6" data-speed="6" aria-pressed="false">6×</button>
-    </div>
-    <div class="seg" role="group" aria-label="Zobrazení">
-      <button id="ovl" aria-pressed="false">Vytížení silnic</button>
-    </div>
-    <span class="spacer"></span>
-    <button class="btn" id="newMap">Nová mapa</button>
   </div>
 
-  <main class="layout">
-    <div class="mapwrap" id="mapwrap">
-      <canvas id="map" aria-label="Mapa krajiny se silnicemi a obcemi"></canvas>
-      <div class="toast" id="toast" hidden></div>
+  <div class="hud tr">
+    <div class="card seg">
+      <button id="ovl" aria-pressed="false">Vytížení</button>
+      <button id="helpBtn">Pravidla</button>
+      <button id="newMap">Nová mapa</button>
     </div>
-    <aside class="side">
-      <section class="card" id="info"></section>
-      <section class="card">
-        <h2>Obce</h2>
-        <ol id="towns"></ol>
-      </section>
-      <section class="card">
-        <h2>Kronika</h2>
-        <ul id="log"></ul>
-      </section>
-    </aside>
-  </main>
+    <details class="card" id="probBox" open>
+      <summary>Co řešit <span class="count" id="probCount">0</span></summary>
+      <ol id="problems"></ol>
+    </details>
+    <details class="card" id="chron">
+      <summary>Kronika</summary>
+      <ul id="log"></ul>
+    </details>
+  </div>
 
-  <section class="rules">
-    <h2>Jak krajina žije</h2>
-    <div class="grid">
-      <div><h3>Bez silnice nic nevznikne</h3><p>Stavět se dá jen u silnice a každá budova má vlastní vjezd. Osada začíná jedním domkem u cesty.</p></div>
-      <div><h3>Domy mají tvar</h3><p>Kde je místo, vyroste dvojdomek nebo statek do L, Z či U. Ve středu větších obcí stojí bytovky s podzemní garáží.</p></div>
-      <div><h3>Auta vyjíždějí z domů</h3><p>Auto čeká ve vjezdu, dokud na silnici není místo. Když se dlouho nedostane ven, lidé cestu vzdají a obec přestane růst.</p></div>
-      <div><h3>Parkoviště mají kapacitu</h3><p>Hospody, obchody a nákupáky mají vlastní parkoviště. Když je plné, auto čeká na silnici a blokuje ji. Kde se to opakuje, vznikne parkovací dům.</p></div>
-      <div><h3>Pumpy u rušných silnic</h3><p>Pumpa má vlastní nájezd a auta na ni cestou zajíždějí natankovat, pak pokračují dál.</p></div>
-      <div><h3>Uzávěra a bourání</h3><p>Uzávěrou vyznačíš, kde se nesmí stavět. Bourání domů je drahé, ale uvolní místo pro silnici.</p></div>
+  <section class="hud card sel" id="sel" hidden></section>
+
+  <nav class="hud card tools" id="tools" aria-label="Nástroje">
+    <button data-tool="road" aria-pressed="true">Silnice<small>1 · 10 Kč</small></button>
+    <button data-tool="hwy" aria-pressed="false">Dálnice<small>2 · 40 Kč</small></button>
+    <button data-tool="lane" aria-pressed="false">Pruh<small>3 · 20 Kč</small></button>
+    <button data-tool="oneway" aria-pressed="false">Jednosměrka<small>4</small></button>
+    <button data-tool="junction" aria-pressed="false">Křižovatka<small>5</small></button>
+    <span class="sep"></span>
+    <button data-tool="erase" aria-pressed="false">Bourat<small>6</small></button>
+    <button data-tool="zone" aria-pressed="false">Uzávěra<small>7</small></button>
+    <button data-tool="hand" aria-pressed="false">Ruka<small>8</small></button>
+  </nav>
+
+  <div class="hud toast" id="toast" hidden></div>
+
+  <div class="modal" id="help" hidden>
+    <div class="card" role="dialog" aria-labelledby="helpTitle">
+      <button class="close" id="helpClose">Zavřít</button>
+      <h2 id="helpTitle">Jak krajina žije</h2>
+      <p>Stavíš jen silnice. Všechno ostatní vzniká samo podle toho, kudy a kolik se jezdí.</p>
+      <div class="grid">
+        <div><h3>Obce rostou podél cest</h3><p>Domy vznikají jen u silnice. Když obec nemá kam růst, postaví si sama uličku. Dosah na jiné obce a na svět zrychluje růst, zácpy ho brzdí.</p></div>
+        <div><h3>Vnější svět</h3><p>Dálnice na okrajích mapy vedou do měst. Po napojení přijedou turisté a tranzit a průmysl může vyvážet zboží.</p></div>
+        <div><h3>Pruhy a jednosměrky</h3><p>Každý pruh přidá místo pro auta v obou směrech. Jednosměrka pustí auta jen jedním směrem, ale po celé šířce.</p></div>
+        <div><h3>Křižovatky</h3><p>Bez úprav platí přednost zprava. Hlavní silnice má přednost, semafor střídá směry podle front, na kruhovém objezdu jede ten, kdo je v kruhu.</p></div>
+        <div><h3>Průmysl</h3><p>Silnice k lesu, k lomu nebo k ložisku rudy přivede těžbu. Dřevo jde na pilu, kámen a ruda do ocelárny, výrobky do obcí nebo ven. Potřebují pracovníky z obcí.</p></div>
+        <div><h3>Služby a parkování</h3><p>Pumpy u rušných silnic, hospody, obchody a nákupní centra s parkovištěm. Když parkoviště nestačí, vznikne parkovací dům.</p></div>
+      </div>
+      <p class="keys">Ovládání: levé tlačítko používá nástroj, kolečko přibližuje, prostřední tlačítko nebo Ruka posouvá mapu, pravé tlačítko bourá. Na dotyku dva prsty posouvají a přibližují. Klávesy 1–8 nástroje, šipky posun, mezerník pauza, V vytížení, Esc zruší výběr. Jednosměrka: táhni ve směru jízdy, klik na jednosměrku ji zruší. Křižovatka: klik přepíná pravidlo.</p>
     </div>
-    <p class="hint" style="margin-top:14px">Ovládání: táhni myší nebo prstem po mapě. Pravé tlačítko myši bourá. Klávesy 1–5 přepínají nástroje, mezerník pauzuje, V přepne vytížení silnic.</p>
-  </section>
+  </div>
 </div>
 
 <script id="sim">
-// ===================== SIMULACE =====================
-const W=48,H=32,N=W*H;
-const STEP=1/30, BASE_SPEED=2.0, TRIP_RATE=0.011, MAX_CARS=420;
-const NAMES=["Lhota","Újezd","Vranov","Habry","Dolany","Kostelec","Bystřice","Lipník","Hradiště","Ronov","Skalice","Lomnice","Březí","Doubrava","Sedlec","Chlum","Zahrádky","Jince","Kamenice","Libčany","Pňov","Sobotka","Třebíz","Vlkov","Žďár","Cerhenice","Olešnice","Podhradí"];
+"use strict";
+// ===================== SIMULACE (bez DOM, testuje se v Node.js) =====================
+const GAME_VERSION="0.3.0";
+const W=128,H=80,N=W*H;
+const STEP=1/30,BASE_SPEED=2.0,MAX_CARS=900,DAY=45;
+const DX=[1,-1,0,0],DY=[0,0,1,-1],RIGHT=[2,3,1,0];
+const ALLEY=1,ROAD=2,HWY=3;
+const KSPEED=[0,0.7,1,1.8];
+const GRASS=0,WATER=1,FOREST=2,ROCK=3,ORE=4;
+const NAMES=["Lhota","Újezd","Vranov","Habry","Dolany","Kostelec","Bystřice","Lipník","Hradiště","Ronov","Skalice","Lomnice","Březí","Doubrava","Sedlec","Chlum","Zahrádky","Jince","Kamenice","Libčany","Pňov","Sobotka","Třebíz","Vlkov","Žďár","Cerhenice","Olešnice","Podhradí","Mezihoří","Bukovina","Javorník","Radošov","Studénka","Klokočov","Hořice","Libuň"];
 const ROAD_NAMES=["Mýto","Rozcestí","Zájezd","Křižanov","Hostinec","Formanka"];
+const GATE_NAMES=["Praha","Brno","Plzeň","Ostrava","Liberec","Olomouc","Hradec Králové","Pardubice","Jihlava","České Budějovice"];
 const ROOFS=["#b4503a","#3d6a9e","#bf8a2a","#7a4a86","#2f8a80","#6f7d33","#a3612f","#4a5aa8","#9c3f5e","#3a7a4a","#8a6d3b","#5b7f9e"];
-// role dlaždice budovy
-const R_HOUSE=1,R_FLAT=2,R_BLD=3,R_LOT=4,R_FORE=5,R_GAR=6;
-const ROLE_OF={h:R_HOUSE,b:R_BLD,p:R_LOT,f:R_FORE,g:R_GAR};
+const R_HOUSE=1,R_FLAT=2,R_BLD=3,R_LOT=4,R_FORE=5,R_GAR=6,R_YARD=7;
+const ROLE_OF={h:R_HOUSE,b:R_BLD,p:R_LOT,f:R_FORE,g:R_GAR,y:R_YARD};
+const GOODS={
+  wood:{name:"dřevo",pay:4,color:"#8a6a3a"},stone:{name:"kámen",pay:4,color:"#9a9a92"},ore:{name:"železná ruda",pay:5,color:"#9a4f3a"},
+  lumber:{name:"řezivo",pay:9,color:"#c9a26a"},steel:{name:"ocel",pay:22,color:"#5d6f86"}};
 const KIND={
   gas:{name:"Pumpa",letter:"B",color:"#d0841c",slots:2,dwell:1.4,pay:3,demolish:120},
   pub:{name:"Hospoda",letter:"H",color:"#8a5a2b",slots:4,dwell:14,pay:4,pull:6,demolish:120},
-  shop:{name:"Obchod",letter:"O",color:"#2f7f6f",slots:4,dwell:5,pay:4,pull:6,demolish:120},
-  mall:{name:"Nákupní centrum",letter:"N",color:"#8a3f8f",slots:4,dwell:7,pay:9,pull:20,demolish:120},
-  park:{name:"Parkovací dům",letter:"P",color:"#2b5fa8",cap:20,dwell:8,pay:2,demolish:120}
+  shop:{name:"Obchod",letter:"O",color:"#2f7f6f",slots:4,dwell:6,pay:4,pull:6,demolish:120},
+  mall:{name:"Nákupní centrum",letter:"N",color:"#8a3f8f",slots:4,dwell:8,pay:9,pull:20,demolish:150},
+  hyper:{name:"Obchodní zóna",letter:"Z",color:"#6a3fa0",slots:4,dwell:10,pay:12,pull:40,demolish:150},
+  park:{name:"Parkovací dům",letter:"P",color:"#2b5fa8",cap:20,dwell:8,pay:2,demolish:120},
+  logging:{name:"Těžba dřeva",letter:"D",color:"#55702f",slots:3,dwell:25,pay:0,workers:4,out:"wood",res:FOREST,demolish:150,industry:true},
+  quarry:{name:"Lom",letter:"K",color:"#77736a",slots:3,dwell:25,pay:0,workers:4,out:"stone",res:ROCK,demolish:150,industry:true},
+  mine:{name:"Důl na železo",letter:"Ž",color:"#8a4b3a",slots:3,dwell:25,pay:0,workers:5,out:"ore",res:ORE,demolish:200,industry:true},
+  sawmill:{name:"Pila",letter:"Pi",color:"#a0763a",slots:4,dwell:25,pay:0,workers:6,out:"lumber",need:{wood:1},rate:0.08,demolish:200,industry:true},
+  steel:{name:"Ocelárna",letter:"Oc",color:"#4d5d73",slots:4,dwell:25,pay:0,workers:10,out:"steel",need:{ore:1,stone:1},rate:0.05,demolish:300,industry:true}
 };
 const HOUSE_SHAPES=[
   {name:"Domek",w:6,cells:[[0,0]]},
@@ -195,83 +241,116 @@ const FLAT_SHAPES=[
   {name:"Panelový dům",w:2,cells:[[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]]},
   {name:"Bytový blok",w:1.5,cells:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]]}
 ];
+const row=(v,n,r)=>Array.from({length:n},(_,u)=>[u,v,r]);
 const SVC_SHAPES={
   pub:[[[0,0,"p"],[1,0,"p"],[0,1,"b"],[1,1,"b"]],[[0,0,"p"],[0,1,"b"]]],
   shop:[[[0,0,"p"],[1,0,"p"],[0,1,"b"],[1,1,"b"]],[[0,0,"p"],[0,1,"b"],[1,1,"b"]]],
-  mall:[[[0,0,"p"],[1,0,"p"],[2,0,"p"],[0,1,"p"],[1,1,"p"],[2,1,"p"],[0,2,"b"],[1,2,"b"],[2,2,"b"]],[[0,0,"p"],[1,0,"p"],[0,1,"p"],[1,1,"p"],[0,2,"b"],[1,2,"b"]]],
+  mall:[[...row(0,3,"p"),...row(1,3,"p"),...row(2,3,"b")],[...row(0,2,"p"),...row(1,2,"p"),...row(2,2,"b")]],
+  hyper:[[...row(0,4,"p"),...row(1,4,"p"),...row(2,4,"b"),...row(3,4,"b")],[...row(0,3,"p"),...row(1,3,"p"),...row(2,3,"b"),...row(3,3,"b")]],
   gas:[[[0,0,"f"],[1,0,"f"],[0,1,"b"],[1,1,"b"]],[[0,0,"f"],[1,0,"f"],[0,1,"b"]]],
-  park:[[[0,0,"g"],[1,0,"g"],[0,1,"g"],[1,1,"g"]],[[0,0,"g"],[1,0,"g"],[2,0,"g"]]]
+  park:[[[0,0,"g"],[1,0,"g"],[0,1,"g"],[1,1,"g"]],[[0,0,"g"],[1,0,"g"],[2,0,"g"]]],
+  logging:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"y"]],[[0,0,"y"],[0,1,"b"]]],
+  quarry:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]],[[0,0,"y"],[0,1,"b"]]],
+  mine:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]],[[0,0,"y"],[0,1,"b"]]],
+  sawmill:[[...row(0,3,"y"),[0,1,"b"],[1,1,"b"],[2,1,"y"]],[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]]],
+  steel:[[...row(0,3,"y"),...row(1,3,"b"),...row(2,3,"b")],[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]]]
 };
 const housePop=n=>[0,4,6,8,9,10,11][n]||11;
 const NB=new Int32Array(N*4);
-(function(){const DX=[1,-1,0,0],DY=[0,0,1,-1];for(let i=0;i<N;i++){const x=i%W,y=(i/W)|0;for(let d=0;d<4;d++){const nx=x+DX[d],ny=y+DY[d];NB[i*4+d]=(nx<0||ny<0||nx>=W||ny>=H)?-1:ny*W+nx}}})();
+(function(){for(let i=0;i<N;i++){const x=i%W,y=(i/W)|0;for(let d=0;d<4;d++){const nx=x+DX[d],ny=y+DY[d];NB[i*4+d]=(nx<0||ny<0||nx>=W||ny>=H)?-1:ny*W+nx}}})();
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const tx=i=>i%W, ty=i=>(i/W)|0;
 const distT=(a,b)=>Math.hypot(tx(a)-tx(b),ty(a)-ty(b));
+const dirOf=(a,b)=>b===a+1?0:b===a-1?1:b===a+W?2:3;
 const isHome=b=>b&&(b.type==="house"||b.type==="flat");
+const isLotRole=r=>r===R_LOT||r===R_FORE||r===R_YARD;
 
-class Heap{constructor(){this.k=[];this.p=[]}get size(){return this.k.length}
+class Heap{constructor(){this.k=[];this.p=[]}get size(){return this.k.length}clear(){this.k.length=0;this.p.length=0}
   push(k,p){const K=this.k,P=this.p;let i=K.length;K.push(k);P.push(p);while(i>0){const j=(i-1)>>1;if(P[j]<=p)break;K[i]=K[j];P[i]=P[j];i=j}K[i]=k;P[i]=p}
   pop(){const K=this.k,P=this.p;const top=K[0];const lk=K.pop(),lp=P.pop();const n=K.length;if(n){let i=0;for(;;){const l=2*i+1;if(l>=n)break;const r=l+1;const m=(r<n&&P[r]<P[l])?r:l;if(P[m]>=lp)break;K[i]=K[m];P[i]=P[m];i=m}K[i]=lk;P[i]=lp}return top}}
+const PF={g:new Float32Array(N),prev:new Int32Array(N),seen:new Uint32Array(N),closed:new Uint32Array(N),gen:0,heap:new Heap()};
 
 function valueNoise(R,cell){const gw=Math.ceil(W/cell)+2,gh=Math.ceil(H/cell)+2;const g=new Float32Array(gw*gh);for(let i=0;i<g.length;i++)g[i]=R();
   return (x,y)=>{const fx=x/cell,fy=y/cell,x0=fx|0,y0=fy|0,a1=fx-x0,b1=fy-y0,sx=a1*a1*(3-2*a1),sy=b1*b1*(3-2*b1);const a=g[y0*gw+x0],b=g[y0*gw+x0+1],c=g[(y0+1)*gw+x0],d=g[(y0+1)*gw+x0+1];return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy}}
 
 function createSim(seed){
   const R=mulberry32(seed);
-  const S={R,seed,terrain:new Uint8Array(N),road:new Uint8Array(N),zone:new Uint8Array(N),role:new Uint8Array(N),bld:new Array(N).fill(null),comp:new Int32Array(N).fill(-1),
-    flow:new Float32Array(N),passes:new Uint16Array(N),occ:new Uint16Array(N),cong:new Float32Array(N),
-    towns:[],buildings:[],cars:[],money:500,time:0,trips:0,cancelled:0,turnedAway:0,log:[],terrainDirty:true,compDirty:true,
-    usedNames:new Set(),secAcc:0,svcTick:0,homesteadAcc:0,nextId:1,lastJamAny:-99};
-  const f1=valueNoise(R,6),f2=valueNoise(R,3),l1=valueNoise(R,7);
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;const n=f1(x,y)*0.7+f2(x,y)*0.3;if(n>0.63)S.terrain[i]=2;if(l1(x,y)<0.15)S.terrain[i]=1}
-  let rx=Math.floor(W*(0.3+R()*0.4));
-  for(let y=0;y<H;y++){S.terrain[y*W+rx]=1;if(R()<0.35&&rx+1<W)S.terrain[y*W+rx+1]=1;const r=R();if(r<0.28&&rx>4)rx--;else if(r>0.72&&rx<W-5)rx++;S.terrain[y*W+rx]=1}
-  // osady: každá má domek u krátké cesty
-  for(let k=0;k<7;k++)seedSettlement(S);
+  const S={R,seed,version:GAME_VERSION,terrain:new Uint8Array(N),road:new Uint8Array(N),lanes:new Uint8Array(N),oneway:new Uint8Array(N),
+    ctlMan:new Uint8Array(N),ctlEff:new Uint8Array(N),mainMask:new Uint8Array(N),deg:new Uint8Array(N),gate:new Int16Array(N).fill(-1),
+    zone:new Uint8Array(N),role:new Uint8Array(N),bld:new Array(N).fill(null),comp:new Int32Array(N).fill(-1),
+    flow:new Float32Array(N),passes:new Uint16Array(N),occ:new Uint16Array(N*4),cong:new Float32Array(N*4),app:new Uint32Array(N*4),stepId:1,
+    towns:[],buildings:[],cars:[],gates:[],lights:new Map(),regrow:[],problems:[],log:[],dirty:[],
+    money:1500,time:0,trips:0,transits:0,exported:0,cancelled:0,turnedAway:0,earned:0,income:0,
+    terrainDirty:true,compDirty:true,usedNames:new Set(),secAcc:0,svcTick:0,homesteadAcc:0,congTick:0,nextId:1,lastJamAny:-99,carId:0};
+  genTerrain(S);
+  for(let k=0;k<3;k++)makeGate(S,k);
+  for(let k=0;k<10;k++)seedSettlement(S);
   computeComponents(S);
   let best=null,bd=1e9;for(let a=0;a<S.towns.length;a++)for(let b=a+1;b<S.towns.length;b++){const d=Math.hypot(S.towns[a].cx-S.towns[b].cx,S.towns[a].cy-S.towns[b].cy);if(d<bd){bd=d;best=[S.towns[a],S.towns[b]]}}
-  if(best){const [A,B]=best;const p=gridPath(S,A.homes[0].access,B.homes[0].access);if(p)for(const i of p){S.road[i]=Math.max(1,S.road[i]);if(S.terrain[i]===2){S.terrain[i]=0}}
+  if(best){const [A,B]=best;const p=gridPath(S,A.homes[0].access,B.homes[0].access);if(p)for(const i of p)if(!S.road[i]){S.road[i]=ROAD;S.lanes[i]=1;if(S.terrain[i]===FOREST)S.terrain[i]=GRASS}
     computeComponents(S);for(let k=0;k<5;k++){growTown(S,A,true);growTown(S,B,true);computeComponents(S)}}
-  S.log=[];addLog(S,"Krajina má "+S.towns.length+" osad. Spoj je silnicemi a sleduj, co se stane.");
-  if(best)addLog(S,"Stará cesta spojuje obce "+best[0].name+" a "+best[1].name+".");
+  S.log=[];addLog(S,"Krajina má "+S.towns.length+" osad a "+S.gates.length+" dálnice do světa. Spoj je silnicemi.",-1);
+  if(best)addLog(S,"Stará cesta spojuje obce "+best[0].name+" a "+best[1].name+".",best[0].homes[0].front);
   for(let k=0;k<600;k++)step(S,STEP);
-  S.money=500;S.trips=0;S.cancelled=0;S.turnedAway=0;
+  S.money=1500;S.trips=0;S.cancelled=0;S.turnedAway=0;S.earned=0;S.income=0;
   return S;
 }
-function freeForBuild(S,j){return j>=0&&!S.road[j]&&!S.bld[j]&&S.terrain[j]!==1&&!S.zone[j]}
+function genTerrain(S){const R=S.R;
+  const f1=valueNoise(R,11),f2=valueNoise(R,4),l1=valueNoise(R,13);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;const n=f1(x,y)*0.72+f2(x,y)*0.28;if(n>0.62)S.terrain[i]=FOREST;if(l1(x,y)<0.13)S.terrain[i]=WATER}
+  const rivers=1+(R()<0.6?1:0);
+  for(let r=0;r<rivers;r++){let rx=Math.floor(W*(0.2+R()*0.6));for(let y=0;y<H;y++){S.terrain[y*W+rx]=WATER;if(R()<0.4&&rx+1<W)S.terrain[y*W+rx+1]=WATER;const q=R();if(q<0.27&&rx>6)rx--;else if(q>0.73&&rx<W-7)rx++;S.terrain[y*W+rx]=WATER}}
+  const blob=(t,count)=>{for(let k=0;k<count;k++){let cx,cy,tries=0;do{cx=6+Math.floor(R()*(W-12));cy=6+Math.floor(R()*(H-12));tries++}while(S.terrain[cy*W+cx]===WATER&&tries<50);
+    const rad=1.6+R()*1.4;for(let y=Math.floor(cy-rad);y<=cy+rad;y++)for(let x=Math.floor(cx-rad);x<=cx+rad;x++){if(x<0||y<0||x>=W||y>=H)continue;const i=y*W+x;if(S.terrain[i]===WATER)continue;if(Math.hypot(x-cx,y-cy)<=rad&&R()<0.85)S.terrain[i]=t}}};
+  blob(ROCK,6);blob(ORE,4)}
+function makeGate(S,k){
+  const edges=[0,1,2,3].sort(()=>S.R()-0.5);
+  for(const e of edges){if(S.gates.some(g=>g.edge===e))continue;
+    for(let tries=0;tries<40;tries++){
+      const along=e<2?8+Math.floor(S.R()*(H-16)):10+Math.floor(S.R()*(W-20));
+      const x0=e===0?0:e===1?W-1:along,y0=e<2?along:e===2?0:H-1;const inward=e===0?0:e===1?1:e===2?2:3;
+      const tiles=[];let x=x0,y=y0,ok=true;for(let s=0;s<7;s++){const i=y*W+x;if(S.terrain[i]===WATER||S.road[i]){ok=false;break}tiles.push(i);x+=DX[inward];y+=DY[inward]}
+      if(!ok)continue;
+      for(const i of tiles){S.road[i]=HWY;S.lanes[i]=2;if(S.terrain[i]!==GRASS)S.terrain[i]=GRASS}
+      const free=GATE_NAMES.filter(n=>!S.gates.some(g=>g.name===n));const name=free[Math.floor(S.R()*free.length)];
+      const g={id:S.gates.length,isGate:true,name,edge:e,tile:tiles[0],front:tiles[0],access:tiles[0],inward,color:"#5b6470",delay:1,cancel:0,trAcc:0,tuAcc:0,exported:0,visitors:0,dead:false};
+      S.gate[tiles[0]]=g.id;S.gates.push(g);return g}}
+  return null}
+function freeForBuild(S,j){return j>=0&&!S.road[j]&&!S.bld[j]&&S.terrain[j]!==WATER&&!S.zone[j]}
 function seedSettlement(S){
-  for(let tries=0;tries<400;tries++){const x=4+Math.floor(S.R()*(W-8)),y=4+Math.floor(S.R()*(H-8));const i=y*W+x;
-    if(!freeForBuild(S,i))continue;if(S.towns.some(t=>Math.hypot(t.cx-x,t.cy-y)<9))continue;
-    const d=Math.floor(S.R()*4);const r0=NB[i*4+d];if(r0<0||S.terrain[r0]===1||S.bld[r0])continue;
-    const pd=d<2?[2,3]:[0,1];const stub=[r0];for(const q of pd){let c=r0;for(let s=0;s<2;s++){c=NB[c*4+q];if(c<0||S.terrain[c]===1||S.bld[c])break;stub.push(c)}}
-    for(const c of stub){S.road[c]=1;if(S.terrain[c]===2)S.terrain[c]=0}
+  for(let tries=0;tries<500;tries++){const x=5+Math.floor(S.R()*(W-10)),y=5+Math.floor(S.R()*(H-10));const i=y*W+x;
+    if(!freeForBuild(S,i)||S.terrain[i]!==GRASS&&S.terrain[i]!==FOREST)continue;if(S.towns.some(t=>Math.hypot(t.cx-x,t.cy-y)<14))continue;
+    const d=Math.floor(S.R()*4);const r0=NB[i*4+d];if(r0<0||S.terrain[r0]===WATER||S.bld[r0]||S.road[r0])continue;
+    const pd=d<2?[2,3]:[0,1];const stub=[r0];for(const q of pd){let c=r0;for(let s=0;s<2;s++){c=NB[c*4+q];if(c<0||S.terrain[c]===WATER||S.bld[c]||S.road[c])break;stub.push(c)}}
+    for(const c of stub){S.road[c]=ALLEY;S.lanes[c]=1;if(S.terrain[c]!==GRASS)S.terrain[c]=GRASS}
     foundTown(S,i,r0,false);return true}
   return false}
 function gridPath(S,a,b){
   const g=new Float32Array(N).fill(Infinity),prev=new Int32Array(N).fill(-1),closed=new Uint8Array(N);const hp=new Heap();g[a]=0;hp.push(a,0);
   while(hp.size){const i=hp.pop();if(closed[i])continue;closed[i]=1;if(i===b)break;
-    for(let d=0;d<4;d++){const j=NB[i*4+d];if(j<0||closed[j]||S.bld[j])continue;const c=S.road[j]?0.5:S.terrain[j]===1?5:S.terrain[j]===2?1.6:1;
+    for(let d=0;d<4;d++){const j=NB[i*4+d];if(j<0||closed[j]||S.bld[j])continue;const c=S.road[j]?0.5:S.terrain[j]===WATER?5:S.terrain[j]===GRASS?1:1.6;
       const ng=g[i]+c;if(ng<g[j]){g[j]=ng;prev[j]=i;hp.push(j,ng+(Math.abs(tx(j)-tx(b))+Math.abs(ty(j)-ty(b)))*0.5)}}}
-  if(!closed[b])return null;const p=[];for(let i=b;i>=0;i=prev[i]){p.push(i);if(i===a)break}return p}
+  if(!closed[b])return null;const p=[];for(let i=b;i>=0;i=prev[i]){p.push(i);if(i===a)break}return p.reverse()}
 function nextName(S,roadBorn){
   if(roadBorn){for(const n of ROAD_NAMES)if(!S.usedNames.has(n)){S.usedNames.add(n);return n}}
   const free=NAMES.filter(n=>!S.usedNames.has(n));const n=free.length?free[Math.floor(S.R()*free.length)]:"Nová Ves "+S.towns.length;S.usedNames.add(n);return n}
 function foundTown(S,front,access,roadBorn){
-  const t={id:S.nextId++,name:nextName(S,roadBorn),cx:tx(front),cy:ty(front),color:ROOFS[S.towns.length%ROOFS.length],homes:[],g:0,tripAcc:0,
-    delay:1,cancel:0,rate:0,reach:0,jam:0,pop:0,tileCount:0,accessList:[],comps:new Set(),born:S.time,milestone:0,lastJamLog:-99,flats:0};
+  const t={id:S.nextId++,isTown:true,name:nextName(S,roadBorn),cx:tx(front),cy:ty(front),color:ROOFS[S.towns.length%ROOFS.length],homes:[],g:0,tripAcc:0,
+    delay:1,cancel:0,rate:0,reach:0,jam:0,pop:0,tileCount:0,accessList:[],comps:new Set(),born:S.time,milestone:0,lastJamLog:-99,flats:0,
+    material:0,matInc:0,noSpace:0,exitFail:0,exitTile:-1,alleys:0,world:false};
   S.towns.push(t);createBuilding(S,"house",t,[[front,"h"]],front,access,HOUSE_SHAPES[0].name);S.compDirty=true;return t}
 function createBuilding(S,type,town,tiles,front,access,name){
-  const b={id:S.nextId++,type,town,name,tiles:tiles.map(q=>q[0]),front,access,pop:0,cap:0,parked:[],incoming:0,visits:0,overflow:0,overflowSeen:0,born:S.time};
+  const b={id:S.nextId++,type,town,name,tiles:tiles.map(q=>q[0]),front,access,pop:0,cap:0,parked:[],incoming:0,visits:0,overflow:0,overflowSeen:0,ofRecent:0,born:S.time,dead:false};
   let lots=0;
-  for(const [j,r] of tiles){if(S.terrain[j]===2){S.terrain[j]=0;S.terrainDirty=true}S.bld[j]=b;
-    S.role[j]=type==="house"?R_HOUSE:type==="flat"?R_FLAT:ROLE_OF[r];if(r==="p"||r==="f")lots++}
-  // vjezd vždy přes první dlaždici u silnice
+  for(const [j,r] of tiles){if(S.terrain[j]===FOREST){S.terrain[j]=GRASS;S.dirty.push(j)}S.bld[j]=b;
+    S.role[j]=type==="house"?R_HOUSE:type==="flat"?R_FLAT:ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
+  const K=KIND[type];
   if(type==="house")b.pop=housePop(b.tiles.length);
   else if(type==="flat")b.pop=10*b.tiles.length;
-  else if(type==="park")b.cap=KIND.park.cap;
-  else b.cap=lots*KIND[type].slots;
+  else if(type==="park")b.cap=K.cap;
+  else b.cap=lots*K.slots;
+  if(K&&K.industry){b.stock={};b.inc={};b.out=0;b.prod=0;b.trucks=0;b.work=0;b.short=null;b.res=null;b.resT=-99;b.made=0;b.color=K.color;b.delay=1;b.cancel=0}
   S.buildings.push(b);if(isHome(b)&&town){town.homes.push(b);town.pop+=b.pop;town.tileCount+=b.tiles.length}
   return b}
 function fitShape(S,f,r,cells,town){
@@ -287,35 +366,62 @@ function fitShape(S,f,r,cells,town){
   return null}
 const townRadius=t=>2.5+Math.sqrt(t.tileCount)*1.05;
 function nearestTown(S,x,y){let b=null,bd=1e9;for(const t of S.towns){const d=Math.hypot(t.cx-x,t.cy-y);if(d<bd){bd=d;b=t}}return [b,bd]}
-const speedOf=(S,i)=>S.road[i]===2?1.45:1;
-const capOf=(S,i)=>S.road[i]===2?4:2;
-const tileCost=(S,i)=>(1/speedOf(S,i))*(1+3*S.cong[i]*S.cong[i]);
+const capDir=(S,i)=>S.lanes[i]*(S.oneway[i]?2:1);
+function jTotal(S,i){const b=i*4;return S.occ[b]+S.occ[b+1]+S.occ[b+2]+S.occ[b+3]}
+function jcap(S,i){if(S.ctlEff[i]===3)return 3;let m=1;for(let d=0;d<4;d++){const j=NB[i*4+d];if(j>=0&&S.road[j])m=Math.max(m,S.lanes[j])}return m+1}
+function owOK(S,i,d){const o=S.oneway[i];return !o||((o-1)>>1)!==(d>>1)||(o-1)===d}
+function canStep(S,a,d){const b=NB[a*4+d];return b>=0&&S.road[b]>0&&owOK(S,a,d)&&owOK(S,b,d)}
+function junctionPenalty(S,j,d){if(S.deg[j]<3)return 0;const e=S.ctlEff[j];if(e===2)return 0.6;if(e===3)return 0.3;if(e===1)return (S.mainMask[j]>>(d^1)&1)?0.05:0.45;return 0.35}
+function tileCost(S,j,d){const c=S.cong[j*4+d];return (1/KSPEED[S.road[j]])*(1+3*c*c)+junctionPenalty(S,j,d)}
 function refreshAccess(S,b){
-  if(b.access>=0&&S.road[b.access]){for(let d=0;d<4;d++)if(NB[b.front*4+d]===b.access)return}
+  if(b.access>=0&&S.road[b.access]&&S.road[b.access]!==HWY){for(let d=0;d<4;d++)if(NB[b.front*4+d]===b.access)return}
   b.access=-1;
-  const order=[...b.tiles].sort((p,q)=>(S.role[q]===R_LOT||S.role[q]===R_FORE?1:0)-(S.role[p]===R_LOT||S.role[p]===R_FORE?1:0));
-  for(const j of order)for(let d=0;d<4;d++){const n=NB[j*4+d];if(n>=0&&S.road[n]){b.front=j;b.access=n;return}}}
+  const order=[...b.tiles].sort((p,q)=>(isLotRole(S.role[q])?1:0)-(isLotRole(S.role[p])?1:0));
+  for(const j of order)for(let d=0;d<4;d++){const n=NB[j*4+d];if(n>=0&&S.road[n]&&S.road[n]!==HWY){b.front=j;b.access=n;return}}}
 
 function computeComponents(S){S.comp.fill(-1);let id=0;const q=new Int32Array(N);
   for(let i=0;i<N;i++){if(!S.road[i]||S.comp[i]>=0)continue;let h=0,tl=0;q[tl++]=i;S.comp[i]=id;
     while(h<tl){const a=q[h++];for(let d=0;d<4;d++){const j=NB[a*4+d];if(j>=0&&S.road[j]&&S.comp[j]<0){S.comp[j]=id;q[tl++]=j}}}id++}
-  S.compDirty=false;updateTownStats(S)}
+  updateJunctions(S);S.compDirty=false;updateTownStats(S)}
+function updateJunctions(S){
+  for(let i=0;i<N;i++){if(!S.road[i]){S.deg[i]=0;S.ctlEff[i]=0;continue}
+    let d=0,arms=0;for(let k=0;k<4;k++){const j=NB[i*4+k];if(j>=0&&S.road[j]){d++;arms|=1<<k}}
+    S.deg[i]=d;
+    if(d<3){S.ctlEff[i]=0;S.lights.delete(i);continue}
+    const man=S.ctlMan[i];
+    if(man===4){S.ctlEff[i]=2;if(!S.lights.has(i))S.lights.set(i,{axis:0,t:0,amber:false})}else S.lights.delete(i);
+    if(man===5)S.ctlEff[i]=3;
+    else if(man===2){S.ctlEff[i]=1;S.mainMask[i]=3}
+    else if(man===3){S.ctlEff[i]=1;S.mainMask[i]=12}
+    else if(man===1)S.ctlEff[i]=0;
+    else if(man===0){let mx=-1,cnt=0,mask=0,lo=false;const rk=[];
+      for(let k=0;k<4;k++){const j=NB[i*4+k];if(j>=0&&S.road[j]){const r=S.road[j]*4+S.lanes[j];rk.push([k,r]);if(r>mx)mx=r}}
+      for(const [k,r] of rk){if(r===mx){cnt++;mask|=1<<k}else lo=true}
+      if(cnt===2&&lo){S.ctlEff[i]=1;S.mainMask[i]=mask}else S.ctlEff[i]=0}}}
 function updateTownStats(S){
   for(const b of S.buildings)refreshAccess(S,b);
   for(const t of S.towns){t.accessList=[];t.comps=new Set();let pop=0,tiles=0;
     for(const b of t.homes){pop+=b.pop;tiles+=b.tiles.length;if(b.access>=0){t.accessList.push(b);t.comps.add(S.comp[b.access])}}
-    t.pop=pop;t.tileCount=tiles}}
+    t.pop=pop;t.tileCount=tiles;t.world=S.gates.some(g=>t.comps.has(S.comp[g.tile]))}}
+function shares(a,b){for(const c of a)if(b.has(c))return true;return false}
 function calcRates(S){
   for(const t of S.towns){
-    if(!t.accessList.length){t.rate=0;t.reach=0;t.jam=0;continue}
-    let reach=0;for(const o of S.towns){if(o===t)continue;let share=false;for(const c of o.comps)if(t.comps.has(c)){share=true;break}
-      if(share)reach+=o.pop/(1+Math.hypot(o.cx-t.cx,o.cy-t.cy)/12)}
+    t.why=[];
+    if(!t.accessList.length){t.rate=0;t.reach=0;t.jam=0;t.why.push("nemá silnici");continue}
+    let reach=0;for(const o of S.towns){if(o===t||!shares(o.comps,t.comps))continue;reach+=o.pop/(1+Math.hypot(o.cx-t.cx,o.cy-t.cy)/12)}
+    for(const g of S.gates){if(!t.comps.has(S.comp[g.tile]))continue;reach+=150/(1+Math.hypot(tx(g.tile)-t.cx,ty(g.tile)-t.cy)/40)}
     const r=townRadius(t)+4;let svc=0;for(const s of S.buildings)if(!isHome(s)&&Math.hypot(tx(s.front)-t.cx,ty(s.front)-t.cy)<=r)svc++;
     let lf=0;for(const b of t.accessList)lf=Math.max(lf,S.flow[b.access]);
-    let rate=0.022+0.02*Math.log2(1+reach/10)+0.008*Math.min(svc,5)+0.008*Math.log2(1+lf/20);
-    const jam=clamp((t.delay-1.35)/1.2,0,1),cf=clamp(t.cancel/3,0,1);
-    rate*=(1-0.75*jam)*(1-0.5*cf);rate*=Math.max(0.1,1-t.pop/450);
-    t.rate=rate;t.reach=reach;t.jam=Math.max(jam,cf)}}
+    let rate=0.012+0.012*Math.log2(1+reach/15)+0.005*Math.min(svc,5)+0.005*Math.log2(1+lf/20);
+    const jam=clamp((t.delay-1.35)/1.2,0,1),cf=clamp(t.cancel/3,0,1),ef=clamp(t.exitFail/2,0,1);
+    rate*=(1-0.85*jam)*(1-0.6*cf)*(1-0.7*ef);rate*=Math.max(0.1,1-t.pop/450);
+    rate*=1+0.4*Math.min(1,t.material/3);
+    t.rate=rate;t.reach=reach;t.jam=Math.max(jam,cf,ef);
+    if(ef>0.3)t.why.push("auta nemůžou vyjet z domů");
+    if(jam>0.3)t.why.push("pomalé cesty kvůli zácpám");
+    if(t.noSpace>=3)t.why.push("nemá kam růst");
+    if(reach<6)t.why.push("málo spojení s okolím");
+    if(t.pop>=380)t.why.push("je skoro plná");}}
 
 function pickW(S,arr,wf){let tot=0;for(const a of arr)tot+=wf(a);let r=S.R()*tot;for(const a of arr){r-=wf(a);if(r<=0)return a}return arr[arr.length-1]}
 function growTown(S,t,force){
@@ -323,11 +429,11 @@ function growTown(S,t,force){
   if(t.homes.length>=10&&S.R()<0.12&&densify(S,t))return;
   const r=townRadius(t),R0=Math.ceil(r)+1;const cand=[];
   for(let y=t.cy-R0;y<=t.cy+R0;y++)for(let x=t.cx-R0;x<=t.cx+R0;x++){
-    if(x<0||y<0||x>=W||y>=H)continue;const i=y*W+x;if(!S.road[i])continue;
+    if(x<0||y<0||x>=W||y>=H)continue;const i=y*W+x;if(!S.road[i]||S.road[i]===HWY)continue;
     for(let d=0;d<4;d++){const f=NB[i*4+d];if(!freeForBuild(S,f))continue;const fd=Math.hypot(tx(f)-t.cx,ty(f)-t.cy);if(fd>r+0.5)continue;
       if(nearestTown(S,tx(f),ty(f))[0]!==t)continue;
       let adj=0;for(let k=0;k<4;k++){const n=NB[f*4+k];if(n>=0&&S.bld[n]&&S.bld[n].town===t)adj++}
-      cand.push({f,r:i,d:fd,w:(1+Math.min(S.flow[i],80)/25)*(1+adj*0.4)/(1+fd*0.5)*(S.terrain[f]===2?0.6:1)})}}
+      const tf=S.terrain[f];cand.push({f,r:i,d:fd,w:(1+Math.min(S.flow[i],80)/25)*(1+adj*0.4)/(1+fd*0.5)*(tf===GRASS?1:0.5)})}}
   for(let attempt=0;attempt<6&&cand.length;attempt++){
     const c=pickW(S,cand,q=>q.w);cand.splice(cand.indexOf(c),1);
     let shape;
@@ -337,361 +443,625 @@ function growTown(S,t,force){
     let tiles=fitShape(S,c.f,c.r,shape.cells,t);
     if(!tiles&&shape.cells.length>1){shape=HOUSE_SHAPES[0];tiles=fitShape(S,c.f,c.r,shape.cells,t)}
     if(!tiles)continue;
-    createBuilding(S,flat&&shape!==HOUSE_SHAPES[0]?"flat":"house",t,tiles,c.f,c.r,shape.name);
-    if(flat&&shape!==HOUSE_SHAPES[0]){t.flats++;if(t.flats===1)addLog(S,t.name+": první bytový dům s podzemní garáží")}
-    const m=[50,100,200,400].find(v=>t.pop>=v&&t.milestone<v);if(m){t.milestone=m;if(S.time>25)addLog(S,t.name+" má už "+m+" obyvatel")}
-    return}}
+    const isFlat=flat&&shape!==HOUSE_SHAPES[0];
+    createBuilding(S,isFlat?"flat":"house",t,tiles,c.f,c.r,shape.name);t.noSpace=0;t.material=Math.max(0,t.material-0.3);
+    if(isFlat){t.flats++;if(t.flats===1)addLog(S,t.name+": první bytový dům s podzemní garáží",c.f)}
+    const m=[50,100,200,400].find(v=>t.pop>=v&&t.milestone<v);if(m){t.milestone=m;if(S.time>25)addLog(S,t.name+" má už "+m+" obyvatel",c.f)}
+    return}
+  t.noSpace++;
+  if(!force&&t.pop>=8)buildAlley(S,t)}
+function buildAlley(S,t){
+  const r=townRadius(t)+2,R0=Math.ceil(r);const opts=[];
+  for(let y=t.cy-R0;y<=t.cy+R0;y++)for(let x=t.cx-R0;x<=t.cx+R0;x++){
+    if(x<0||y<0||x>=W||y>=H)continue;const i=y*W+x;if(!S.road[i]||S.road[i]===HWY)continue;
+    for(let d=0;d<4;d++){let c=i,len=0;const tiles=[];
+      while(len<4){const n=NB[c*4+d];if(!freeForBuild(S,n))break;const nx=tx(n),ny=ty(n);if(Math.hypot(nx-t.cx,ny-t.cy)>r+2||nearestTown(S,nx,ny)[0]!==t)break;
+        let side=false;for(const q of d<2?[2,3]:[0,1]){const s=NB[n*4+q];if(s>=0&&S.road[s])side=true}if(side)break;
+        tiles.push(n);c=n;len++}
+      if(len>=2)opts.push({tiles,w:1/(1+Math.hypot(x-t.cx,y-t.cy))*(len/2)})}}
+  if(!opts.length)return false;
+  const o=pickW(S,opts,q=>q.w);
+  for(const j of o.tiles){S.road[j]=ALLEY;S.lanes[j]=1;if(S.terrain[j]!==GRASS){S.terrain[j]=GRASS;S.dirty.push(j)}}
+  t.alleys++;t.noSpace=0;S.compDirty=true;
+  if(t.alleys===1)addLog(S,t.name+": obec si postavila uličku, aby měla kam růst",o.tiles[0]);
+  return true}
 function densify(S,t){const r=townRadius(t)*0.5;const c=t.homes.filter(h=>h.type==="house"&&h.tiles.length<=2&&Math.hypot(tx(h.front)-t.cx,ty(h.front)-t.cy)<=r&&h.access>=0);
   if(!c.length)return false;const h=c[Math.floor(S.R()*c.length)];h.type="flat";h.name="Bytový dům";const np=10*h.tiles.length;t.pop+=np-h.pop;h.pop=np;for(const j of h.tiles)S.role[j]=R_FLAT;t.flats++;
-  if(t.flats===1)addLog(S,t.name+": první bytový dům s podzemní garáží");return true}
+  if(t.flats===1)addLog(S,t.name+": první bytový dům s podzemní garáží",h.front);return true}
 
 function findPath(S,a,b){
-  const g=new Float32Array(N).fill(Infinity),prev=new Int32Array(N).fill(-1),closed=new Uint8Array(N);
-  const bx=tx(b),by=ty(b),h=i=>(Math.abs(tx(i)-bx)+Math.abs(ty(i)-by))*0.68;
-  const hp=new Heap();g[a]=0;hp.push(a,h(a));
-  while(hp.size){const i=hp.pop();if(closed[i])continue;closed[i]=1;if(i===b)break;
-    for(let d=0;d<4;d++){const j=NB[i*4+d];if(j<0||!S.road[j]||closed[j])continue;const ng=g[i]+tileCost(S,j);if(ng<g[j]){g[j]=ng;prev[j]=i;hp.push(j,ng+h(j))}}}
-  if(!closed[b])return null;const path=[];for(let i=b;i>=0;i=prev[i]){path.push(i);if(i===a)break}path.reverse();return {path,cost:g[b]}}
+  if(a<0||b<0||!S.road[a]||!S.road[b])return null;
+  const P=PF;P.gen++;const gen=P.gen,g=P.g,prev=P.prev,seen=P.seen,closed=P.closed,hp=P.heap;hp.clear();
+  const bx=tx(b),by=ty(b),h=i=>(Math.abs(tx(i)-bx)+Math.abs(ty(i)-by))*0.55;
+  g[a]=0;prev[a]=-1;seen[a]=gen;hp.push(a,h(a));
+  let found=false;
+  while(hp.size){const i=hp.pop();if(closed[i]===gen)continue;closed[i]=gen;if(i===b){found=true;break}
+    for(let d=0;d<4;d++){if(!canStep(S,i,d))continue;const j=NB[i*4+d];if(closed[j]===gen)continue;const ng=g[i]+tileCost(S,j,d);
+      if(seen[j]!==gen||ng<g[j]){seen[j]=gen;g[j]=ng;prev[j]=i;hp.push(j,ng+h(j))}}}
+  if(!found)return null;const path=[];for(let i=b;i>=0;i=prev[i]){path.push(i);if(i===a)break}path.reverse();return {path,cost:g[b]}}
+function buildPath(src,dst,road){const p=[];if(src.front!==src.access)p.push(src.front);for(const i of road)p.push(i);if(dst.front!==dst.access)p.push(dst.front);return p}
+function freeCost(S,road){let f=1;for(let i=1;i<road.length;i++)f+=1/KSPEED[S.road[road[i]]];return f}
 const lotFree=b=>b.cap-b.parked.length-b.incoming;
+function laneDirAt(S,c,k){const i=c.p[k];if(i===undefined||!S.road[i])return -1;const n=c.p[k+1],pv=c.p[k-1];
+  if(n!==undefined&&S.road[n]&&n!==i)return dirOf(i,n);if(pv!==undefined&&S.road[pv]&&pv!==i)return dirOf(pv,i);if(n!==undefined&&n!==i)return dirOf(i,n);return 0}
+function newCar(S,o){
+  const c=Object.assign({id:S.carId++,k:0,t:0,ld:-1,kind:"visit",stops:{},pend:new Set(),wait:0,state:"move",dwell:0,lot:null,final:false,start:S.time,ang:0,dead:false,truck:false,cargo:null,cargoTo:null},o);
+  if(S.road[c.p[0]]){const ld=laneDirAt(S,c,0);if(S.occ[c.p[0]*4+ld]>=capDir(S,c.p[0]))return null;c.ld=ld;S.occ[c.p[0]*4+ld]++;S.passes[c.p[0]]++}
+  S.cars.push(c);return c}
+function insertGasStop(S,path,road,offset){
+  if(road.length<=8||S.R()>=0.35)return null;
+  for(let j=2;j<road.length-2;j++){const a=road[j];
+    for(let d=0;d<4;d++){const n=NB[a*4+d];const b=n>=0?S.bld[n]:null;if(b&&b.type==="gas"&&b.access===a&&lotFree(b)>0){path.splice(j+offset+1,0,b.front,a);b.incoming++;return [j+offset+1,b]}}}
+  return null}
 
 function spawnTrip(S,t){
   if(S.cars.length>=MAX_CARS||!t.accessList.length)return;
   const home=pickW(S,t.accessList,b=>b.pop);const cid=S.comp[home.access];
   const opts=[];
-  for(const u of S.towns){if(u===t||!u.comps.has(cid))continue;const d=Math.hypot(u.cx-t.cx,u.cy-t.cy);opts.push({w:u.pop/Math.pow(d+6,1.1),u})}
-  for(const s of S.buildings){const k=KIND[s.type];if(!k||!k.pull||s.access<0||S.comp[s.access]!==cid)continue;const d=Math.hypot(tx(s.front)-t.cx,ty(s.front)-t.cy);if(s.type==="pub"&&d>14)continue;opts.push({w:k.pull/Math.pow(d+8,0.9),s})}
+  for(const u of S.towns){if(u===t||!u.comps.has(cid))continue;const d=Math.hypot(u.cx-t.cx,u.cy-t.cy);opts.push({w:u.pop/Math.pow(d+6,1.5),u})}
+  for(const s of S.buildings){const k=KIND[s.type];if(!k||s.access<0||S.comp[s.access]!==cid)continue;
+    const d=Math.hypot(tx(s.front)-t.cx,ty(s.front)-t.cy);
+    if(k.pull){if(s.type==="pub"&&d>14)continue;opts.push({w:k.pull/Math.pow(d+8,0.9),s})}
+    else if(k.industry){const need=k.workers-s.parked.length-s.incoming;if(need>0&&d<40)opts.push({w:need*6/Math.pow(d+8,0.9),s})}}
+  for(const g of S.gates){if(S.comp[g.tile]!==cid)continue;const d=Math.hypot(tx(g.tile)-t.cx,ty(g.tile)-t.cy);opts.push({w:12/(d+30),g})}
   if(!opts.length)return;
   const o=pickW(S,opts,q=>q.w);let dest;
   if(o.u){const l=o.u.accessList.filter(b=>S.comp[b.access]===cid);if(!l.length)return;dest=l[Math.floor(S.R()*l.length)]}
-  else{dest=o.s;if(lotFree(dest)<=0){let alt=null,ad=8;for(const p of S.buildings){if(p.type!=="park"||p.access<0||S.comp[p.access]!==cid||lotFree(p)<=0)continue;const d=distT(p.front,dest.front);if(d<ad){ad=d;alt=p}}if(alt)dest=alt}}
+  else if(o.g)dest=o.g;
+  else{dest=o.s;if(KIND[dest.type].pull&&lotFree(dest)<=0){let alt=null,ad=8;for(const p of S.buildings){if(p.type!=="park"||p.access<0||S.comp[p.access]!==cid||lotFree(p)<=0)continue;const d=distT(p.front,dest.front);if(d<ad){ad=d;alt=p}}if(alt)dest=alt}}
   if(dest===home)return;
   const res=findPath(S,home.access,dest.access);if(!res)return;
-  let free=2;for(let i=1;i<res.path.length;i++)free+=1/speedOf(S,res.path[i]);
-  const ratio=(res.cost+2)/free;
+  const free=freeCost(S,res.path)+1,ratio=(res.cost+1)/free;
   if(ratio>1.5&&S.R()<Math.min(0.85,ratio-1.5)){S.cancelled++;t.cancel+=1;return}
-  const path=[home.front,...res.path,dest.front];const stops={},pend=new Set();
-  const road=res.path;
-  if(road.length>8&&S.R()<0.35){
-    for(let j=2;j<road.length-2;j++){const a=road[j];let g=null;
-      for(let d=0;d<4;d++){const n=NB[a*4+d];const b=n>=0?S.bld[n]:null;if(b&&b.type==="gas"&&b.access===a&&lotFree(b)>0){g=b;break}}
-      if(g){path.splice(j+2,0,g.front,a);stops[j+2]=g;g.incoming++;pend.add(g);break}}}
+  const path=buildPath(home,dest,res.path);const stops={},pend=new Set();
+  const gs=insertGasStop(S,path,res.path,1);if(gs){stops[gs[0]]=gs[1];pend.add(gs[1])}
   if(dest.cap>0){dest.incoming++;pend.add(dest)}
-  S.cars.push({p:path,k:0,t:0,town:t,home,dest,kind:"visit",stops,pend,wait:0,state:"move",dwell:0,lot:null,final:false,start:S.time,free:free/BASE_SPEED,ang:0,dead:false});}
+  const c=newCar(S,{p:path,town:t,home,dest,stops,pend,free:free/BASE_SPEED,commute:!!(KIND[dest.type]&&KIND[dest.type].industry)});
+  if(!c){for(const l of pend)l.incoming--}}
+function spawnFromGate(S,g,tourist){
+  if(S.cars.length>=MAX_CARS)return false;const cid=S.comp[g.tile];if(cid<0)return false;let dest=null;
+  if(tourist){const opts=[];for(const s of S.buildings){const k=KIND[s.type];if(!k||!k.pull||s.access<0||S.comp[s.access]!==cid||lotFree(s)<=0)continue;opts.push({s,w:k.pull/Math.pow(distT(s.front,g.tile)+20,0.6)})}
+    if(!opts.length)return false;dest=pickW(S,opts,q=>q.w).s}
+  else{const others=S.gates.filter(o=>o!==g&&S.comp[o.tile]===cid);if(!others.length)return false;dest=others[Math.floor(S.R()*others.length)]}
+  const res=findPath(S,g.tile,dest.access);if(!res)return false;
+  const path=buildPath(g,dest,res.path);const pend=new Set();const stops={};
+  const gs=insertGasStop(S,path,res.path,0);if(gs){stops[gs[0]]=gs[1];pend.add(gs[1])}
+  if(dest.cap>0){dest.incoming++;pend.add(dest)}
+  const c=newCar(S,{p:path,town:g,home:g,dest,stops,pend,free:(freeCost(S,res.path)+1)/BASE_SPEED,kind:tourist?"visit":"transit",tourist});
+  if(!c){for(const l of pend)l.incoming--;return false}
+  if(tourist)g.visitors++;return true}
 
 function killCar(S,c){if(c.dead)return;c.dead=true;for(const l of c.pend)l.incoming--;c.pend.clear();
+  if(c.cargo&&c.cargoTo){if(c.cargoTo.isTown)c.cargoTo.matInc--;else if(c.cargoTo.inc)c.cargoTo.inc[c.cargo]--;c.cargo=null}
+  if(c.truck&&c.home.trucks!==undefined)c.home.trucks--;
   if(c.lot){const k=c.lot.parked.indexOf(c);if(k>=0)c.lot.parked.splice(k,1);c.lot=null}
-  else{const i=c.p[c.k];if(S.road[i]&&S.occ[i]>0)S.occ[i]--}}
-function park(S,c,lot,final){c.state="dwell";c.dwell=final?(KIND[lot.type].dwell):KIND.gas.dwell;c.lot=lot;lot.parked.push(c);
-  if(c.pend.has(lot)){lot.incoming--;c.pend.delete(lot)}lot.visits++;S.money+=KIND[lot.type].pay;c.final=final;c.t=0}
+  if(c.ld>=0){const i=c.p[c.k];const o=i*4+c.ld;if(S.occ[o]>0)S.occ[o]--;c.ld=-1}}
+function park(S,c,lot,final){c.state="dwell";c.dwell=final?(c.commute?KIND[lot.type].dwell:(KIND[lot.type].industry?25:KIND[lot.type].dwell)):KIND.gas.dwell;c.lot=lot;lot.parked.push(c);
+  if(c.pend.has(lot)){lot.incoming--;c.pend.delete(lot)}lot.visits++;if(!c.commute){const p=KIND[lot.type].pay;S.money+=p;S.earned+=p}c.final=final;c.t=0}
+function makeReturn(S,c,from,to){
+  if(!to||to.dead||from.dead||to.access<0||from.access<0){killCar(S,c);return}
+  const res=findPath(S,from.access,to.access);if(!res){killCar(S,c);return}
+  c.p=buildPath(from,to,res.path);c.k=0;c.t=0;c.ld=-1;c.kind="return";c.state="move";c.stops={};c.final=false;c.start=S.time;c.free=freeCost(S,res.path)/BASE_SPEED;c.wait=0;
+  if(S.road[c.p[0]]){const ld=laneDirAt(S,c,0);c.ld=ld;S.occ[c.p[0]*4+ld]++}}
 function leaveLot(S,c){const lot=c.lot;const k=lot.parked.indexOf(c);if(k>=0)lot.parked.splice(k,1);c.lot=null;
   if(!c.final){c.state="move";return}
-  const h=c.home;if(h.dead||h.access<0||lot.access<0){killCar(S,c);return}
-  const res=findPath(S,lot.access,h.access);if(!res){killCar(S,c);return}
-  let free=2;for(let i=1;i<res.path.length;i++)free+=1/speedOf(S,res.path[i]);
-  c.p=[lot.front,...res.path,h.front];c.k=0;c.t=0;c.kind="return";c.state="move";c.stops={};c.final=false;c.start=S.time;c.free=free/BASE_SPEED;c.wait=0}
+  makeReturn(S,c,lot,c.home)}
+function deliver(S,c){const d=c.dest,g=c.cargo,to=c.cargoTo;let pay=GOODS[g].pay;
+  if(to&&to.isTown){to.matInc--;to.material+=1}
+  else if(to&&to.inc){to.inc[g]--;to.stock[g]=(to.stock[g]||0)+1}
+  else if(d.isGate){pay=Math.round(pay*1.5);d.exported+=pay;S.exported+=pay}
+  S.money+=pay;S.earned+=pay;c.cargo=null}
 function finish(S,c){
-  if(c.kind==="visit"){S.trips++;S.money+=1+Math.floor(c.p.length/10);
-    const ratio=(S.time-c.start)/Math.max(0.5,c.free);c.town.delay+=(ratio-c.town.delay)*0.12;
-    if(c.dest.cap>0&&!c.dest.dead){park(S,c,c.dest,true);return}}
-  else S.money+=1;
+  const d=c.dest;
+  if(c.kind==="visit"){
+    if(c.truck){deliver(S,c);if(d.isGate){killCar(S,c);return}makeReturn(S,c,d,c.home);return}
+    S.trips++;const p=1+Math.floor(c.p.length/10);S.money+=p;S.earned+=p;
+    if(c.town.isTown){const ratio=(S.time-c.start)/Math.max(0.5,c.free);c.town.delay+=(ratio-c.town.delay)*0.12}
+    if(d.cap>0&&!d.dead){park(S,c,d,true);return}}
+  else if(c.kind==="transit"){S.transits++;S.money+=2;S.earned+=2}
+  else{S.money+=1;S.earned+=1}
   killCar(S,c)}
 function updateCars(S,dt){
+  S.stepId++;const sid=S.stepId;
+  for(const c of S.cars){if(c.state!=="move"||c.ld<0||c.t<0.4)continue;const n=c.p[c.k+1];if(n===undefined||!S.road[n]||S.deg[n]<3)continue;S.app[n*4+dirOf(n,c.p[c.k])]=sid}
+  for(const [J,L] of S.lights){L.t+=dt;const q0=S.app[J*4]===sid||S.app[J*4+1]===sid,q1=S.app[J*4+2]===sid||S.app[J*4+3]===sid;const q=[q0,q1];
+    if(L.amber){if(L.t>1.2){L.amber=false;L.axis^=1;L.t=0}}
+    else if(L.t>4&&q[L.axis^1]&&(!q[L.axis]||L.t>14)){L.amber=true;L.t=0}}
   for(let n=S.cars.length-1;n>=0;n--){const c=S.cars[n];
     if(!c.dead)moveCar(S,c,dt);
     if(c.dead){S.cars[n]=S.cars[S.cars.length-1];S.cars.pop()}}}
+function permit(S,c,J,d){const sid=S.stepId,a=d^1,e=S.ctlEff[J];
+  if(e===2){const L=S.lights.get(J);return !!L&&!L.amber&&L.axis===(d>>1)}
+  if(e===3)return jTotal(S,J)<2;
+  if(e===1){const m=S.mainMask[J];if(m>>a&1)return true;for(let k=0;k<4;k++)if((m>>k&1)&&S.app[J*4+k]===sid)return false;return true}
+  return S.app[J*4+RIGHT[d]]!==sid}
 function moveCar(S,c,dt){
   if(c.state==="dwell"){c.dwell-=dt;if(c.dwell<=0)leaveLot(S,c);return}
   const cur=c.p[c.k],nxt=c.p[c.k+1];
   if(nxt===undefined){finish(S,c);return}
-  let sp;if(S.road[cur]){sp=BASE_SPEED*speedOf(S,cur);const th=capOf(S,cur)/2,o=S.occ[cur];if(o>th)sp/=1+0.45*(o-th)}else sp=1.4;
+  const onRoad=c.ld>=0;
+  let sp;if(onRoad){sp=BASE_SPEED*KSPEED[S.road[cur]]*(c.truck?0.8:1);const cp=capDir(S,cur),o=S.occ[cur*4+c.ld];if(o>cp)sp/=1+0.45*(o-cp);if(S.deg[cur]>=3)sp*=S.ctlEff[cur]===3?0.7:0.85}else sp=1.4;
   const nt=c.t+sp*dt;if(nt<1){c.t=nt;return}
-  let block=false,giveUp=false;
+  let block=false,giveUp=false,ld2=-1;
   if(S.road[nxt]){
-    if(S.occ[nxt]>=capOf(S,nxt)){
-      if(S.road[cur]){block=c.wait<2.5}
-      else{block=true;if(c.k===0&&c.kind==="visit"&&c.wait>8)giveUp=true}}}
-  else{const lot=c.stops[c.k+1]||(c.k+1===c.p.length-1&&c.kind==="visit"&&c.dest.cap>0?c.dest:null);
+    ld2=laneDirAt(S,c,c.k+1);
+    const junc=S.deg[nxt]>=3;
+    const full=S.occ[nxt*4+ld2]>=capDir(S,nxt)||(junc&&jTotal(S,nxt)>=jcap(S,nxt));
+    if(full){if(onRoad)block=c.wait<2.5;else if(c.k===0&&c.kind!=="return"){block=true;if(c.wait>8)giveUp=true}else block=c.wait<6}
+    if(!block&&junc&&c.wait<3.5){
+      if(onRoad){if(!permit(S,c,nxt,dirOf(cur,nxt)))block=true}
+      else{const sid=S.stepId;for(let k=0;k<4;k++)if(S.app[nxt*4+k]===sid){block=true;break}}}}
+  else{const lot=c.stops[c.k+1]||(c.k+1===c.p.length-1&&c.kind==="visit"&&!c.truck&&c.dest.cap>0?c.dest:null);
     if(lot&&lot.parked.length>=lot.cap){block=true;if(c.wait>4)giveUp=true}}
   if(giveUp){
     const st=c.stops[c.k+1];
     if(st){c.p.splice(c.k+1,2);c.stops={};st.incoming--;c.pend.delete(st);c.wait=0;return}
-    if(c.k===0){S.cancelled++;c.town.cancel+=1;killCar(S,c);return}
-    c.dest.overflow++;S.turnedAway++;killCar(S,c);return}
+    if(c.k===0&&!onRoad){S.cancelled++;if(c.town.isTown){c.town.exitFail+=1;c.town.exitTile=c.p[1]}killCar(S,c);return}
+    c.dest.overflow++;c.dest.ofRecent+=1;S.turnedAway++;killCar(S,c);return}
   if(block){c.t=Math.min(nt,0.97);c.wait+=dt;return}
-  if(S.road[cur]&&S.occ[cur]>0)S.occ[cur]--;
-  if(S.road[nxt]){S.occ[nxt]++;S.passes[nxt]++}
+  if(onRoad){const o=cur*4+c.ld;if(S.occ[o]>0)S.occ[o]--}
   c.k++;c.t=Math.min(nt-1,0.5);c.wait=0;
-  const st=c.stops[c.k];if(st){delete c.stops[c.k];park(S,c,st,false)}}
+  if(ld2>=0){c.ld=ld2;S.occ[nxt*4+ld2]++;S.passes[nxt]++}else c.ld=-1;
+  const st=c.stops[c.k];if(st){delete c.stops[c.k];park(S,c,st,false);return}
+  if(c.k===c.p.length-1&&ld2<0)finish(S,c)}
 
 function step(S,dt){
   S.time+=dt;
   if(S.compDirty)computeComponents(S);
-  for(const t of S.towns){if(!t.accessList.length)continue;t.tripAcc+=dt*t.pop*TRIP_RATE;while(t.tripAcc>=1){t.tripAcc-=1;spawnTrip(S,t)}}
+  for(const t of S.towns){if(!t.accessList.length)continue;t.tripAcc+=dt*t.pop*0.004;while(t.tripAcc>=1){t.tripAcc-=1;spawnTrip(S,t)}}
   updateCars(S,dt);
-  const a=Math.min(1,dt*0.6);
-  for(let i=0;i<N;i++){if(S.road[i])S.cong[i]+=(S.occ[i]/capOf(S,i)-S.cong[i])*a;else S.cong[i]=0}
+  if(++S.congTick>=3){S.congTick=0;const a=Math.min(1,dt*3*0.6);
+    for(let i=0;i<N;i++){const b=i*4;if(!S.road[i]){if(S.cong[b]||S.cong[b+1]||S.cong[b+2]||S.cong[b+3]){S.cong[b]=S.cong[b+1]=S.cong[b+2]=S.cong[b+3]=0}continue}
+      const cp=capDir(S,i);for(let d=0;d<4;d++)S.cong[b+d]+=(S.occ[b+d]/cp-S.cong[b+d])*a}}
   S.secAcc+=dt;if(S.secAcc>=1){S.secAcc-=1;perSecond(S)}
   for(const t of S.towns){t.g+=dt*t.rate;if(t.g>=1){t.g-=1;growTown(S,t,false)}}}
 function perSecond(S){
   for(let i=0;i<N;i++){if(S.road[i])S.flow[i]+=(S.passes[i]*60-S.flow[i])*0.15;else S.flow[i]=0;S.passes[i]=0}
   updateTownStats(S);calcRates(S);
-  let pop=0;for(const t of S.towns){pop+=t.pop;t.cancel*=0.92;
-    if(t.jam>0.5&&S.time-t.lastJamLog>120&&S.time-S.lastJamAny>25&&S.time>25){t.lastJamLog=S.time;S.lastJamAny=S.time;addLog(S,t.name+": kolony a plné silnice, lidé jezdí méně")}}
-  S.money+=pop*0.01;
-  if(++S.svcTick>=2){S.svcTick=0;serviceCheck(S)}
-  S.homesteadAcc+=1;if(S.homesteadAcc>60&&S.towns.length<12){S.homesteadAcc=0;roadsideHomestead(S)}}
+  let pop=0;for(const t of S.towns){pop+=t.pop;t.cancel*=0.92;t.exitFail*=0.9;
+    if(t.jam>0.5&&S.time-t.lastJamLog>120&&S.time-S.lastJamAny>25&&S.time>25){t.lastJamLog=S.time;S.lastJamAny=S.time;addLog(S,t.name+": zácpy, lidé jezdí méně",t.homes[0].front)}}
+  const tax=pop*0.01;S.money+=tax;S.earned+=tax;
+  S.income+=(S.earned*60-S.income)*0.1;S.earned=0;
+  for(const b of S.buildings)b.ofRecent*=0.95;
+  industryTick(S);gatesTick(S);
+  while(S.regrow.length&&S.regrow[0].t<=S.time){const r=S.regrow.shift();if(!S.road[r.i]&&!S.bld[r.i]&&S.terrain[r.i]===GRASS){S.terrain[r.i]=FOREST;S.dirty.push(r.i)}}
+  if(++S.svcTick>=2){S.svcTick=0;serviceCheck(S);computeProblems(S)}
+  S.homesteadAcc+=1;if(S.homesteadAcc>60&&S.towns.length<24){S.homesteadAcc=0;roadsideHomestead(S)}}
+function gatesTick(S){const day=S.time/DAY;
+  for(const g of S.gates){const cid=S.comp[g.tile];if(cid<0)continue;
+    if(S.gates.some(o=>o!==g&&S.comp[o.tile]===cid)){g.trAcc+=0.08+Math.min(0.25,day*0.015);while(g.trAcc>=1){g.trAcc-=1;spawnFromGate(S,g,false)}}
+    let svc=0;for(const s of S.buildings)if(KIND[s.type]&&KIND[s.type].pull&&s.access>=0&&S.comp[s.access]===cid)svc++;
+    g.tuAcc+=Math.min(0.7,0.04*svc);while(g.tuAcc>=1){g.tuAcc-=1;spawnFromGate(S,g,true)}}}
+function countRes(S,b,t){let n=0;const x0=tx(b.front),y0=ty(b.front);for(let y=y0-4;y<=y0+4;y++)for(let x=x0-4;x<=x0+4;x++){if(x<0||y<0||x>=W||y>=H)continue;if(S.terrain[y*W+x]===t)n++}return n}
+function deplete(S,b,t){const x0=tx(b.front),y0=ty(b.front);const p=t===FOREST?0.3:0.04;if(S.R()>p)return;
+  const c=[];for(let y=y0-4;y<=y0+4;y++)for(let x=x0-4;x<=x0+4;x++){if(x<0||y<0||x>=W||y>=H)continue;const i=y*W+x;if(S.terrain[i]===t&&!S.road[i]&&!S.bld[i])c.push(i)}
+  if(!c.length)return;const i=c[Math.floor(S.R()*c.length)];S.terrain[i]=GRASS;S.dirty.push(i);if(t===FOREST)S.regrow.push({i,t:S.time+300});b.res=Math.max(0,(b.res||1)-1)}
+function industryTick(S){
+  for(const b of S.buildings){const K=KIND[b.type];if(!K||!K.industry)continue;
+    const work=Math.min(1,b.parked.length/K.workers);b.work=work;b.short=null;
+    if(b.access<0){b.short="road";continue}
+    if(K.res!==undefined){if(b.res===null||S.time-b.resT>10){b.res=countRes(S,b,K.res);b.resT=S.time}
+      if(b.res===0)b.short="res";else if(b.out<8)b.prod+=0.07*work}
+    else{const ok=Object.keys(K.need).every(g=>(b.stock[g]||0)>=K.need[g]);if(!ok)b.short="input";else if(b.out<8)b.prod+=K.rate*work}
+    if(work===0&&!b.short)b.short="workers";
+    while(b.prod>=1){b.prod-=1;if(K.need)for(const g in K.need)b.stock[g]-=K.need[g];b.out++;b.made++;if(K.res!==undefined)deplete(S,b,K.res)}
+    if(b.out>=1&&b.trucks<2){const dst=findCargoDest(S,b,K.out);if(dst){if(spawnTruck(S,b,K.out,dst))b.out--}else if(b.out>=8)b.short=b.short||"full";else if(!b.short)b.short="nodest"}}}
+function findCargoDest(S,b,g){const cid=S.comp[b.access];let best=null,bs=1e9;
+  for(const x of S.buildings){const K=KIND[x.type];if(!K||!K.need||!K.need[g]||x.access<0||S.comp[x.access]!==cid)continue;if((x.stock[g]||0)+(x.inc[g]||0)>=6)continue;const d=distT(x.front,b.front);if(d<bs){bs=d;best={to:x,ep:x}}}
+  if(g==="lumber"||g==="stone")for(const t of S.towns){if(!t.comps.has(cid)||t.material+t.matInc>=6)continue;const l=t.accessList.filter(h=>S.comp[h.access]===cid);if(!l.length)continue;
+    const d=Math.hypot(t.cx-tx(b.front),t.cy-ty(b.front))+(g==="stone"?15:5);if(d<bs){bs=d;best={to:t,ep:l[Math.floor(S.R()*l.length)]}}}
+  for(const gt of S.gates){if(S.comp[gt.tile]!==cid)continue;const d=distT(gt.tile,b.front)+40;if(d<bs){bs=d;best={to:null,ep:gt}}}
+  return best}
+function spawnTruck(S,b,g,dst){if(S.cars.length>=MAX_CARS)return false;
+  const res=findPath(S,b.access,dst.ep.access);if(!res)return false;
+  const path=buildPath(b,dst.ep,res.path);
+  const c=newCar(S,{p:path,town:b,home:b,dest:dst.ep,truck:true,cargo:g,cargoTo:dst.to,free:freeCost(S,res.path)/BASE_SPEED});
+  if(!c)return false;b.trucks++;
+  if(dst.to){if(dst.to.isTown)dst.to.matInc++;else dst.to.inc[g]=(dst.to.inc[g]||0)+1}
+  return true}
+
 function roadsideHomestead(S){
   let best=null,bs=-1;
-  for(let k=0;k<40;k++){const i=Math.floor(S.R()*N);if(!S.road[i])continue;const [t,d]=nearestTown(S,tx(i),ty(i));if(d<8)continue;
+  for(let k=0;k<80;k++){const i=Math.floor(S.R()*N);if(!S.road[i]||S.road[i]===HWY)continue;const [t,d]=nearestTown(S,tx(i),ty(i));if(d<10)continue;
     const f=freeNeighbor(S,i);if(f<0)continue;const sc=S.flow[i]+S.R()*20;if(sc>bs){bs=sc;best=[f,i]}}
-  if(best){const t=foundTown(S,best[0],best[1],false);addLog(S,"U silnice se usadil nový domek: "+t.name)}}
+  if(best){const t=foundTown(S,best[0],best[1],false);addLog(S,"U silnice se usadil nový domek: "+t.name,best[0])}}
 function freeNeighbor(S,i){const c=[];for(let d=0;d<4;d++){const j=NB[i*4+d];if(freeForBuild(S,j))c.push(j)}return c.length?c[Math.floor(S.R()*c.length)]:-1}
 function serviceNear(S,type,i,r){return S.buildings.some(s=>s.type===type&&distT(s.front,i)<r)}
-function placeServiceAt(S,type,road,town){
+function placeServiceAt(S,type,road,town){if(S.road[road]===HWY)return null;
   for(let d=0;d<4;d++){const f=NB[road*4+d];if(!freeForBuild(S,f))continue;
     for(const cells of SVC_SHAPES[type]){const tiles=fitShape(S,f,road,cells,null);
-      if(tiles){const fi=tiles.findIndex(q=>q[0]===f);return createBuilding(S,type,town,tiles,f,road,KIND[type].name)}}}
+      if(tiles)return createBuilding(S,type,town,tiles,f,road,KIND[type].name)}}
   return null}
 function placeServiceNear(S,type,town,cx,cy,radius,minFlow,edge){
   const R0=Math.ceil(radius),cands=[];
-  for(let y=cy-R0;y<=cy+R0;y++)for(let x=cx-R0;x<=cx+R0;x++){if(x<0||y<0||x>=W||y>=H)continue;const i=y*W+x;if(!S.road[i]||S.flow[i]<minFlow)continue;
+  for(let y=cy-R0;y<=cy+R0;y++)for(let x=cx-R0;x<=cx+R0;x++){if(x<0||y<0||x>=W||y>=H)continue;const i=y*W+x;if(!S.road[i]||S.road[i]===HWY||S.flow[i]<minFlow)continue;
     const d=Math.hypot(x-cx,y-cy);if(d>radius)continue;cands.push([(S.flow[i]+5)*(edge?0.4+d/radius:1/(1+d*0.3))+S.R()*4,i])}
   cands.sort((a,b)=>b[0]-a[0]);
   for(let k=0;k<Math.min(15,cands.length);k++){const b=placeServiceAt(S,type,cands[k][1],town);if(b)return b}
   return null}
+function resNear(S,i,t,r){let n=0;const x0=tx(i),y0=ty(i);for(let y=y0-r;y<=y0+r;y++)for(let x=x0-r;x<=x0+r;x++){if(x<0||y<0||x>=W||y>=H)continue;if(S.terrain[y*W+x]===t)n++}return n}
 function serviceCheck(S){
-  const busy=[];for(let i=0;i<N;i++)if(S.road[i]&&S.flow[i]>=30)busy.push(i);
-  for(let n=0;n<Math.min(6,busy.length);n++){const i=busy[Math.floor(S.R()*busy.length)];
+  const busy=[];for(let i=0;i<N;i++)if(S.road[i]&&S.road[i]!==HWY&&S.flow[i]>=30)busy.push(i);
+  for(let n=0;n<Math.min(8,busy.length);n++){const i=busy[Math.floor(S.R()*busy.length)];
     const [t,d]=nearestTown(S,tx(i),ty(i));
     if(S.flow[i]>=45&&!serviceNear(S,"gas",i,9)&&S.R()<0.25){const near=t&&d<townRadius(t)+4;
-      if(placeServiceAt(S,"gas",i,near?t:null)){addLog(S,"Nová pumpa u rušné silnice"+(t?" poblíž obce "+t.name:""));continue}}
+      const b=placeServiceAt(S,"gas",i,near?t:null);if(b){addLog(S,"Nová pumpa u rušné silnice"+(t?" poblíž obce "+t.name:""),b.front);continue}}
     let deg=0;for(let k=0;k<4;k++){const j=NB[i*4+k];if(j>=0&&S.road[j])deg++}
-    if(d>=9&&S.towns.length<16&&S.R()<(deg>=3?0.25:0.05)){const f=freeNeighbor(S,i);if(f>=0){const nt=foundTown(S,f,i,true);
-      addLog(S,(deg>=3?"Na rušné křižovatce":"U rušné silnice")+" vznikla osada "+nt.name)}}}
+    if(d>=10&&S.towns.length<30&&S.R()<(deg>=3?0.25:0.05)){const f=freeNeighbor(S,i);if(f>=0){const nt=foundTown(S,f,i,true);
+      addLog(S,(deg>=3?"Na rušné křižovatce":"U rušné silnice")+" vznikla osada "+nt.name,f)}}}
+  // těžba: silnice u lesa, lomu nebo rudy, v dosahu obce
+  for(let k=0;k<14;k++){const i=Math.floor(S.R()*N);if(!S.road[i]||S.road[i]===HWY||S.comp[i]<0)continue;
+    const [t,d]=nearestTown(S,tx(i),ty(i));if(!t||d>26||t.pop<20||!t.comps.has(S.comp[i]))continue;
+    for(const [type,res,min] of [["logging",FOREST,8],["quarry",ROCK,4],["mine",ORE,4]]){
+      if(resNear(S,i,res,3)<min||serviceNear(S,type,i,10)||S.R()>0.25)continue;
+      const b=placeServiceAt(S,type,i,t);if(b){addLog(S,KIND[type].name+" u obce "+t.name+": silnice přivedla práci",b.front);break}}}
+  // zpracování
+  for(const [type,needs,minPop] of [["sawmill",["logging"],30],["steel",["mine","quarry"],50]]){
+    for(const src of S.buildings){if(src.type!==needs[0]||src.access<0)continue;const cid=S.comp[src.access];
+      if(S.buildings.some(b=>b.type===type&&b.access>=0&&S.comp[b.access]===cid))continue;
+      if(!needs.every(n=>S.buildings.some(b=>b.type===n&&b.access>=0&&S.comp[b.access]===cid)))continue;
+      if(S.R()>0.3)continue;
+      let tb=null,td=1e9;for(const t of S.towns){if(t.pop<minPop||!t.comps.has(cid))continue;const d=Math.hypot(t.cx-tx(src.front),t.cy-ty(src.front));if(d<td){td=d;tb=t}}
+      if(!tb)continue;const b=placeServiceNear(S,type,tb,tb.cx,tb.cy,townRadius(tb)+5,0,true);
+      if(b){addLog(S,KIND[type].name+" u obce "+tb.name+" zpracuje "+(type==="sawmill"?"dřevo z okolí":"rudu a kámen"),b.front);break}}}
   for(const t of S.towns){if(!t.accessList.length)continue;
     const cnt=type=>S.buildings.reduce((a,s)=>a+(s.town===t&&s.type===type?1:0),0);
-    const r=townRadius(t);
-    if(t.pop>=24&&cnt("pub")<1+Math.floor(t.pop/160)&&S.R()<0.3){if(placeServiceNear(S,"pub",t,t.cx,t.cy,r+1,0,false))addLog(S,t.name+": otevřela se hospoda s parkovištěm")}
-    if(t.pop>=40&&cnt("shop")<Math.max(1,Math.floor(t.pop/130))&&S.R()<0.25){if(placeServiceNear(S,"shop",t,t.cx,t.cy,r+1,15,false))addLog(S,t.name+": nový obchod s parkovištěm")}
-    if(t.pop>=90&&!S.buildings.some(s=>s.type==="mall"&&Math.hypot(tx(s.front)-t.cx,ty(s.front)-t.cy)<14)&&S.R()<0.2){if(placeServiceNear(S,"mall",t,t.cx,t.cy,r+3,50,true))addLog(S,"U obce "+t.name+" postavili nákupní centrum")}}
-  // parkovací domy tam, kde parkoviště nestačí
+    const r=townRadius(t);let b;
+    if(t.pop>=24&&cnt("pub")<1+Math.floor(t.pop/160)&&S.R()<0.3){if(b=placeServiceNear(S,"pub",t,t.cx,t.cy,r+1,0,false))addLog(S,t.name+": otevřela se hospoda s parkovištěm",b.front)}
+    if(t.pop>=40&&cnt("shop")<Math.max(1,Math.floor(t.pop/130))&&S.R()<0.25){if(b=placeServiceNear(S,"shop",t,t.cx,t.cy,r+1,15,false))addLog(S,t.name+": nový obchod s parkovištěm",b.front)}
+    if(t.pop>=90&&!S.buildings.some(s=>s.type==="mall"&&Math.hypot(tx(s.front)-t.cx,ty(s.front)-t.cy)<14)&&S.R()<0.2){if(b=placeServiceNear(S,"mall",t,t.cx,t.cy,r+3,50,true))addLog(S,"U obce "+t.name+" postavili nákupní centrum",b.front)}
+    if((t.pop>=150||(t.world&&t.pop>=100))&&!S.buildings.some(s=>s.type==="hyper"&&Math.hypot(tx(s.front)-t.cx,ty(s.front)-t.cy)<25)&&S.R()<0.15){if(b=placeServiceNear(S,"hyper",t,t.cx,t.cy,r+5,40,true))addLog(S,"U obce "+t.name+" vyrostla obchodní zóna",b.front)}}
   for(const s of S.buildings){if(!KIND[s.type]||!KIND[s.type].pull)continue;const over=s.overflow-s.overflowSeen;
     if(over>=3&&!S.buildings.some(p=>p.type==="park"&&distT(p.front,s.front)<7)){
       const p=placeServiceNear(S,"park",s.town,tx(s.front),ty(s.front),5,0,false);
-      if(p){s.overflowSeen=s.overflow;addLog(S,(s.town?s.town.name+": ":"")+"parkoviště u "+(s.type==="pub"?"hospody":s.type==="shop"?"obchodu":"nákupáku")+" nestačí, vyrostl parkovací dům")}}
+      if(p){s.overflowSeen=s.overflow;addLog(S,(s.town?s.town.name+": ":"")+"parkoviště nestačí, vyrostl parkovací dům",p.front)}}
     else if(over>0&&S.R()<0.1)s.overflowSeen++}}
 
-function addLog(S,text){S.log.unshift({day:Math.floor(S.time/45)+1,text});if(S.log.length>60)S.log.pop()}
+// ---- problémy: jen to, s čím hráč může něco udělat ----
+function computeProblems(S){const P=[];const add=(sev,text,hint,tile,kind)=>{if(tile<0)return;if(P.some(p=>distT(p.tile,tile)<5&&p.sev===sev))return;P.push({sev,text,hint,tile,kind})};
+  for(const t of S.towns){if(!t.homes.length)continue;
+    if(t.exitFail>0.8&&t.exitTile>=0)add(2,t.name+": auta nemůžou vyjet z domů","Silnice u domů je plná. Přidej pruh, jednosměrku nebo objížďku.",t.exitTile);
+    if(t.accessList.length&&!t.world&&!S.towns.some(o=>o!==t&&shares(o.comps,t.comps))&&t.pop>=8)add(1,t.name+" je odříznutá","Spoj ji silnicí s ostatními obcemi nebo s dálnicí.",t.homes[0].front);
+    if(t.noSpace>=4&&t.pop>=20&&t.accessList.length&&P.filter(p=>p.kind==='space').length<2)add(1,t.name+" nemá kam růst","Postav silnici do volné krajiny nebo zruš uzávěru.",t.homes[0].front,"space")}
+  const jams=[];for(let i=0;i<N;i++){if(!S.road[i]||S.flow[i]<15)continue;const b=i*4;const c=Math.max(S.cong[b],S.cong[b+1],S.cong[b+2],S.cong[b+3]);if(c>0.85)jams.push([c,i])}
+  jams.sort((a,b)=>b[0]-a[0]);
+  for(const [c,i] of jams.slice(0,30)){const [t]=nearestTown(S,tx(i),ty(i));const j=S.deg[i]>=3;
+    add(2,(j?"Ucpaná křižovatka":"Kolona")+(t?" u obce "+t.name:""),j?"Zkus semafor, kruhový objezd nebo nastav hlavní silnici.":"Přidej pruh nebo postav objížďku.",i);if(P.length>8)break}
+  for(const b of S.buildings){const K=KIND[b.type];if(!K)continue;
+    if(K.pull&&b.ofRecent>1.5)add(1,"Plné parkoviště: "+K.name.toLowerCase()+(b.town?" v obci "+b.town.name:""),"Auta čekají na silnici. Parkovací dům vznikne sám; pomůže zbourat dům vedle.",b.front);
+    if(K.industry&&b.short){const m={workers:["nemá pracovníky","Napoj ho na obec, ze které můžou lidé dojíždět."],nodest:["nemá kam vozit","Napoj ho na dálnici do světa nebo na odběratele."],full:["má plný sklad","Výrobky nemá kdo odebrat. Napoj ho na dálnici do světa."],input:["čeká na suroviny",b.type==="sawmill"?"Potřebuje dřevo: veď silnici k těžbě dřeva.":"Potřebuje rudu i kámen: veď silnici k dolu a lomu."],res:["vytěžil okolí","Zásoby došly. Můžeš ho zbourat."],road:["nemá silnici","Přiveď k němu silnici."]}[b.short];
+      if(m)add(b.short==="workers"||b.short==="res"?0:1,K.name+(b.town?" u obce "+b.town.name:"")+" "+m[0],m[1],b.front)}}
+  for(const g of S.gates){const cid=S.comp[g.tile];if(!S.towns.some(t=>t.comps.has(cid)))add(1,"Dálnice do města "+g.name+" není napojená","Napoj ji na svou síť: přijedou turisté a průmysl bude moct vyvážet.",g.tile)}
+  if(P.length<6){for(const [t,type,name] of [[ORE,"mine","Ložisko železné rudy"],[ROCK,"quarry","Skály pro lom"]]){let done=0;
+    for(let i=0;i<N&&done<1;i+=7){if(S.terrain[i]!==t)continue;if(serviceNear(S,type,i,12))continue;let near=false;for(let k=0;k<4;k++){const j=NB[i*4+k];}
+      add(0,name,"Postav k nim silnici z obce. Vznikne "+KIND[type].name.toLowerCase()+" a práce pro lidi.",i);done++}}}
+  P.sort((a,b)=>b.sev-a.sev);S.problems=P.slice(0,8)}
+
+function addLog(S,text,tile){S.log.unshift({day:Math.floor(S.time/DAY)+1,text,tile:tile===undefined?-1:tile});if(S.log.length>80)S.log.pop()}
 
 // ---- stavění ----
-function roadCost(S,i){return 10+(S.terrain[i]===2?8:0)+(S.terrain[i]===1?40:0)}
+function terrainExtra(S,i,kind){const t=S.terrain[i];return t===WATER?(kind===HWY?110:40):t===FOREST?8:(t===ROCK||t===ORE)?15:0}
+function roadCost(S,i,kind){return (kind===HWY?40:10)+terrainExtra(S,i,kind)}
 function demolishCost(b){return(b.type==="house"?40:b.type==="flat"?100:KIND[b.type].demolish)*b.tiles.length}
-function buildRoad(S,i){if(S.road[i])return "ok";if(S.bld[i])return "Tady stojí budova, nejdřív ji zbourej";const c=roadCost(S,i);if(S.money<c)return "Málo peněz v pokladně";
-  S.money-=c;S.road[i]=1;if(S.terrain[i]===2){S.terrain[i]=0;S.terrainDirty=true}S.compDirty=true;return "ok"}
-function upgradeRoad(S,i){if(S.road[i]!==1)return S.road[i]===2?"ok":"Rozšířit jde jen silnici";if(S.money<30)return "Málo peněz v pokladně";S.money-=30;S.road[i]=2;return "ok"}
-function eraseRoad(S,i){if(!S.road[i])return "ok";
+function buildRoad(S,i,kind){kind=kind||ROAD;
+  if(S.road[i]){if(kind===HWY&&S.road[i]!==HWY){if(S.money<30)return "Málo peněz v pokladně";S.money-=30;S.road[i]=HWY;S.lanes[i]=Math.max(2,S.lanes[i]);S.compDirty=true}
+    else if(kind===ROAD&&S.road[i]===ALLEY){S.road[i]=ROAD;S.compDirty=true}return "ok"}
+  if(S.bld[i])return "Tady stojí budova, nejdřív ji zbourej";const c=roadCost(S,i,kind);if(S.money<c)return "Málo peněz v pokladně";
+  S.money-=c;S.road[i]=kind;S.lanes[i]=kind===HWY?2:1;S.oneway[i]=0;S.ctlMan[i]=0;if(S.terrain[i]===FOREST||S.terrain[i]===ROCK||S.terrain[i]===ORE){S.terrain[i]=GRASS;S.dirty.push(i)}S.compDirty=true;return "ok"}
+function addLane(S,i,minus){if(!S.road[i])return "Pruh jde přidat jen na silnici";
+  if(minus){const min=S.road[i]===HWY?2:1;if(S.lanes[i]<=min)return "Méně pruhů už nejde";S.lanes[i]--;S.compDirty=true;return "ok"}
+  if(S.road[i]===ALLEY){if(S.money<10)return "Málo peněz v pokladně";S.money-=10;S.road[i]=ROAD;S.compDirty=true;return "ok"}
+  if(S.lanes[i]>=3)return "Víc než 3 pruhy v jednom směru nejde";const c=S.road[i]===HWY?40:20;if(S.money<c)return "Málo peněz v pokladně";S.money-=c;S.lanes[i]++;S.compDirty=true;return "ok"}
+function setOneway(S,i,d){if(!S.road[i])return "Jednosměrka jde jen na silnici";S.oneway[i]=d<0?0:d+1;return "ok"}
+const CTL_NAMES=["Bez úprav (přednost zprava)","Přednost zprava","Hlavní silnice vodorovně","Hlavní silnice svisle","Semafor","Kruhový objezd"];
+function setControl(S,i,m){if(!S.road[i]||S.deg[i]<3)return "Tohle není křižovatka";const cost=m===4?60:m===5?80:0;
+  if(m===S.ctlMan[i])return "ok";if(S.money<cost)return "Málo peněz v pokladně";S.money-=cost;S.ctlMan[i]=m;updateJunctions(S);return "ok"}
+function eraseRoad(S,i){if(!S.road[i])return "ok";if(S.gate[i]>=0)return "Hraniční přechod zbourat nejde";
   for(const c of S.cars){if(c.dead||c.state==="dwell")continue;if(c.p.indexOf(i,c.k)>=0)killCar(S,c)}
   S.cars=S.cars.filter(c=>!c.dead);
-  S.road[i]=0;S.occ[i]=0;S.money+=3;S.cong[i]=0;S.flow[i]=0;S.compDirty=true;return "ok"}
+  S.road[i]=0;S.lanes[i]=0;S.oneway[i]=0;S.ctlMan[i]=0;for(let d=0;d<4;d++){S.occ[i*4+d]=0;S.cong[i*4+d]=0}S.money+=3;S.flow[i]=0;S.compDirty=true;return "ok"}
 function demolish(S,b){const cost=demolishCost(b);if(S.money<cost)return "Na zbourání chybí peníze ("+cost+" Kč)";
   S.money-=cost;b.dead=true;
   for(const c of S.cars){if(c.dead)continue;
-    if(c.lot===b){killCar(S,c);continue}
+    if(c.lot===b||c.home===b&&c.truck){killCar(S,c);continue}
     if(c.state!=="dwell"){for(let k=c.k;k<c.p.length;k++)if(S.bld[c.p[k]]===b){killCar(S,c);break}}}
   S.cars=S.cars.filter(c=>!c.dead);
   for(const j of b.tiles){S.bld[j]=null;S.role[j]=0}
   S.buildings.splice(S.buildings.indexOf(b),1);
   const t=b.town;if(t&&isHome(b)){t.homes.splice(t.homes.indexOf(b),1);t.pop-=b.pop;t.tileCount-=b.tiles.length;
-    if(!t.homes.length){S.towns.splice(S.towns.indexOf(t),1);for(const s of S.buildings)if(s.town===t)s.town=null;addLog(S,t.name+" zanikla, zbourán poslední dům")}}
+    if(!t.homes.length){S.towns.splice(S.towns.indexOf(t),1);for(const s of S.buildings)if(s.town===t)s.town=null;addLog(S,t.name+" zanikla, zbourán poslední dům",b.front)}}
   S.compDirty=true;return "ok:"+cost}
 </script>
 
 <script>
+"use strict";
 // ===================== VYKRESLOVÁNÍ A OVLÁDÁNÍ =====================
 (function(){
 const cv=document.getElementById("map"),ctx=cv.getContext("2d");
-const tc=document.createElement("canvas"),tctx=tc.getContext("2d");
-let S=createSim((Math.random()*1e9)|0);
-let ts=16,dpr=1,colors={},tool="road",speed=1,overlay=false,hover=-1,zonePattern=null;
+const TS0=24,tc=document.createElement("canvas"),tctx=tc.getContext("2d");tc.width=W*TS0;tc.height=H*TS0;
 const $=id=>document.getElementById(id);
+let S=createSim((Math.random()*1e9)|0);
+const cam={x:0,y:0,z:10};let vw=0,vh=0,dpr=1,zmin=4;
+let colors={},tool="road",speed=1,overlay=false,hover=-1,pinned=-1,zonePattern=null,flash=null;
 
 function readColors(){const cs=getComputedStyle(document.documentElement);
-  for(const k of["land","forest","tree","water","water-edge","road","road-edge","label","halo","good","warn","bad","accent","ink","panel","lot","lot-line","canopy","zone","sign"])colors[k]=cs.getPropertyValue("--"+k).trim();
+  for(const k of["land","forest","tree","water","water-edge","rock","rock-dot","ore","ore-dot","outside","road","road-edge","alley","hwy","hwy-edge","mark","label","halo","good","warn","bad","accent","ink","panel","lot","lot-line","canopy","zone","sign"])colors[k]=cs.getPropertyValue("--"+k).trim();
   const p=document.createElement("canvas");p.width=p.height=8;const pc=p.getContext("2d");pc.strokeStyle=colors.zone;pc.globalAlpha=0.55;pc.lineWidth=1.4;
   pc.beginPath();pc.moveTo(0,8);pc.lineTo(8,0);pc.moveTo(-2,2);pc.lineTo(2,-2);pc.moveTo(6,10);pc.lineTo(10,6);pc.stroke();zonePattern=ctx.createPattern(p,"repeat");
-  S.terrainDirty=true}
-function resize(){const w=cv.parentElement.clientWidth;if(!w)return;ts=w/W;dpr=window.devicePixelRatio||1;
-  cv.style.width=w+"px";cv.style.height=(ts*H)+"px";cv.width=Math.round(w*dpr);cv.height=Math.round(ts*H*dpr);tc.width=cv.width;tc.height=cv.height;S.terrainDirty=true}
+  drawTerrainAll()}
+function resize(){const r=cv.getBoundingClientRect();vw=r.width;vh=r.height;dpr=window.devicePixelRatio||1;cv.width=Math.round(vw*dpr);cv.height=Math.round(vh*dpr);
+  zmin=Math.max(2,Math.min(vw/W,vh/H)*0.9);clampCam()}
+function fit(){cam.z=Math.max(zmin,Math.min(vw/W,vh/H));cam.x=(W*cam.z-vw)/2;cam.y=(H*cam.z-vh)/2;
+  if(vw<760){const t=[...S.towns].sort((a,b)=>b.pop-a.pop)[0];cam.z=Math.max(cam.z,vh*0.75/H);if(t){cam.x=(t.cx+0.5)*cam.z-vw/2;cam.y=(t.cy+0.5)*cam.z-vh/2}}clampCam()}
+function clampCam(){cam.z=clamp(cam.z,zmin,48);const mw=W*cam.z,mh=H*cam.z;
+  cam.x=mw<vw?(mw-vw)/2:clamp(cam.x,-vw*0.3,mw-vw*0.7);cam.y=mh<vh?(mh-vh)/2:clamp(cam.y,-vh*0.3,mh-vh*0.7)}
+function zoomAt(sx,sy,f){const wx=(sx+cam.x)/cam.z,wy=(sy+cam.y)/cam.z;cam.z=clamp(cam.z*f,zmin,48);cam.x=wx*cam.z-sx;cam.y=wy*cam.z-sy;clampCam()}
+function focusTile(i){const z=Math.max(cam.z,18);cam.z=z;cam.x=(tx(i)+0.5)*z-vw/2;cam.y=(ty(i)+0.5)*z-vh/2;clampCam();flash={tile:i,t:performance.now()};pinned=i;selDirty=true}
 
 function hash(i,k){let h=(i*374761393+k*668265263)|0;h=(h^(h>>>13))*1274126177;return((h^(h>>>16))>>>0)/4294967296}
-function drawTerrain(){const c=tctx;c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle=colors.land;c.fillRect(0,0,W*ts,H*ts);
-  c.fillStyle=colors["water-edge"];for(let i=0;i<N;i++)if(S.terrain[i]===1)c.fillRect(tx(i)*ts-1,ty(i)*ts-1,ts+2,ts+2);
-  c.fillStyle=colors.water;for(let i=0;i<N;i++)if(S.terrain[i]===1)c.fillRect(tx(i)*ts,ty(i)*ts,ts+0.5,ts+0.5);
-  for(let i=0;i<N;i++){if(S.terrain[i]!==2)continue;const x=tx(i)*ts,y=ty(i)*ts;c.fillStyle=colors.forest;c.fillRect(x,y,ts+0.5,ts+0.5);
-    c.fillStyle=colors.tree;for(let k=0;k<3;k++){const px=x+ts*(0.2+hash(i,k)*0.6),py=y+ts*(0.2+hash(i,k+7)*0.6);c.beginPath();c.arc(px,py,ts*(0.16+hash(i,k+3)*0.08),0,Math.PI*2);c.fill()}}
-  c.fillStyle=colors["road-edge"];c.globalAlpha=0.25;for(let y=4;y<H;y+=4)for(let x=4;x<W;x+=4)c.fillRect(x*ts-1,y*ts-1,2,2);c.globalAlpha=1;
-  S.terrainDirty=false}
+function drawTerrainTile(i){const c=tctx,T=TS0,x=tx(i)*T,y=ty(i)*T,t=S.terrain[i];
+  c.fillStyle=t===WATER?colors.water:t===FOREST?colors.forest:t===ROCK?colors.rock:t===ORE?colors.ore:colors.land;c.fillRect(x,y,T,T);
+  if(t===WATER){c.fillStyle=colors["water-edge"];for(let d=0;d<4;d++){const n=NB[i*4+d];if(n>=0&&S.terrain[n]!==WATER){if(d===0)c.fillRect(x+T-1.5,y,1.5,T);else if(d===1)c.fillRect(x,y,1.5,T);else if(d===2)c.fillRect(x,y+T-1.5,T,1.5);else c.fillRect(x,y,T,1.5)}}}
+  else if(t===FOREST){c.fillStyle=colors.tree;for(let k=0;k<3;k++){c.beginPath();c.arc(x+T*(0.2+hash(i,k)*0.6),y+T*(0.2+hash(i,k+7)*0.6),T*(0.16+hash(i,k+3)*0.08),0,Math.PI*2);c.fill()}}
+  else if(t===ROCK||t===ORE){c.fillStyle=t===ROCK?colors["rock-dot"]:colors["ore-dot"];for(let k=0;k<4;k++){const px=x+T*(0.15+hash(i,k)*0.7),py=y+T*(0.15+hash(i,k+9)*0.7);
+    if(t===ROCK){c.beginPath();c.moveTo(px-2,py+1.5);c.lineTo(px,py-2);c.lineTo(px+2.2,py+1.5);c.closePath();c.fill()}else c.fillRect(px-1.2,py-1.2,2.4,2.4)}}}
+function drawTerrainAll(){for(let i=0;i<N;i++)drawTerrainTile(i);S.dirty.length=0}
 
-const DXs=[1,-1,0,0],DYs=[0,0,1,-1];
-function congColor(i){if(S.flow[i]<4&&S.occ[i]===0)return colors.road;const c=S.cong[i];return c<0.35?colors.good:c<0.7?colors.warn:colors.bad}
-function drawRoads(){
+// ---- silnice ----
+function roadW(i){const k=S.road[i];if(k===ALLEY)return 0.3;return Math.min(0.94,0.22+0.24*S.lanes[i])}
+function congColor(i){const b=i*4;if(S.flow[i]<4&&!S.occ[b]&&!S.occ[b+1]&&!S.occ[b+2]&&!S.occ[b+3])return null;const c=Math.max(S.cong[b],S.cong[b+1],S.cong[b+2],S.cong[b+3]);return c<0.35?colors.good:c<0.7?colors.warn:colors.bad}
+function drawRoads(x0,y0,x1,y1){const ts=cam.z;
   for(let pass=0;pass<2;pass++){
-    for(let i=0;i<N;i++){const lv=S.road[i];if(!lv)continue;const cx=(tx(i)+0.5)*ts,cy=(ty(i)+0.5)*ts;
-      const w=ts*(lv===2?0.68:0.46)+(pass===0?Math.max(2,ts*0.12):0);
-      ctx.fillStyle=pass===0?(S.terrain[i]===1?colors.ink:colors["road-edge"]):(overlay?congColor(i):colors.road);
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*W+x,k=S.road[i];if(!k)continue;
+      const cx=(x+0.5)*ts,cy=(y+0.5)*ts;let w=roadW(i)*ts;
+      if(pass===0){w+=Math.max(1.5,ts*0.1);ctx.fillStyle=S.terrain[i]===WATER?colors.ink:k===HWY?colors["hwy-edge"]:colors["road-edge"]}
+      else{const oc=overlay?congColor(i):null;ctx.fillStyle=oc||(k===HWY?colors.hwy:k===ALLEY?colors.alley:colors.road)}
       ctx.fillRect(cx-w/2,cy-w/2,w,w);
-      for(let d=0;d<4;d++){const j=NB[i*4+d];if(j<0||!S.road[j])continue;
-        if(d===0)ctx.fillRect(cx,cy-w/2,ts/2+0.5,w);else if(d===1)ctx.fillRect(cx-ts/2-0.5,cy-w/2,ts/2+0.5,w);
-        else if(d===2)ctx.fillRect(cx-w/2,cy,w,ts/2+0.5);else ctx.fillRect(cx-w/2,cy-ts/2-0.5,w,ts/2+0.5)}}}
-  if(ts>=10){ctx.strokeStyle=colors["road-edge"];ctx.lineWidth=1;ctx.setLineDash([ts*0.18,ts*0.14]);ctx.beginPath();
-    for(let i=0;i<N;i++){if(S.road[i]!==2)continue;const cx=(tx(i)+0.5)*ts,cy=(ty(i)+0.5)*ts;
-      for(let d=0;d<4;d+=2){const j=NB[i*4+d];if(j>=0&&S.road[j]===2){ctx.moveTo(cx,cy);ctx.lineTo(cx+DXs[d]*ts,cy+DYs[d]*ts)}}}
-    ctx.stroke();ctx.setLineDash([])}}
+      for(let d=0;d<4;d++){const j=NB[i*4+d];if(j<0||!S.road[j])continue;let ww=Math.min(w,(roadW(j)*ts)+(pass===0?Math.max(1.5,ts*0.1):0));
+        if(S.deg[i]>=3)ww=Math.min(w,ww);else ww=w;
+        if(d===0)ctx.fillRect(cx,cy-ww/2,ts/2+0.5,ww);else if(d===1)ctx.fillRect(cx-ts/2-0.5,cy-ww/2,ts/2+0.5,ww);
+        else if(d===2)ctx.fillRect(cx-ww/2,cy,ww,ts/2+0.5);else ctx.fillRect(cx-ww/2,cy-ts/2-0.5,ww,ts/2+0.5)}
+      if(S.gate[i]>=0&&pass===0){const g=S.gates[S.gate[i]];const ox=(g.edge===0?-1:g.edge===1?1:0),oy=(g.edge===2?-1:g.edge===3?1:0);ctx.fillRect(cx-w/2+ox*ts*0.5,cy-w/2+oy*ts*0.5,w,w)}}}
+  if(ts<9)return;
+  ctx.lineWidth=Math.max(1,ts*0.04);
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*W+x,k=S.road[i];if(!k||k===ALLEY||S.deg[i]>=3)continue;
+    const cx=(x+0.5)*ts,cy=(y+0.5)*ts,w=roadW(i)*ts,L=S.lanes[i],ow=S.oneway[i];
+    for(let d=0;d<4;d+=2){// osa vodorovně (d=0) a svisle (d=2)
+      const j1=NB[i*4+d],j2=NB[i*4+d+1];const a=j1>=0&&S.road[j1],b=j2>=0&&S.road[j2];if(!a&&!b)continue;
+      const len0=b?-ts/2:0,len1=a?ts/2:0;
+      const total=2*L,lw=w/total;
+      for(let m=1;m<total;m++){const off=-w/2+m*lw;const center=m===L;
+        if(center&&!ow){ctx.strokeStyle=k===HWY||L>=2?colors.mark:colors["road-edge"];ctx.setLineDash(k===HWY||L>=2?[]:[ts*0.16,ts*0.12])}
+        else{ctx.strokeStyle=colors["road-edge"];ctx.setLineDash([ts*0.12,ts*0.14])}
+        ctx.beginPath();if(d===0){ctx.moveTo(cx+len0,cy+off);ctx.lineTo(cx+len1,cy+off)}else{ctx.moveTo(cx+off,cy+len0);ctx.lineTo(cx+off,cy+len1)}ctx.stroke()}}
+    if(ow&&ts>=12){const dd=ow-1;ctx.setLineDash([]);ctx.fillStyle=colors.accent;ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.atan2(DY[dd],DX[dd]));const s=ts*0.18;
+      ctx.beginPath();ctx.moveTo(s,0);ctx.lineTo(-s*0.6,-s*0.75);ctx.lineTo(-s*0.6,s*0.75);ctx.closePath();ctx.fill();ctx.restore()}}
+  ctx.setLineDash([]);
+  // křižovatky
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*W+x;if(!S.road[i]||S.deg[i]<3)continue;const e=S.ctlEff[i],cx=(x+0.5)*ts,cy=(y+0.5)*ts;
+    if(e===3){ctx.fillStyle=colors.road;ctx.beginPath();ctx.arc(cx,cy,ts*0.56,0,Math.PI*2);ctx.fill();ctx.strokeStyle=colors["road-edge"];ctx.lineWidth=Math.max(1,ts*0.05);ctx.stroke();
+      ctx.fillStyle=colors.tree;ctx.beginPath();ctx.arc(cx,cy,ts*0.2,0,Math.PI*2);ctx.fill()}
+    else if(e===2){const L=S.lights.get(i);for(let d=0;d<4;d++){const j=NB[i*4+d];if(j<0||!S.road[j])continue;const ax=(d>>1);
+      const col=L&&L.axis===ax?(L.amber?colors.warn:colors.good):colors.bad;const px=cx+DX[d]*ts*0.42-DY[d]*ts*0.3,py=cy+DY[d]*ts*0.42+DX[d]*ts*0.3;
+      ctx.fillStyle="#1a1d1b";ctx.beginPath();ctx.arc(px,py,ts*0.13,0,Math.PI*2);ctx.fill();ctx.fillStyle=col;ctx.beginPath();ctx.arc(px,py,ts*0.09,0,Math.PI*2);ctx.fill()}}
+    else if(e===1){const m=S.mainMask[i];for(let d=0;d<4;d++){const j=NB[i*4+d];if(j<0||!S.road[j]||(m>>d&1))continue;
+      const px=cx+DX[d]*ts*0.44-DY[d]*ts*0.32,py=cy+DY[d]*ts*0.44+DX[d]*ts*0.32,s=ts*0.14;
+      ctx.fillStyle="#fff";ctx.strokeStyle="#c03a2b";ctx.lineWidth=Math.max(1,ts*0.045);ctx.beginPath();ctx.moveTo(px-s,py-s*0.7);ctx.lineTo(px+s,py-s*0.7);ctx.lineTo(px,py+s*0.9);ctx.closePath();ctx.fill();ctx.stroke()}}}}
+
+// ---- budovy ----
 function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=(n>>8)&255,b=n&255;return`rgb(${Math.min(255,Math.round(r*f))},${Math.min(255,Math.round(g*f))},${Math.min(255,Math.round(b*f))})`}
-const isLotRole=r=>r===R_LOT||r===R_FORE;
-// obdélník dlaždice slitý se sousedy stejné budovy a stejné skupiny rolí
-function mergedRect(j,b,inset){const x=tx(j)*ts,y=ty(j)*ts,lot=isLotRole(S.role[j]);
+function mergedRect(j,b,inset){const ts=cam.z,x=tx(j)*ts,y=ty(j)*ts,lot=isLotRole(S.role[j]);
   const same=d=>{const n=NB[j*4+d];return n>=0&&S.bld[n]===b&&isLotRole(S.role[n])===lot};
   const l=same(1)?0:inset,r=same(0)?0:inset,t=same(3)?0:inset,bo=same(2)?0:inset;return[x+l,y+t,ts-l-r,ts-t-bo]}
-function center(b,roleFilter){let sx=0,sy=0,n=0;for(const j of b.tiles)if(!roleFilter||roleFilter(S.role[j])){sx+=tx(j);sy+=ty(j);n++}if(!n)return center(b);return[(sx/n+0.5)*ts,(sy/n+0.5)*ts]}
-function drawSign(x,y,r,color,letter,square){ctx.fillStyle=color;ctx.beginPath();if(square){ctx.rect(x-r,y-r,2*r,2*r)}else ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
-  if(ts>=10){ctx.fillStyle="#fff";ctx.font=`500 ${Math.round(r*1.2)}px "IBM Plex Mono", monospace`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(letter,x,y+1)}}
-function drawBuildings(){
-  const ins=ts*0.13;
-  // vjezdy k domům
+function center(b,f){const ts=cam.z;let sx=0,sy=0,n=0;for(const j of b.tiles)if(!f||f(S.role[j])){sx+=tx(j);sy+=ty(j);n++}if(!n)return center(b);return[(sx/n+0.5)*ts,(sy/n+0.5)*ts]}
+function drawSign(x,y,r,color,letter,square){ctx.fillStyle=color;ctx.beginPath();if(square)ctx.rect(x-r,y-r,2*r,2*r);else ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  if(cam.z>=9){ctx.fillStyle="#fff";ctx.font=`500 ${Math.round(r*(letter.length>1?0.95:1.2))}px "IBM Plex Mono", monospace`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(letter,x,y+1)}}
+function bVisible(b,x0,y0,x1,y1){const x=tx(b.front),y=ty(b.front);return x>=x0-4&&x<=x1+4&&y>=y0-4&&y<=y1+4}
+function drawBuildings(x0,y0,x1,y1){const ts=cam.z,ins=ts*0.13;
+  const vis=S.buildings.filter(b=>bVisible(b,x0,y0,x1,y1));
   ctx.fillStyle=colors.lot;
-  for(const b of S.buildings){if(!isHome(b)||b.access<0)continue;const f=b.front,a=b.access;const dx=tx(a)-tx(f),dy=ty(a)-ty(f);const cx=(tx(f)+0.5)*ts,cy=(ty(f)+0.5)*ts,w=ts*0.24;
+  for(const b of vis){if(!isHome(b)||b.access<0)continue;const f=b.front,a=b.access;const dx=tx(a)-tx(f),dy=ty(a)-ty(f);const cx=(tx(f)+0.5)*ts,cy=(ty(f)+0.5)*ts,w=ts*0.24;
     if(dx)ctx.fillRect(dx>0?cx:cx-ts*0.62,cy-w/2,ts*0.62,w);else ctx.fillRect(cx-w/2,dy>0?cy:cy-ts*0.62,w,ts*0.62)}
-  // stíny
   ctx.fillStyle="rgba(0,0,0,.18)";
-  for(const b of S.buildings)for(const j of b.tiles){const r=S.role[j];if(isLotRole(r))continue;const q=mergedRect(j,b,ins);ctx.fillRect(q[0]+1.5,q[1]+2,q[2],q[3])}
-  for(const b of S.buildings){
+  for(const b of vis)for(const j of b.tiles){if(isLotRole(S.role[j]))continue;const q=mergedRect(j,b,ins);ctx.fillRect(q[0]+1.5,q[1]+2,q[2],q[3])}
+  for(const b of vis){const K=KIND[b.type];
     for(const j of b.tiles){const r=S.role[j];
-      if(r===R_HOUSE){const q=mergedRect(j,b,ins);ctx.fillStyle=b.town?b.town.color:"#888";ctx.fillRect(...q)}
+      if(r===R_HOUSE){ctx.fillStyle=b.town?b.town.color:"#888";ctx.fillRect(...mergedRect(j,b,ins))}
       else if(r===R_FLAT){const q=mergedRect(j,b,ins*0.6);ctx.fillStyle=shade(b.town?b.town.color:"#888888",0.62);ctx.fillRect(...q);
         if(ts>=10){ctx.fillStyle="rgba(255,236,170,.8)";const x=tx(j)*ts,y=ty(j)*ts;for(let a=0;a<2;a++)for(let c=0;c<2;c++)ctx.fillRect(x+ts*(0.26+a*0.32),y+ts*(0.26+c*0.32),ts*0.14,ts*0.14)}}
-      else if(r===R_BLD){const q=mergedRect(j,b,ins);ctx.fillStyle=KIND[b.type].color;ctx.fillRect(...q)}
+      else if(r===R_BLD){ctx.fillStyle=K.industry?shade(K.color,0.9):K.color;ctx.fillRect(...mergedRect(j,b,ins))}
       else if(r===R_GAR){const q=mergedRect(j,b,ins*0.6);ctx.fillStyle=colors["road-edge"];ctx.fillRect(...q);ctx.fillStyle=colors.lot;ctx.fillRect(q[0]+2,q[1]+2,q[2]-4,q[3]-4)}
-      else if(r===R_LOT||r===R_FORE){const q=mergedRect(j,b,ts*0.04);ctx.fillStyle=colors.lot;ctx.fillRect(...q);
-        if(r===R_LOT&&ts>=9){ctx.strokeStyle=colors["lot-line"];ctx.lineWidth=1;ctx.beginPath();const x=tx(j)*ts,y=ty(j)*ts;
-          ctx.moveTo(x+ts/2,y+ts*0.12);ctx.lineTo(x+ts/2,y+ts*0.88);ctx.moveTo(x+ts*0.12,y+ts/2);ctx.lineTo(x+ts*0.88,y+ts/2);ctx.stroke()}
-        if(r===R_FORE){const x=tx(j)*ts,y=ty(j)*ts;ctx.fillStyle=colors.canopy;ctx.globalAlpha=0.75;ctx.fillRect(x+ts*0.14,y+ts*0.14,ts*0.72,ts*0.72);ctx.globalAlpha=1;
-          ctx.fillStyle=KIND.gas.color;ctx.fillRect(x+ts*0.44,y+ts*0.3,ts*0.12,ts*0.4)}}}
-    // garáž u bytovky: vjezd do podzemí
+      else{const q=mergedRect(j,b,ts*0.04);ctx.fillStyle=r===R_YARD?shade(K.color,1.9).replace(/rgb\((\d+),(\d+),(\d+)\)/,(m,a,b2,c)=>`rgba(${a},${b2},${c},.55)`):colors.lot;ctx.fillRect(...q);
+        const x=tx(j)*ts,y=ty(j)*ts;
+        if(r===R_LOT&&ts>=9){ctx.strokeStyle=colors["lot-line"];ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+ts/2,y+ts*0.12);ctx.lineTo(x+ts/2,y+ts*0.88);ctx.moveTo(x+ts*0.12,y+ts/2);ctx.lineTo(x+ts*0.88,y+ts/2);ctx.stroke()}
+        if(r===R_FORE){ctx.fillStyle=colors.canopy;ctx.globalAlpha=0.75;ctx.fillRect(x+ts*0.14,y+ts*0.14,ts*0.72,ts*0.72);ctx.globalAlpha=1;ctx.fillStyle=KIND.gas.color;ctx.fillRect(x+ts*0.44,y+ts*0.3,ts*0.12,ts*0.4)}
+        if(r===R_YARD&&K.out&&ts>=10){const n=Math.min(4,Math.ceil(b.out/2));ctx.fillStyle=GOODS[K.out].color;for(let s=0;s<n;s++)ctx.fillRect(x+ts*(0.15+s*0.18),y+ts*0.55,ts*0.13,ts*0.28)}}}
     if(b.type==="flat"&&b.access>=0){const f=b.front,a=b.access,dx=tx(a)-tx(f),dy=ty(a)-ty(f);const cx=(tx(f)+0.5+dx*0.36)*ts,cy=(ty(f)+0.5+dy*0.36)*ts;
       ctx.fillStyle="rgba(10,12,10,.85)";const l=ts*0.34,w=ts*0.16;if(dx)ctx.fillRect(cx-w/2,cy-l/2,w,l);else ctx.fillRect(cx-l/2,cy-w/2,l,w)}
-    if(KIND[b.type]){const k=KIND[b.type];
-      if(b.type==="park"){const [x,y]=center(b);drawSign(x,y,ts*0.36,colors.sign,"P",true);
+    if(K){if(b.type==="park"){const [x,y]=center(b);drawSign(x,y,ts*0.36,colors.sign,"P",true);
         if(ts>=12&&b.parked.length){ctx.fillStyle=colors.label;ctx.font=`500 ${Math.round(ts*0.42)}px "IBM Plex Mono", monospace`;ctx.textAlign="center";ctx.textBaseline="top";ctx.fillText(b.parked.length+"/"+b.cap,x,y+ts*0.42)}}
-      else{const [x,y]=center(b,r=>r===R_BLD);drawSign(x,y,ts*(b.type==="mall"?0.46:0.36),k.color==="#8a5a2b"?shade(k.color,0.8):shade(k.color,0.85),k.letter,false)}}}}
-function lotSlots(b){const out=[];for(const j of b.tiles){const r=S.role[j];const x=tx(j)*ts,y=ty(j)*ts;
-  if(r===R_LOT){for(const [a,c] of[[0.27,0.27],[0.73,0.27],[0.27,0.73],[0.73,0.73]])out.push([x+a*ts,y+c*ts])}
+      else{const [x,y]=center(b,r=>r===R_BLD);drawSign(x,y,ts*(b.type==="mall"||b.type==="hyper"||b.type==="steel"?0.46:0.36),shade(K.color,0.82),K.letter,false)}}}}
+function lotSlots(b){const ts=cam.z,out=[];for(const j of b.tiles){const r=S.role[j];const x=tx(j)*ts,y=ty(j)*ts;
+  if(r===R_LOT||r===R_YARD){for(const [a,c] of[[0.27,0.27],[0.73,0.27],[0.27,0.73],[0.73,0.73]])out.push([x+a*ts,y+c*ts])}
   else if(r===R_FORE){for(const a of[0.27,0.73])out.push([x+a*ts,y+0.5*ts])}}return out}
-function drawCar(x,y,ang,color){const l=ts*0.34,w=ts*0.2;ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.fillStyle=color;ctx.fillRect(-l/2,-w/2,l,w);
-  ctx.fillStyle="rgba(255,255,255,.7)";ctx.fillRect(l/2-l*0.22,-w/2,l*0.18,w);ctx.restore()}
+function drawCar(x,y,ang,color,truck,cargo){const ts=cam.z,l=ts*(truck?0.48:0.34),w=ts*(truck?0.24:0.2);ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.fillStyle=color;ctx.fillRect(-l/2,-w/2,l,w);
+  if(truck&&cargo){ctx.fillStyle=GOODS[cargo].color;ctx.fillRect(-l/2+1,-w/2+1,l*0.6,w-2)}
+  ctx.fillStyle="rgba(255,255,255,.7)";ctx.fillRect(l/2-l*0.2,-w/2,l*0.16,w);ctx.restore()}
 function laneOff(c,k){const i=c.p[k];if(i===undefined||!S.road[i])return[0,0];const n=c.p[k+1],pv=c.p[k-1];let a,b;
   if(n!==undefined&&S.road[n]&&n!==i){a=i;b=n}else if(pv!==undefined&&S.road[pv]&&pv!==i){a=pv;b=i}else return[0,0];
-  const off=ts*0.13;return[-(ty(b)-ty(a))*off,(tx(b)-tx(a))*off]}
-function drawCars(){
-  for(const b of S.buildings){if(b.type==="park"||!b.parked.length)continue;const sl=lotSlots(b);
-    b.parked.forEach((c,k)=>{const s=sl[k%sl.length];drawCar(s[0],s[1],Math.PI/2,c.town.color)})}
-  for(const c of S.cars){if(c.state==="dwell"||c.dead)continue;const p=c.p[c.k],q=c.p[c.k+1];
-    const oa=laneOff(c,c.k);const ax=(tx(p)+0.5)*ts+oa[0],ay=(ty(p)+0.5)*ts+oa[1];
-    let x=ax,y=ay;if(q!==undefined){const ob=laneOff(c,c.k+1);const bx=(tx(q)+0.5)*ts+ob[0],by=(ty(q)+0.5)*ts+ob[1];x=ax+(bx-ax)*c.t;y=ay+(by-ay)*c.t;
-      if(bx!==ax||by!==ay)c.ang=Math.atan2(by-ay,bx-ax)}
-    drawCar(x,y,c.ang,c.town.color)}}
-function drawZones(){if(!zonePattern)return;ctx.fillStyle=zonePattern;for(let i=0;i<N;i++)if(S.zone[i])ctx.fillRect(tx(i)*ts,ty(i)*ts,ts,ts);
-  ctx.strokeStyle=colors.zone;ctx.globalAlpha=0.7;ctx.lineWidth=1;ctx.beginPath();
-  for(let i=0;i<N;i++){if(!S.zone[i])continue;const x=tx(i)*ts,y=ty(i)*ts;
-    if(NB[i*4]<0||!S.zone[NB[i*4]]){ctx.moveTo(x+ts,y);ctx.lineTo(x+ts,y+ts)}if(NB[i*4+1]<0||!S.zone[NB[i*4+1]]){ctx.moveTo(x,y);ctx.lineTo(x,y+ts)}
-    if(NB[i*4+2]<0||!S.zone[NB[i*4+2]]){ctx.moveTo(x,y+ts);ctx.lineTo(x+ts,y+ts)}if(NB[i*4+3]<0||!S.zone[NB[i*4+3]]){ctx.moveTo(x,y);ctx.lineTo(x+ts,y)}}
-  ctx.stroke();ctx.globalAlpha=1}
-function drawLabels(){const fs=Math.max(10,Math.min(14,ts*0.7));
-  ctx.textAlign="center";ctx.textBaseline="bottom";ctx.lineJoin="round";
-  for(const t of S.towns){const x=(t.cx+0.5)*ts,y=(t.cy-0.25)*ts;
-    ctx.font=`600 ${fs}px "IBM Plex Sans", system-ui, sans-serif`;const txt=t.name;
+  const ts=cam.z,w=roadW(i)*ts,L=S.lanes[i];let off;
+  if(S.oneway[i]){const tot=2*L;off=-w/2+((c.id%tot)+0.5)*w/tot}else off=((c.id%L)+0.5)*w/(2*L);
+  return[-(ty(b)-ty(a))*off,(tx(b)-tx(a))*off]}
+function drawCars(x0,y0,x1,y1){const ts=cam.z;if(ts<4)return;
+  for(const b of S.buildings){if(b.type==="park"||!b.parked.length||!bVisible(b,x0,y0,x1,y1))continue;const sl=lotSlots(b);if(!sl.length)continue;
+    b.parked.forEach((c,k)=>{const s=sl[k%sl.length];drawCar(s[0],s[1],Math.PI/2,c.town.color,false,null)})}
+  for(const c of S.cars){if(c.state==="dwell"||c.dead)continue;const p=c.p[c.k],q=c.p[c.k+1];const px=tx(p),py=ty(p);if(px<x0-1||px>x1+1||py<y0-1||py>y1+1)continue;
+    const oa=laneOff(c,c.k);const ax=(px+0.5)*ts+oa[0],ay=(py+0.5)*ts+oa[1];let x=ax,y=ay;
+    if(q!==undefined){const ob=laneOff(c,c.k+1);const bx=(tx(q)+0.5)*ts+ob[0],by=(ty(q)+0.5)*ts+ob[1];x=ax+(bx-ax)*c.t;y=ay+(by-ay)*c.t;if(bx!==ax||by!==ay)c.ang=Math.atan2(by-ay,bx-ax)}
+    drawCar(x,y,c.ang,c.truck?"#3b4148":c.town.color,c.truck,c.cargo)}}
+function drawZones(x0,y0,x1,y1){if(!zonePattern)return;const ts=cam.z;ctx.fillStyle=zonePattern;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(S.zone[y*W+x])ctx.fillRect(x*ts,y*ts,ts,ts)}
+function drawLabels(){const ts=cam.z,fs=clamp(ts*0.75,11,15);ctx.lineJoin="round";ctx.textAlign="center";ctx.textBaseline="bottom";
+  for(const t of S.towns){const x=(t.cx+0.5)*ts,y=(t.cy-0.25)*ts;if(x<cam.x-80||x>cam.x+vw+80||y<cam.y-40||y>cam.y+vh+40)continue;
+    if(ts<6&&t.pop<30)continue;
+    ctx.font=`600 ${fs}px "IBM Plex Sans", system-ui, sans-serif`;const txt=t.name+(ts>=8?"  "+t.pop:"");
     ctx.lineWidth=4;ctx.strokeStyle=colors.halo;ctx.strokeText(txt,x,y);ctx.fillStyle=colors.label;ctx.fillText(txt,x,y);
-    const tw=ctx.measureText(txt).width;ctx.fillStyle=!t.accessList.length?colors["road-edge"]:t.jam>0.4?colors.bad:t.rate>0.03?colors.good:colors.warn;
-    ctx.beginPath();ctx.arc(x-tw/2-6,y-fs*0.45,3,0,Math.PI*2);ctx.fill()}}
-function drawHover(){if(hover<0)return;const b=S.bld[hover];ctx.strokeStyle=colors.accent;ctx.lineWidth=2;
-  if(b&&(tool==="erase"||tool==="look")){for(const j of b.tiles)ctx.strokeRect(tx(j)*ts+1,ty(j)*ts+1,ts-2,ts-2)}
-  else if(tool!=="look"||S.road[hover])ctx.strokeRect(tx(hover)*ts+1,ty(hover)*ts+1,ts-2,ts-2)}
-function render(){if(S.terrainDirty)drawTerrain();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(tc,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
-  drawZones();drawRoads();drawBuildings();drawCars();drawLabels();drawHover()}
+    const tw=ctx.measureText(txt).width;ctx.fillStyle=!t.accessList.length?colors["road-edge"]:t.jam>0.4?colors.bad:t.rate>0.018?colors.good:colors.warn;
+    ctx.beginPath();ctx.arc(x-tw/2-7,y-fs*0.45,3.2,0,Math.PI*2);ctx.fill()}
+  for(const g of S.gates){const i=g.tile;const px=-DY[g.inward],py=DX[g.inward];const x=(tx(i)+0.5+DX[g.inward]*2.5+px*1.6)*ts,y=(ty(i)+0.5+DY[g.inward]*2.5+py*1.6)*ts;
+    const txt=(g.edge===0?"← ":g.edge===1?"":g.edge===2?"↑ ":"↓ ")+g.name+(g.edge===1?" →":"");ctx.font=`600 ${fs}px "IBM Plex Sans", system-ui, sans-serif`;
+    const tw=ctx.measureText(txt).width+12;let bx=clamp(x-tw/2,4,W*ts-tw-4),by=clamp(y-fs*0.8,4,H*ts-fs*1.7);
+    ctx.fillStyle=colors.sign;ctx.fillRect(bx,by,tw,fs*1.55);ctx.fillStyle="#fff";ctx.textBaseline="middle";ctx.textAlign="left";ctx.fillText(txt,bx+6,by+fs*0.8);ctx.textAlign="center";ctx.textBaseline="bottom"}}
+function drawHover(){const ts=cam.z;
+  const mark=(i,col)=>{if(i<0)return;const b=S.bld[i];ctx.strokeStyle=col;ctx.lineWidth=2;if(b){for(const j of b.tiles)ctx.strokeRect(tx(j)*ts+1,ty(j)*ts+1,ts-2,ts-2)}else ctx.strokeRect(tx(i)*ts+1,ty(i)*ts+1,ts-2,ts-2)};
+  mark(pinned,colors.ink);if(hover!==pinned)mark(hover,colors.accent);
+  if(flash){const age=(performance.now()-flash.t)/1000;if(age>2.4)flash=null;else{const r=ts*(0.8+age*1.2);ctx.strokeStyle=colors.accent;ctx.globalAlpha=Math.max(0,1-age/2.4);ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc((tx(flash.tile)+0.5)*ts,(ty(flash.tile)+0.5)*ts,r,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}}}
+function render(){
+  for(const i of S.dirty)drawTerrainTile(i);S.dirty.length=0;
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=colors.outside;ctx.fillRect(0,0,vw,vh);
+  ctx.imageSmoothingEnabled=cam.z<TS0;ctx.drawImage(tc,0,0,tc.width,tc.height,-cam.x,-cam.y,W*cam.z,H*cam.z);
+  ctx.setTransform(dpr,0,0,dpr,-cam.x*dpr,-cam.y*dpr);
+  const ts=cam.z,x0=Math.max(0,Math.floor(cam.x/ts)),y0=Math.max(0,Math.floor(cam.y/ts)),x1=Math.min(W-1,Math.floor((cam.x+vw)/ts)),y1=Math.min(H-1,Math.floor((cam.y+vh)/ts));
+  drawZones(x0,y0,x1,y1);drawRoads(x0,y0,x1,y1);drawBuildings(x0,y0,x1,y1);drawCars(x0,y0,x1,y1);drawLabels();drawHover()}
 
-// --- UI panely ---
-const fmt=n=>Math.floor(n).toLocaleString("cs-CZ");
-function infoHTML(){
-  const legend=`<div class="legend">${["gas","pub","shop","mall"].map(k=>`<span><i style="background:${KIND[k].color}">${KIND[k].letter}</i>${KIND[k].name}</span>`).join("")}<span><i class="sq" style="background:var(--sign)">P</i>Parkovací dům</span></div>`;
-  if(hover<0)return`<h2>Na mapě</h2><p class="hint">Táhni po mapě a stav silnice. Najeď na cokoli a uvidíš podrobnosti.</p>${legend}`;
-  const i=hover,b=S.bld[i];let title,rows=[];
-  if(S.road[i]){title=S.road[i]===2?"Široká silnice":(S.terrain[i]===1?"Most":"Silnice");
-    rows=[["Provoz",fmt(S.flow[i])+" aut/min"],["Vytížení",Math.round(Math.min(1,S.cong[i])*100)+" %"],["Aut teď",S.occ[i]+" / "+capOf(S,i)]];
-    if(S.road[i]===1)rows.push(["Rozšíření","30 Kč"])}
-  else if(isHome(b)){const t=b.town;title=b.name+" · "+t.name;
-    rows=[["Obyvatel v domě",b.pop],["Obyvatel obce",fmt(t.pop)],["Růst obce",growthLabel(t)[0]],["Zpoždění cest",t.accessList.length?Math.round(Math.max(0,t.delay-1)*100)+" %":"bez silnice"],["Zbourání",fmt(demolishCost(b))+" Kč"]];
-    if(b.type==="flat")rows.splice(1,0,["Garáž","podzemní, vjezd z ulice"])}
-  else if(b){const k=KIND[b.type];title=k.name+(b.town?" · "+b.town.name:" u silnice");
-    rows=[[b.type==="gas"?"U stojanů":"Parkoviště",b.parked.length+" / "+b.cap],["Návštěv",fmt(b.visits)],["Příjem z návštěvy",k.pay+" Kč"]];
-    if(k.pull)rows.push(["Odjeli bez místa",fmt(b.overflow)]);rows.push(["Zbourání",fmt(demolishCost(b))+" Kč"])}
-  else{const k=S.terrain[i];title=k===1?"Voda":k===2?"Les":"Louka";if(S.zone[i])title+=" · stavební uzávěra";rows=[[k===1?"Most":"Silnice",roadCost(S,i)+" Kč"]];const [t,d]=nearestTown(S,tx(i),ty(i));if(t)rows.push(["Nejblíž obec",t.name+" ("+Math.round(d)+" polí)"])}
-  return`<h2>Na mapě</h2><div class="title">${title}</div><div class="rows">${rows.map(r=>`<span>${r[0]}</span><b>${r[1]}</b>`).join("")}</div>${legend}`}
-function growthLabel(t){if(!t.accessList.length)return["bez silnice","mute"];
-  if(t.jam>0.4)return["zácpy","bad"];if(t.rate>0.065)return["roste rychle","good"];if(t.rate>0.03)return["roste","good"];if(t.rate>0.008)return["pomalu","warn"];return["stojí","mute"]}
-let lastLogLen=-1,lastLogTop=null;
+// ---- panely ----
+const fmt=n=>Math.round(n).toLocaleString("cs-CZ");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let selDirty=true,lastSelKey="";
+function growthLabel(t){if(!t.accessList.length)return"bez silnice";if(t.jam>0.4)return"brzdí ji zácpy";if(t.rate>0.04)return"roste rychle";if(t.rate>0.018)return"roste";if(t.rate>0.005)return"roste pomalu";return"stojí"}
+function selHTML(i){
+  const b=S.bld[i];const acts=[];let title,sub="",rows=[],why=null,ok=false;
+  if(S.road[i]){
+    const k=S.road[i],L=S.lanes[i],j=S.deg[i]>=3;const g=S.gate[i]>=0?S.gates[S.gate[i]]:null;
+    title=g?"Dálnice do města "+g.name:j?"Křižovatka":k===HWY?"Dálnice":k===ALLEY?"Ulička":S.terrain[i]===WATER?"Most":"Silnice";
+    sub=k===ALLEY?"úzká, pomalá, postavila si ji obec":(L+" "+(L===1?"pruh":"pruhy")+" v každém směru")+(S.oneway[i]?" · jednosměrka":"");
+    const b4=i*4,c=Math.max(S.cong[b4],S.cong[b4+1],S.cong[b4+2],S.cong[b4+3]);
+    rows.push(["Provoz",fmt(S.flow[i])+" aut/min"],["Vytížení",Math.round(Math.min(1,c)*100)+" %"]);
+    if(g){rows.push(["Turisté",fmt(g.visitors)],["Vývoz",fmt(g.exported)+" Kč"]);if(!S.towns.some(t=>t.comps.has(S.comp[g.tile]))){why="Zatím vede do prázdna. Napoj ji na obce silnicí.";}}
+    if(j){const e=S.ctlEff[i];sub=CTL_NAMES[S.ctlMan[i]]+(S.ctlMan[i]===0&&e===1?" · hlavní silnice určena podle šířky":"");
+      for(let m=1;m<=5;m++)acts.push({label:["","Přednost zprava","Hlavní ↔","Hlavní ↕","Semafor 60 Kč","Kruhový objezd 80 Kč"][m],act:"ctl:"+m,pressed:S.ctlMan[i]===m});
+      acts.push({label:"Zrušit úpravu",act:"ctl:0",pressed:S.ctlMan[i]===0});
+      if(c>0.7)why="Tady se auta zdržují. Zkus semafor nebo kruhový objezd, případně objížďku."}
+    else{if(c>0.75)why="Tvoří se tu kolona. Pomůže pruh navíc nebo objížďka.";
+      if(k===ALLEY)acts.push({label:"Rozšířit na silnici 10 Kč",act:"lane+"});else{if(L<3)acts.push({label:"Přidat pruh "+(k===HWY?40:20)+" Kč",act:"lane+"});if(L>(k===HWY?2:1))acts.push({label:"Ubrat pruh",act:"lane-"})}
+      if(S.oneway[i])acts.push({label:"Zrušit jednosměrku",act:"ow:clear"});
+      if(!g)acts.push({label:"Zbourat",act:"erase"})}}
+  else if(isHome(b)){const t=b.town;title=b.name;sub="obec "+t.name+" · "+fmt(t.pop)+" obyvatel · "+growthLabel(t);
+    rows.push(["Bydlí tu",b.pop+" lidí"],["Cesty zdržené o",t.accessList.length?Math.round(Math.max(0,t.delay-1)*100)+" %":"–"]);
+    if(t.material>0)rows.push(["Stavební materiál",t.material.toFixed(1)+" fůry"]);
+    if(t.why&&t.why.length)why="Růst obce brzdí: "+t.why.join(", ")+".";else{why="Obec se rozvíjí bez potíží.";ok=true}
+    acts.push({label:"Zbourat "+fmt(demolishCost(b))+" Kč",act:"demolish"})}
+  else if(b){const K=KIND[b.type];title=K.name;sub=b.town?"obec "+b.town.name:"u silnice";
+    if(K.industry){rows.push(["Pracovníci",b.parked.length+" / "+K.workers],["Ve skladu",b.out+" fůr "+GOODS[K.out].name]);
+      if(K.need)for(const g in K.need)rows.push(["Na skladě "+GOODS[g].name,String(b.stock[g]||0)]);
+      if(K.res!==undefined)rows.push(["Zásoba v okolí",String(b.res||0)+" polí"]);
+      rows.push(["Vyrobeno",fmt(b.made)+" fůr"]);
+      const m={workers:"Nemá pracovníky. Napoj ho silnicí na obec.",nodest:"Nemá kam vozit. Napoj ho na dálnici do světa nebo na odběratele.",full:"Plný sklad. Výrobky nemá kdo odebrat.",input:"Čeká na suroviny.",res:"Okolí je vytěžené.",road:"Nemá silnici."};
+      if(b.short){why=m[b.short]}else{why="Vyrábí.";ok=true}}
+    else{rows.push([b.type==="gas"?"U stojanů":"Parkoviště",b.parked.length+" / "+b.cap],["Návštěv",fmt(b.visits)]);if(K.pull&&b.ofRecent>1)why="Parkoviště nestačí, auta čekají na silnici."}
+    acts.push({label:"Zbourat "+fmt(demolishCost(b))+" Kč",act:"demolish"})}
+  else{const k=S.terrain[i];title=["Louka","Voda","Les","Skály","Ložisko železné rudy"][k];if(S.zone[i])sub="stavební uzávěra";
+    rows.push([k===WATER?"Most":"Silnice",roadCost(S,i,ROAD)+" Kč"],["Dálnice",roadCost(S,i,HWY)+" Kč"]);
+    const [t,d]=nearestTown(S,tx(i),ty(i));if(t)rows.push(["Nejbližší obec",t.name+", "+Math.round(d)+" polí"]);
+    if(k===ROCK||k===ORE)why="Silnice sem z obce přivede "+(k===ROCK?"lom":"důl")+".";else if(k===FOREST)why="Silnice k lesu přivede těžbu dřeva.";
+    if(S.zone[i])acts.push({label:"Zrušit uzávěru",act:"zone:0"});else acts.push({label:"Stavební uzávěra",act:"zone:1"})}
+  return`<span class="pin">${pinned===i?"vybráno · Esc":"klikni pro výběr"}</span><h3>${esc(title)}</h3>${sub?`<div class="sub">${esc(sub)}</div>`:""}
+    <div class="rows">${rows.map(r=>`<span>${esc(r[0])}</span><b>${esc(r[1])}</b>`).join("")}</div>
+    ${why?`<p class="why${ok?" ok":""}">${esc(why)}</p>`:""}
+    ${acts.length?`<div class="acts">${acts.map(a=>`<button data-act="${a.act}" aria-pressed="${a.pressed?"true":"false"}">${esc(a.label)}</button>`).join("")}</div>`:""}`}
+function updateSel(){const i=pinned>=0?pinned:hover;const el=$("sel");if(i<0){el.hidden=true;return}el.hidden=false;el.innerHTML=selHTML(i)}
+$("sel").addEventListener("click",e=>{const btn=e.target.closest("[data-act]");if(!btn)return;const i=pinned>=0?pinned:hover;if(i<0)return;const a=btn.dataset.act;let r="ok";
+  if(a.startsWith("ctl:"))r=setControl(S,i,+a.slice(4));else if(a==="lane+")r=addLane(S,i,false);else if(a==="lane-")r=addLane(S,i,true);
+  else if(a==="ow:clear")r=setOneway(S,i,-1);else if(a==="erase"){r=eraseRoad(S,i);pinned=-1}else if(a==="demolish"){const b=S.bld[i];if(b)r=demolish(S,b);if(String(r).startsWith("ok")){toast("Zbouráno za "+r.slice(3)+" Kč");r="ok";pinned=-1}}
+  else if(a.startsWith("zone:"))S.zone[i]=+a.slice(5);
+  if(r!=="ok")toast(r);updateSel()});
 function updateUI(){
-  $("sMoney").textContent=fmt(S.money)+" Kč";let pop=0;for(const t of S.towns)pop+=t.pop;$("sPop").textContent=fmt(pop);
-  $("sTowns").textContent=S.towns.length;$("sCars").textContent=S.cars.length;$("sDay").textContent=Math.floor(S.time/45)+1;
-  $("info").innerHTML=infoHTML();
-  const ts2=[...S.towns].sort((a,b)=>b.pop-a.pop).slice(0,12);
-  $("towns").innerHTML=ts2.map(t=>{const [l,c]=growthLabel(t);return`<li><span class="sw" style="background:${t.color}"></span><span class="nm">${t.name}</span><span class="pp">${fmt(t.pop)}</span><span class="chip ${c}">${l}</span></li>`}).join("");
+  $("sMoney").textContent=fmt(S.money)+" Kč";const inc=$("sIncome");inc.textContent=(S.income>=0?"+":"")+fmt(S.income)+" Kč/min";inc.className=S.income<0?"neg":"";
+  let pop=0;for(const t of S.towns)pop+=t.pop;$("sPop").textContent=fmt(pop);$("sDay").textContent=Math.floor(S.time/DAY)+1;
+  const P=S.problems;const serious=P.filter(p=>p.sev>0).length;const cnt=$("probCount");cnt.textContent=serious;cnt.className="count"+(serious?"":" zero");
+  const key=P.map(p=>p.text).join("|");if(key!==lastProbKey){lastProbKey=key;
+    $("problems").innerHTML=P.length?P.map((p,k)=>`<li><button data-p="${k}"><span class="dot" style="background:${p.sev===2?"var(--bad)":p.sev===1?"var(--warn)":"var(--accent)"}"></span><span><span class="t">${esc(p.text)}</span><span class="h">${esc(p.hint)}</span></span></button></li>`).join(""):`<li class="empty">Nic nehoří. Krajina žije sama.</li>`}
   if(S.log.length!==lastLogLen||S.log[0]!==lastLogTop){lastLogLen=S.log.length;lastLogTop=S.log[0];
-    $("log").innerHTML=S.log.slice(0,40).map(e=>`<li><span>den ${e.day}</span><div>${e.text}</div></li>`).join("")}}
+    $("log").innerHTML=S.log.slice(0,50).map((e,k)=>`<li><button data-l="${k}"><span>den ${e.day}</span><span>${esc(e.text)}</span></button></li>`).join("")}
+  updateSel()}
+let lastProbKey="",lastLogLen=-1,lastLogTop=null;
+$("problems").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b)return;const p=S.problems[+b.dataset.p];if(p)focusTile(p.tile)});
+$("log").addEventListener("click",e=>{const b=e.target.closest("[data-l]");if(!b)return;const l=S.log[+b.dataset.l];if(l&&l.tile>=0)focusTile(l.tile)});
 
-// --- vstup ---
-let toastT=0;function toast(msg){const el=$("toast");el.textContent=msg;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,1600)}
-function tileAt(e){const r=cv.getBoundingClientRect();const x=Math.floor((e.clientX-r.left)/ts),y=Math.floor((e.clientY-r.top)/ts);return(x<0||y<0||x>=W||y>=H)?-1:y*W+x}
-let drawing=false,last=-1,strokeTool="road",mode=null,warned=false,spent=0;
-function apply(i){if(i<0)return;let res="ok";
-  if(strokeTool==="road")res=buildRoad(S,i);
-  else if(strokeTool==="upgrade")res=upgradeRoad(S,i);
-  else if(strokeTool==="erase"){
-    if(mode==="bld"){const b=S.bld[i];if(b){res=demolish(S,b);if(res.startsWith("ok:")){spent+=+res.slice(3);res="ok"}}}
-    else res=eraseRoad(S,i)}
-  else if(strokeTool==="zone"){if(!S.road[i])S.zone[i]=mode==="set"?1:0}
+// ---- vstup ----
+let toastT=0;function toast(msg){const el=$("toast");el.textContent=msg;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,1800)}
+function tileAt(sx,sy){const x=Math.floor((sx+cam.x)/cam.z),y=Math.floor((sy+cam.y)/cam.z);return(x<0||y<0||x>=W||y>=H)?-1:y*W+x}
+const ptrs=new Map();let stroke=null,panning=null,pinch=null,warned=false,spent=0,moved=false;
+function local(e){const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]}
+function applyTool(i,prev){if(i<0)return;const st=stroke;let res="ok";
+  switch(st.tool){
+    case"road":res=buildRoad(S,i,ROAD);break;
+    case"hwy":res=buildRoad(S,i,HWY);break;
+    case"lane":if(st.done.has(i))return;st.done.add(i);res=addLane(S,i,st.minus);break;
+    case"oneway":if(prev>=0){const d=dirOf(prev,i);if(S.road[prev])setOneway(S,prev,d);if(S.road[i])setOneway(S,i,d)}break;
+    case"junction":break;
+    case"erase":if(st.mode==="bld"){const b=S.bld[i];if(b){res=demolish(S,b);if(String(res).startsWith("ok:")){spent+=+res.slice(3);res="ok"}}}else res=eraseRoad(S,i);break;
+    case"zone":if(!S.road[i])S.zone[i]=st.mode==="set"?1:0;break}
   if(res!=="ok"&&!warned){warned=true;toast(res)}}
-function walk(a,b){let x=tx(a),y=ty(a);const bx=tx(b),by=ty(b);while(x!==bx||y!==by){if(Math.abs(bx-x)>=Math.abs(by-y))x+=Math.sign(bx-x);else y+=Math.sign(by-y);apply(y*W+x)}}
-cv.addEventListener("pointerdown",e=>{const i=tileAt(e);if(i<0)return;strokeTool=e.button===2?"erase":tool;if(strokeTool==="look")return;
-  mode=strokeTool==="erase"?(S.bld[i]?"bld":"road"):strokeTool==="zone"?(S.zone[i]?"clear":"set"):null;
-  drawing=true;warned=false;spent=0;cv.setPointerCapture(e.pointerId);last=i;apply(i)});
-cv.addEventListener("pointermove",e=>{const i=tileAt(e);hover=i;if(drawing&&i>=0&&i!==last){walk(last,i);last=i}});
-const end=()=>{if(drawing&&spent>0)toast("Zbouráno za "+fmt(spent)+" Kč");drawing=false};cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);
-cv.addEventListener("pointerleave",()=>{if(!drawing)hover=-1});
+function walk(a,b){let x=tx(a),y=ty(a);const bx=tx(b),by=ty(b);let prev=a;while(x!==bx||y!==by){if(Math.abs(bx-x)>=Math.abs(by-y))x+=Math.sign(bx-x);else y+=Math.sign(by-y);const i=y*W+x;applyTool(i,prev);prev=i}}
+cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);const [sx,sy]=local(e);ptrs.set(e.pointerId,{x:sx,y:sy});
+  if(ptrs.size===2){stroke=null;panning=null;const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),cx:(a.x+b.x)/2,cy:(a.y+b.y)/2};return}
+  if(ptrs.size>2)return;
+  moved=false;
+  if(e.button===1||tool==="hand"){panning={x:sx,y:sy,cx:cam.x,cy:cam.y,click:tool==="hand"&&e.button===0};return}
+  const i=tileAt(sx,sy);if(i<0)return;
+  const t=e.button===2?"erase":tool;
+  stroke={tool:t,start:i,last:i,mode:t==="erase"?(S.bld[i]?"bld":"road"):t==="zone"?(S.zone[i]?"clear":"set"):null,minus:e.shiftKey,done:new Set()};warned=false;spent=0;
+  if(t!=="oneway"&&t!=="junction")applyTool(i,-1)});
+cv.addEventListener("pointermove",e=>{const [sx,sy]=local(e);const p=ptrs.get(e.pointerId);if(p){if(Math.hypot(p.x-sx,p.y-sy)>3)moved=true;p.x=sx;p.y=sy}
+  if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y),cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
+    cam.x-=cx-pinch.cx;cam.y-=cy-pinch.cy;zoomAt(cx,cy,d/Math.max(1,pinch.d));pinch={d,cx,cy};return}
+  if(panning){cam.x=panning.cx-(sx-panning.x);cam.y=panning.cy-(sy-panning.y);clampCam();return}
+  const i=tileAt(sx,sy);if(i!==hover){hover=i;selDirty=true}
+  if(stroke&&i>=0&&i!==stroke.last){walk(stroke.last,i);stroke.last=i}});
+function endPtr(e){const [sx,sy]=local(e);ptrs.delete(e.pointerId);
+  if(pinch){if(ptrs.size<2)pinch=null;return}
+  if(panning){if(panning.click&&!moved){const i=tileAt(sx,sy);pinned=pinned===i?-1:i;selDirty=true}panning=null;return}
+  if(stroke){const st=stroke;stroke=null;
+    if(st.tool==="oneway"&&st.last===st.start){const i=st.start;if(S.road[i]){if(S.oneway[i]){setOneway(S,i,-1);toast("Jednosměrka zrušena")}else toast("Táhni po silnici ve směru jízdy")}}
+    if(st.tool==="junction"){const i=st.start;if(S.road[i]&&S.deg[i]>=3){const nm=(S.ctlMan[i]+1)%6;const r=setControl(S,i,nm);if(r==="ok"){toast(CTL_NAMES[nm]);pinned=i}else toast(r)}else toast("Klikni na křižovatku")}
+    if(spent>0)toast("Zbouráno za "+fmt(spent)+" Kč");selDirty=true}}
+cv.addEventListener("pointerup",endPtr);cv.addEventListener("pointercancel",endPtr);
+cv.addEventListener("pointerleave",()=>{if(!stroke&&!panning){hover=-1;selDirty=true}});
 cv.addEventListener("contextmenu",e=>e.preventDefault());
-
-function setTool(t){tool=t;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t))}
+cv.addEventListener("wheel",e=>{e.preventDefault();const [sx,sy]=local(e);zoomAt(sx,sy,Math.pow(1.0015,-e.deltaY))},{passive:false});
+function setTool(t){tool=t;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));cv.classList.toggle("pan",t==="hand")}
 function setSpeed(s){speed=s;document.querySelectorAll("[data-speed]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.speed===s))}
 document.querySelectorAll("[data-tool]").forEach(b=>b.addEventListener("click",()=>setTool(b.dataset.tool)));
 document.querySelectorAll("[data-speed]").forEach(b=>b.addEventListener("click",()=>setSpeed(+b.dataset.speed)));
 $("ovl").addEventListener("click",()=>{overlay=!overlay;$("ovl").setAttribute("aria-pressed",overlay)});
-$("newMap").addEventListener("click",()=>{S=createSim((Math.random()*1e9)|0);readColors();lastLogLen=-1;updateUI()});
-let prevSpeed=1;
+$("newMap").addEventListener("click",()=>{S=createSim((Math.random()*1e9)|0);pinned=-1;hover=-1;readColors();fit();lastLogLen=-1;lastProbKey="";updateUI()});
+$("helpBtn").addEventListener("click",()=>{$("help").hidden=false});$("helpClose").addEventListener("click",()=>{$("help").hidden=true});
+$("help").addEventListener("click",e=>{if(e.target.id==="help")$("help").hidden=true});
+let prevSpeed=1;const keysDown=new Set();
 window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;
-  const m={"1":"road","2":"upgrade","3":"erase","4":"zone","5":"look"};if(m[e.key])setTool(m[e.key]);
+  const m={"1":"road","2":"hwy","3":"lane","4":"oneway","5":"junction","6":"erase","7":"zone","8":"hand"};
+  if(m[e.key])setTool(m[e.key]);
   else if(e.key===" "){e.preventDefault();if(speed){prevSpeed=speed;setSpeed(0)}else setSpeed(prevSpeed||1)}
-  else if(e.key==="v"||e.key==="V")$("ovl").click()});
+  else if(e.key==="v"||e.key==="V")$("ovl").click();
+  else if(e.key==="Escape"){pinned=-1;$("help").hidden=true;selDirty=true}
+  else if(e.key.startsWith("Arrow")){e.preventDefault();keysDown.add(e.key)}
+  else if(e.key==="+"||e.key==="=")zoomAt(vw/2,vh/2,1.2);else if(e.key==="-")zoomAt(vw/2,vh/2,1/1.2)});
+window.addEventListener("keyup",e=>keysDown.delete(e.key));
 
-readColors();resize();
-new ResizeObserver(resize).observe(cv.parentElement);
+readColors();resize();fit();
+new ResizeObserver(()=>{resize()}).observe(cv);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",readColors);
 new MutationObserver(readColors).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+if(matchMedia("(max-width:760px)").matches)$("probBox").open=false;
 let lastT=performance.now(),acc=0,lastUI=0;
 function frame(now){const dt=Math.min(0.1,(now-lastT)/1000);lastT=now;
+  if(keysDown.size){const v=600*dt;if(keysDown.has("ArrowLeft"))cam.x-=v;if(keysDown.has("ArrowRight"))cam.x+=v;if(keysDown.has("ArrowUp"))cam.y-=v;if(keysDown.has("ArrowDown"))cam.y+=v;clampCam()}
   if(speed>0){acc+=dt*speed;let n=0;while(acc>=STEP&&n<24){step(S,STEP);acc-=STEP;n++}if(n>=24)acc=0}
-  render();if(now-lastUI>250){updateUI();lastUI=now}requestAnimationFrame(frame)}
+  render();if(now-lastUI>300||selDirty){updateUI();lastUI=now;selDirty=false}requestAnimationFrame(frame)}
 updateUI();requestAnimationFrame(frame);
 })();
 </script>
-
 </body>
 </html>
