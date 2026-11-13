@@ -7,18 +7,21 @@ function newDay(S,b){const nonHO=b.workers-b.ho;b.tCommute=Math.ceil(nonHO/2);b.
   b.tSchool=b.kids>0?Math.ceil(b.kids/3):0;b.kPer=b.tSchool?b.kids/b.tSchool:0;b.tShop=Math.round(b.adults*0.3+S.R()*0.8);
   b.tSenior=b.seniors>0?Math.ceil(b.seniors/2):0;b.tVisit=S.R()<0.45?1:0}
 function entEp(S,x){if(!x||x.dead)return null;if(x.isGate)return {node:x.node};if(!x.access)return null;return x.access}
-function entXY(S,x){if(x.isGate){const n=S.nodes[x.node];return [n.x,n.y]}return [tx(x.front)+0.5,ty(x.front)+0.5]}
+function entXY(S,x){if(x.isGate){const n=S.nodes[x.node];return [n.x,n.y]}return [wxOf(x.front),wyOf(x.front)]}
 function entComp(S,x){if(x.isGate)return S.nodes[x.node].comp;return x.access?edgeComp(S,x.access.e):-1}
 function entDist(S,a,b){const [ax,ay]=entXY(S,a),[bx,by]=entXY(S,b);return Math.hypot(ax-bx,ay-by)}
 
 function startTrip(S,tr){
   const fromEp=entEp(S,tr.from),toEp=entEp(S,tr.to);if(!fromEp||!toEp)return false;
   if(tr.mode==="walk"){if(tr.from.isGate||tr.to.isGate||S.walkers.length>=MAX_WALKERS)tr.mode="car";
-    else{const p=findPath(S,fromEp,toEp,true);if(p&&p.len<10){S.walkers.push({id:S.vid++,links:p.links,li:0,s:p.s0,sEnd:p.sEnd,trip:tr,ph:tr.from.front!==undefined?"out":"road",t:0,speed:tr.purpose==="senior"?0.38:0.5,side:S.R()<0.5?1:-1,dead:false,kid:tr.purpose==="school"});return true}tr.mode="car"}}
+    else{const p=findPath(S,fromEp,toEp,true);if(p&&p.len<10){const l0=p.links[0],lz=p.links[p.links.length-1];
+      const w={id:S.vid++,links:p.links,li:0,s:p.s0,sEnd:p.sEnd,trip:tr,ph:tr.from.front!==undefined?"out":"road",t:0,speed:tr.purpose==="senior"?0.38:0.5,
+        sd:sdOf(l0,fromEp.side||1),goalSd:sdOf(lz,toEp.side||1),xAt:-1,queue:null,cur:null,dead:false,kid:tr.purpose==="school"};
+      S.walkers.push(w);if(w.ph==="road")planFinal(S,w);return true}tr.mode="car"}}
   if(S.cars.length>=MAX_CARS)return false;
   const p=findPath(S,fromEp,toEp);if(!p)return false;
   const c=newVehicle(S,{links:p.links,s:p.s0,sEnd:p.sEnd,trip:tr,startEp:fromEp,goalEp:toEp,truck:!!tr.truck,color:tr.color,start:S.time,free:p.len/BASE_SPEED,firstExit:!tr.ret&&!tr.truck});
-  c.lane=chooseLane(S,c,0);
+  clampTrip(S,c);c.lane=chooseLane(S,c,0);
   if(tr.from.isGate){const l=c.links[0];const q=S.edges[l>>1].q[l&1][c.lane];const rear=q[q.length-1];
     if(rear&&rear.s<c.len+0.3){c.dead=true;c.state="gone";return false}c.s=0;q.push(c);c.state="drive";c.sid=S.sid}
   else S.exiting.push(c);
@@ -40,7 +43,7 @@ function lotFailed(S,c){const tr=c.trip,to=tr.to;to.overflow++;to.ofRecent+=1;S.
   const l=c.links[c.li],e=S.edges[l>>1];const homeEp=entEp(S,tr.home);
   const p=homeEp?findPath(S,{e:e.id,u:clamp((l&1)?e.g.len-c.s:c.s,0,e.g.len),dirs:[l&1]},homeEp):null;
   if(!p||p.links[0]!==l){c.dead=true;c.state="gone";if(isHome(tr.home))tr.home.away-=tr.group;tr.handled=true;return}
-  c.trip=back;c.goalEp=homeEp;c.links=p.links;c.li=0;c.sEnd=p.sEnd;c.wait=0;insertQ(e.q[l&1][c.lane],c)}
+  c.trip=back;c.goalEp=homeEp;c.links=p.links;c.li=0;const lz=p.links[p.links.length-1];c.sEnd=clamp(p.sEnd,linkIn(S,lz)+0.3,Math.max(linkIn(S,lz)+0.3,linkOut(S,lz)-0.3));if(p.links.length===1)c.sEnd=Math.max(c.sEnd,c.s);c.wait=0;insertQ(e.q[l&1][c.lane],c)}
 function arriveVehicle(S,c){c.dead=true;c.state="gone";handleArrival(S,c.trip,"car",c,false)}
 function walkerArrived(S,w,aborted){handleArrival(S,w.trip,"walk",null,aborted)}
 function handleArrival(S,tr,mode,c,silent){

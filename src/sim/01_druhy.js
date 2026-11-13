@@ -2,13 +2,15 @@
 
 // lanes = výchozí počet pruhů v každém směru, cost = Kč za pole délky, laneCost = za každý další pruh
 const RK={
-  street:{name:"Ulice",lanes:1,min:1,max:1,speed:0.8,median:0,side:0.1,cost:6,laneCost:0,front:true,walk:true,rank:1},
-  road:{name:"Silnice",lanes:1,min:1,max:3,speed:1.0,median:0,side:0.12,cost:10,laneCost:8,front:true,walk:true,rank:2},
+  alley:{name:"Ulička",lanes:1,min:1,max:1,speed:0.6,median:0,side:0.08,cost:4,laneCost:0,front:true,walk:true,rank:0,line:"none"},
+  street:{name:"Ulice",lanes:1,min:1,max:1,speed:0.8,median:0,side:0.1,cost:6,laneCost:0,front:true,walk:true,rank:1,line:"dash"},
+  road:{name:"Silnice",lanes:1,min:1,max:3,speed:1.0,median:0,side:0.12,cost:10,laneCost:8,front:true,walk:true,rank:2,line:"solid"},
+  oneway:{name:"Jednosměrka",lanes:1,min:1,max:3,speed:0.9,median:0,side:0.12,cost:8,laneCost:7,front:true,walk:true,oneway:true,rank:2,line:"none"},
   blvd:{name:"Bulvár",lanes:2,min:2,max:3,speed:1.25,median:0.34,side:0.14,cost:22,laneCost:10,front:true,walk:true,rightOnly:true,rank:3},
   hwy:{name:"Dálnice",lanes:2,min:2,max:4,speed:1.9,median:0.24,side:0,cost:36,laneCost:14,front:false,walk:false,rank:5},
   ramp:{name:"Nájezd",lanes:1,min:1,max:2,speed:1.3,median:0,side:0,cost:14,laneCost:8,front:false,walk:false,oneway:true,rank:4}
 };
-const ROAD_KINDS=["street","road","blvd","hwy","ramp"];
+const ROAD_KINDS=["alley","street","road","oneway","blvd","hwy","ramp"];
 const LEVEL_NAMES=["Zem","Most","Vysoký most"];
 
 const R_HOUSE=1,R_FLAT=2,R_BLD=3,R_LOT=4,R_FORE=5,R_GAR=6,R_YARD=7;
@@ -35,7 +37,8 @@ const KIND={
   sawmill:{name:"Pila",letter:"Pi",color:"#a0763a",slots:4,pay:0,jobs:12,out:"lumber",need:{wood:1},rate:0.08,demolish:200,industry:true},
   steel:{name:"Ocelárna",letter:"Oc",color:"#4d5d73",slots:4,pay:0,jobs:24,out:"steel",need:{ore:1,stone:1},rate:0.05,demolish:300,industry:true}
 };
-const jobsOf=b=>{const K=KIND[b.type];if(!K)return 0;return K.jobsPerTile?K.jobsPerTile*b.tiles.length:(K.jobs||0)};
+const units=b=>b.tiles.length/4;          // velikost budovy v polích (pole = 2 × 2 buňky)
+const jobsOf=b=>{const K=KIND[b.type];if(!K)return 0;return K.jobsPerTile?Math.round(K.jobsPerTile*units(b)):(K.jobs||0)};
 
 const HOUSE_SHAPES=[
   {name:"Domek",w:6,cells:[[0,0]]},
@@ -67,5 +70,10 @@ const SVC_SHAPES={
   sawmill:[[...row(0,3,"y"),[0,1,"b"],[1,1,"b"],[2,1,"y"]],[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]]],
   steel:[[...row(0,3,"y"),...row(1,3,"b"),...row(2,3,"b")],[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]]]
 };
-const housePop=n=>[0,4,6,8,9,10,11][n]||11;
+// tvary jsou v polích; na jemné síti je každé pole 2 × 2 buňky (v = 0 je řada u silnice)
+const fineShape=cells=>{const o=[];for(const c of cells)for(let b=0;b<2;b++)for(let a=0;a<2;a++)o.push([c[0]*2+a,c[1]*2+b,c[2]]);return o};
+for(const s of HOUSE_SHAPES)s.cells=fineShape(s.cells);
+for(const s of FLAT_SHAPES)s.cells=fineShape(s.cells);
+for(const k in SVC_SHAPES)SVC_SHAPES[k]=SVC_SHAPES[k].map(fineShape);
+const housePop=n=>[0,4,6,8,9,10,11][Math.round(n)]||11;   // n = počet polí
 const isHome=b=>b&&(b.type==="house"||b.type==="flat");
