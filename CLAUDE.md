@@ -17,8 +17,9 @@ způsob práce převzat z repozitáře BIMPOLIS a upraven pro hru.
   nápadu ho přečti, ale nic z něj nestav bez výslovného zadání.
 - `poznatky/` – poznatky z jednotlivých chatů (soubor na chat), čekající
   na zapracování; zpracované v `poznatky/zpracovano/`.
-- `index.html` – celá hra (simulace + vykreslování). Dokud hra nepřeroste
-  jeden soubor, zůstává v jednom souboru (rozhodnutí R1).
+- `src/` – zdroje hry: `template.html`, `sim/*.js` (simulace bez DOM),
+  `ui/*.js` (vykreslování a ovládání). `node build.js` z nich složí
+  `index.html` (rozhodnutí R26). `index.html` se ručně needituje.
 - `tests/` – automatické testy simulace v Node.js (bez prohlížeče).
 - `CHANGELOG.md` – změny podle verzí.
 
@@ -69,7 +70,7 @@ pád · [PAST] překvapivé chování pro hráče · [POZN.] drobnost.
    chyb můžeš udělat rovnou a napsat, co a proč.
 3. Změna ve vlastní větvi, jedna věcná změna = jeden pull request.
    Aktualizuj verzi (`GAME_VERSION` v `index.html`, až bude) a `CHANGELOG.md`.
-4. Spusť `node tests/test_simulace.js`. Napiš, co prošlo a co je neověřené
+4. Spusť `node build.js` a `node tests/test_simulace.js`. Napiš, co prošlo a co je neověřené
    (hratelnost a vzhled ověřuje uživatel hraním).
 
 Slučování pull requestů: jen na výslovný souhlas uživatele v chatu, u každého

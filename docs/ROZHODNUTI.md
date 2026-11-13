@@ -18,3 +18,23 @@ nepřepisuje, ale označí „nahrazeno R<číslo>“ a připíše se nové.
 | R10 | 13. 11. 2026 | Bourání budov je drahé (40–120 Kč za pole), uzávěra je zdarma. | Bourání má být rozhodnutí, ne běžný nástroj; uzávěra je plánování. | Bourání zdarma; uzávěra placená. |
 | R11 | 13. 11. 2026 | Repozitář (`.git`) neleží v OneDrive; v `OneDrive\GIT\Silnice` je jen hratelná kopie. | Synchronizace OneDrive poškozuje git (zkušenost z BIMPOLIS). | Pracovat přímo v OneDrive – zamítnuto. |
 | R12 | 13. 11. 2026 | Způsob práce převzat z BIMPOLIS: HRA.md jako základní dokument, nápady, poznatky, větev + pull request, slučování na „slouč“. | Přání uživatele mít profesionální repozitář s historií rozhodnutí. | – |
+| R13 | 13. 11. 2026 | Všechny změny verze 0.3 v jednom pull requestu. | Volba uživatele. | Tři fáze (rozhraní, silnice, svět) – doporučeno, zamítnuto. |
+| R14 | 13. 11. 2026 | Mapa 128 × 80 polí s přibližováním a posunem. | Volba uživatele; plynulé i na slabším počítači. | 192 × 120, 256 × 160. |
+| R15 | 13. 11. 2026 | Hra přes celou obrazovku, panely uvnitř hry. | Přání uživatele. | Panely kolem mapy (verze 0.2). |
+| R16 | 13. 11. 2026 | Zásada „každá informace vede k akci“: panel Co řešit s radou a odkazem na místo, výběr s důvodem a tlačítky. | Uživateli vadí panely plné čísel, se kterými nejde nic udělat. | Seznam obcí a statistik (verze 0.2) – zrušen. |
+| R17 | 13. 11. 2026 | Vnější svět: tři dálnice z okrajů mapy; tranzit, turisté i vývoz zboží. | Volba uživatele. | Jen tranzit; jen obchod. |
+| R18 | 13. 11. 2026 | Obsazenost silnice se počítá zvlášť pro každý směr jízdy; kapacita = počet pruhů, jednosměrka dvojnásobek. | Nutné pro pruhy a jednosměrky. | Obsazenost pole bez směru (verze 0.2) – nahrazeno. |
+| R19 | 13. 11. 2026 | Křižovatky se skutečným čekáním: přednost zprava, hlavní silnice, semafor podle front, kruhový objezd; pojistka proti zaseknutí (3,5 s). | Volba uživatele. | Jen zpomalení na křižovatce. |
+| R20 | 13. 11. 2026 | Obce si samy stavějí uličky, když nemají kam růst. | Přání uživatele; obec nezamrzne, když hráč nestaví. | Obec čeká na hráče. |
+| R21 | 13. 11. 2026 | Průmysl: těžba dřeva, lom, důl → pila, ocelárna; vzniká, když silnice přivede přístup k surovině a obec v dosahu; potřebuje pracovníky. | Přání uživatele; průmysl vzniká stejně organicky jako obce. | Hráč by průmysl stavěl sám – zamítnuto (R3). |
+| R22 | 13. 11. 2026 | Dálnice nemá vjezdy do budov; domy a služby u ní nevznikají. | Odpovídá skutečnosti, dálnice je pro rychlý průjezd. | – |
+| R23 | 13. 11. 2026 | Silniční síť jako graf (uzly a úseky s křivkami) přichycený na mřížku; terén a budovy zůstávají na polích. | Křivky, 45°, kruháky libovolné velikosti a mosty na políčkách nejdou. | Políčka + úhlopříčky – zamítnuto. Nahrazuje silnice na polích (R18). |
+| R24 | 13. 11. 2026 | Verze 0.4 v jednom pull requestu (silnice, lidé, zóny). | Volba uživatele. | Tři verze 0.4 / 0.5 / 0.6 – doporučeno, zamítnuto. |
+| R25 | 13. 11. 2026 | Lidé po domácnostech (děti, dospělí, senioři), jednotlivě jen na cestě. | Výkon i při tisících obyvatel. | Každý člověk stále – pomalé. |
+| R26 | 13. 11. 2026 | Kód v `src/` (sim a ui), `build.js` skládá `index.html`. | Hra přerostla jeden soubor (R1 s tím počítal); test čte stejné zdroje. | Dál jeden soubor. Nahrazuje R1 v části „jeden soubor“. |
+| R27 | 13. 11. 2026 | Výška silnice ve třech úrovních (zem, most, vysoký most); křižují se jen silnice ve stejné výšce. | Mimoúrovňová křížení a mosty přes silnice. | Tunely – zatím ne. |
+| R28 | 13. 11. 2026 | Dálnici nejde křížit v úrovni; napojení jen nájezdem, sjezd a nájezd jen vpravo. | Přání uživatele (plná čára uprostřed). | – |
+| R29 | 13. 11. 2026 | Kruhový objezd jako jednosměrný okruh z úseků; silnice uvnitř se odstraní; přednost má kruh. | Auta po kruhu opravdu jezdí; velikost libovolná. | Kruhový objezd jako jeden uzel (verze 0.3) – nahrazeno. |
+| R30 | 13. 11. 2026 | Stavba přes budovy jen s potvrzením „Postavit a zbourat“ a za cenu bourání. | Přání uživatele; nic se nebourá potichu. | Zákaz stavby přes budovy. |
+| R31 | 13. 11. 2026 | Den 4 minuty při 1×; program dne s ranní a odpolední špičkou, home office 15 %, chodci do krátkých vzdáleností. | Přání uživatele; špičky vzniknou samy. | – |
+| R32 | 13. 11. 2026 | Statky dávají práci na poli, aby i vesnice měly provoz od začátku. | Bez práce byla mapa na začátku prázdná. | – |
