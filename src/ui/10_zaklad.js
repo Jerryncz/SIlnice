@@ -39,7 +39,7 @@ function drawTerrainAll(){for(let i=0;i<N;i++)drawTerrainTile(i);S.dirty.length=
 function hitTest(x,y){
   let best=null,bd=1e9,bl=-1;
   for(const e of edgesNear(S,x,y,2)){const r=nearestOn(e.g,x,y);const lv=lvlAt(S,e,r.u);if(r.d>e.w/2+0.15)continue;const score=r.d-lv*0.5;if(score<bd){bd=score;best=e;bl=lv}}
-  for(const n of S.nodes){if(n.dead||(n.edges.length<3&&n.gate<0))continue;const d=Math.hypot(n.x-x,n.y-y);let rmax=0.4;for(const a of n.arms)rmax=Math.max(rmax,S.edges[a.e].w/2);
+  for(const n of S.nodes){if(n.dead||(n.edges.length<3&&n.gate<0&&!n.keep))continue;const d=Math.hypot(n.x-x,n.y-y);let rmax=n.keep&&n.edges.length<3?0.17:0.4;if(n.edges.length>=3)rmax=Math.max(rmax,n.rad);
     if(d<rmax+0.05&&(!best||Math.abs(n.lvl-bl)<0.5))return {type:"node",id:n.id}}
   if(best)return {type:"edge",id:best.id};
   const c=cellAt(x,y);if(c<0)return null;if(S.bld[c])return {type:"bld",b:S.bld[c]};return {type:"cell",c}}

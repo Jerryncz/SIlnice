@@ -191,6 +191,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
       <button data-tool="lane" aria-pressed="false">Pruhy<small>4</small></button>
       <button data-tool="oneway" aria-pressed="false">Jednosměrka<small>5</small></button>
       <button data-tool="junction" aria-pressed="false">Křižovatka<small>6</small></button>
+      <button data-tool="split" aria-pressed="false">Rozdělit<small>R</small></button>
       <span class="sep"></span>
       <button data-tool="erase" aria-pressed="false">Bourat<small>7</small></button>
       <button data-tool="zone" aria-pressed="false">Uzávěra<small>8</small></button>
@@ -206,14 +207,15 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
       <h2 id="helpTitle">Jak krajina žije</h2>
       <p>Stavíš a řídíš silnice. Všechno ostatní vzniká samo podle toho, kudy, kdy a kolik se jezdí. Verze {{VERSION}}.</p>
       <div class="grid">
-        <div><h3>Kreslení silnic</h3><p>Rovně: táhni, silnice se drží 0°, 45° a 90° (Shift = libovolný úhel). Oblouk: klikni začátek, směr a konec. Kruháč: táhni od středu. Náhled ukáže cenu a domy, které by se musely zbourat.</p></div>
-        <div><h3>Druhy silnic a výška</h3><p>Ulice, silnice, bulvár se zeleným středem, dálnice a nájezd. Dálnici nejde křížit v úrovni a připojit se dá jen nájezdem z boku. Výška Most nebo Vysoký most vede silnici přes jinou bez křižovatky.</p></div>
-        <div><h3>Křižovatky</h3><p>Výchozí je přednost zprava nebo hlavní silnice podle šířky. Semafor střídá směry podle front. Na kruhovém objezdu má přednost ten, kdo je v kruhu.</p></div>
-        <div><h3>Lidé a den</h3><p>Děti ráno do školy, dospělí do práce, část pracuje z domu. Odpoledne nákupy a hospody, senioři dopoledne. Blízko se chodí pěšky po chodnících.</p></div>
+        <div><h3>Kreslení silnic</h3><p>Rovně: táhni, silnice se drží 0°, 45° a 90° (Shift = libovolný úhel). Oblouk: klikni začátek, směr a konec. Kruháč: táhni od středu. Náhled ukáže cenu a domy, které by se musely zbourat. Tah po existující silnici ji přestaví na zvolený druh, silnice přes silnici nevznikne.</p></div>
+        <div><h3>Úseky a pruhy</h3><p>Silnice se dělí na úseky mezi křižovatkami; rovně navazující stejné úseky se spojí samy. Rozdělit: klik rozdělí úsek, aby šel kus přestavět. Pruhy: klik na polovinu silnice přidá pruh v tom směru, tah podél silnice jen na kus úseku, Shift ubírá.</p></div>
+        <div><h3>Druhy silnic a výška</h3><p>Ulice, silnice, bulvár se zeleným středem, dálnice a nájezd. Dálnici nejde křížit v úrovni. Silnice nebo nájezd připojený z boku dálnice funguje jen vpravo: najet ve směru jízdy, sjet doprava, přejet na druhou stranu nejde. Výška Most nebo Vysoký most vede silnici přes jinou bez křižovatky.</p></div>
+        <div><h3>Křižovatky</h3><p>Auta zastaví před křižovatkou a vjedou, až mají přednost a místo za ní. Výchozí je přednost zprava nebo hlavní silnice podle šířky. Semafor střídá směry podle front. Na kruhovém objezdu má přednost ten, kdo je v kruhu.</p></div>
+        <div><h3>Lidé a den</h3><p>Děti ráno do školy, dospělí do práce, část pracuje z domu. Odpoledne nákupy a hospody, senioři dopoledne. Blízko se chodí pěšky po chodnících. Lidé i auta do budov vcházejí a zajíždějí.</p></div>
         <div><h3>Obce a zóny</h3><p>Domy rostou podél silnic, obce si samy staví uličky. Ve větších obcích vznikají školy a kanceláře, u těžby průmyslové zóny.</p></div>
         <div><h3>Vnější svět</h3><p>Dálnice na okrajích vedou do měst. Po napojení přijedou turisté a tranzit a průmysl vyváží zboží.</p></div>
       </div>
-      <p class="keys">Myš: levé tlačítko kreslí, pravé nebo prostřední tlačítko posouvá mapu, kolečko přibližuje, pravý klik zruší rozkreslenou silnici. Dotyk: jeden prst kreslí, dva posouvají a přibližují. Klávesy 1–9 nástroje, Q/E výška, mezerník pauza, V vytížení, Esc zrušit.</p>
+      <p class="keys">Myš: levé tlačítko kreslí, pravé nebo prostřední tlačítko posouvá mapu, kolečko přibližuje, pravý klik zruší rozkreslenou silnici. Dotyk: jeden prst kreslí, dva posouvají a přibližují. Klávesy 1–9 a R nástroje, Q/E výška, mezerník pauza, V vytížení, Esc zrušit.</p>
     </div>
   </div>
 </div>

@@ -2,7 +2,7 @@
 // Osady a cesty – simulace (bez DOM). Soubory v src/sim se skládají v abecedním
 // pořadí do <script id="sim"> v index.html (build.js) a testují se v Node.js.
 
-const GAME_VERSION="0.4.0";
+const GAME_VERSION="0.5.0";
 const W=128,H=80,N=W*H;
 const STEP=1/30,BASE_SPEED=2.0,MAX_CARS=900,MAX_WALKERS=600;
 const DAY=240,DAY_START_HOUR=6;           // jeden herní den = 240 s při rychlosti 1×

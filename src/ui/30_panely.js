@@ -17,10 +17,11 @@ $("problems").addEventListener("click",e=>{const b=e.target.closest("[data-p]");
 $("log").addEventListener("click",e=>{const b=e.target.closest("[data-l]");if(!b)return;const l=S.log[+b.dataset.l];if(l&&l.tile>=0)focusXY(tx(l.tile)+0.5,ty(l.tile)+0.5)});
 
 // ---- volby nástroje ----
-const TOOL_HINT={line:"Táhni po mapě. Silnice se drží 0°, 45° a 90°, Shift = libovolný úhel. Konec u jiné silnice ji napojí.",
+const TOOL_HINT={line:"Táhni po mapě. Silnice se drží 0°, 45° a 90°, Shift = libovolný úhel. Konec u jiné silnice ji napojí, tah po silnici ji přestaví.",
   curve:"Klikni začátek, pak bod, kterým oblouk směřuje, a konec. Pravý klik zruší.",
   round:"Táhni od středu: velikost kruhu je na tobě. Silnice, které kruh protne, se na něj napojí.",
-  lane:"Klikni na úsek: přidá pruh v obou směrech. Shift + klik pruh ubere.",oneway:"Klikni na úsek: obousměrná → jednosměrka → opačný směr → obousměrná.",
+  lane:"Klikni na polovinu silnice: přidá pruh v tom směru. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
+  split:"Klikni na silnici: rozdělí úsek, aby šel kus přestavět nebo rozšířit zvlášť. Klik na značku rozdělení úseky zase spojí.",oneway:"Klikni na úsek: obousměrná → jednosměrka → opačný směr → obousměrná.",
   junction:"Klikni na křižovatku: přepíná přednost zprava, hlavní silnici a semafor.",erase:"Táhni přes silnice nebo budovy. Tah začatý na budově bourá budovy (za peníze).",
   zone:"Táhni přes pole, kde se nesmí stavět. Tahem přes šrafy uzávěru zrušíš.",hand:"Táhni mapou, klikni pro výběr."};
 function updateOpts(){const t=UI.tool,K=RK[UI.kind];const key=[t,UI.kind,UI.lanes,UI.level,UI.draw&&UI.draw.r].join("|");if(key===lastOptsKey)return;lastOptsKey=key;
@@ -55,18 +56,22 @@ const COMPASS=(hx,hy)=>{const a=Math.atan2(-hy,hx)*180/Math.PI;const n=["V","SV"
 function growthLabel(t){if(!t.accessList.length)return"bez silnice";if(t.jam>0.4)return"brzdí ji zácpy";if(t.rate>0.04)return"roste rychle";if(t.rate>0.018)return"roste";if(t.rate>0.005)return"roste pomalu";return"stojí"}
 function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;const A=(label,act,pressed,group)=>acts.push({label,act,pressed,group});
   if(t.type==="edge"){const e=S.edges[t.id];if(!e||e.dead)return"";const K=RK[e.kind];const lv=Math.max(S.nodes[e.a].lvl,S.nodes[e.b].lvl);
-    title=(e.ring?"Kruhový objezd":K.name)+(lv>=1.5?" · vysoký most":lv>=0.5?" · most":"");
-    const one=e.lf===0||e.lb===0;sub=one?(e.lf+e.lb)+" "+((e.lf+e.lb)===1?"pruh":"pruhy")+", jednosměrně":e.lf+" "+(e.lf===1?"pruh":"pruhy")+" v každém směru";if(e.auto)sub+=" · postavila obec";
+    title=(e.ring?"Kruhový objezd · "+K.name.toLowerCase():K.name)+(lv>=1.5?" · vysoký most":lv>=0.5?" · most":"");
+    const one=e.lf===0||e.lb===0;const pr=n=>n+" "+(n===1?"pruh":n<5?"pruhy":"pruhů");const mid=pointAt(e.g,e.g.len/2);const c0=COMPASS(mid.tx,mid.ty),c1=COMPASS(-mid.tx,-mid.ty);
+    sub=one?pr(e.lf+e.lb)+", jednosměrně":e.lf===e.lb?pr(e.lf)+" v každém směru":pr(e.lf)+" směr "+c0+", "+pr(e.lb)+" směr "+c1;if(e.auto)sub+=" · postavila obec";
     const c=Math.max(e.cong[0],e.cong[1]);rows.push(["Provoz",fmt(e.flow)+" aut/min"],["Vytížení",Math.round(Math.min(1,c)*100)+" %"],["Délka",e.g.len.toFixed(1)+" polí"]);
     if(e.gateEdge){const g=S.gates.find(g=>S.nodes[g.node].edges.includes(e.id));if(g){title="Dálnice do města "+g.name;rows.push(["Turisté",fmt(g.visitors)],["Vývoz",fmt(g.exported)+" Kč"]);
       if(!S.towns.some(tt=>tt.comps.has(S.nodes[g.node].comp)))why="Zatím vede do prázdna. Na konci ji napoj silnicí, nebo k ní postav nájezd."}}
     if(c>0.75)why="Tvoří se tu kolona. Pomůže pruh navíc, objížďka nebo úprava křižovatky na konci úseku.";
-    if(!e.ring&&!e.gateEdge){for(const k of ROAD_KINDS)if(k!==e.kind)A(RK[k].name,"kind:"+k,false,"Změnit na");
-      A("Přidat pruh","lane:1",false,"Pruhy");A("Ubrat pruh","lane:-1",false,"Pruhy");A(one?"Změnit směr / obousměrně":"Jednosměrka","ow",false,"Pruhy")}
+    if(!e.gateEdge){for(const k of ROAD_KINDS)if(k!==e.kind&&!(e.ring&&(k==="hwy"||k==="ramp")))A(RK[k].name,"kind:"+k,false,e.ring?"Celý kruh změnit na":"Změnit na");
+      if(one){A("Přidat pruh","lane:1",false,"Pruhy");A("Ubrat pruh","lane:-1",false,"Pruhy")}
+      else{A("+ oba směry","lane:1",false,"Pruhy");A("− oba směry","lane:-1",false,"Pruhy");A("+ směr "+c0,"lane:1:0",false,"Pruhy");A("− směr "+c0,"lane:-1:0",false,"Pruhy");A("+ směr "+c1,"lane:1:1",false,"Pruhy");A("− směr "+c1,"lane:-1:1",false,"Pruhy")}
+      if(!e.ring)A(one?"Změnit směr / obousměrně":"Jednosměrka","ow",false,"Pruhy")}
     if(!e.gateEdge)A("Zbourat úsek","erase",false,"Úsek")}
+  else if(t.type==="node"&&S.nodes[t.id]&&S.nodes[t.id].keep&&S.nodes[t.id].edges.length===2){title="Rozdělení úseku";sub="úseky se samy nespojí, každý jde přestavět zvlášť";A("Spojit úseky","unsplit",false,"Úsek")}
   else if(t.type==="node"){const n=S.nodes[t.id];if(!n||n.dead)return"";
     title=n.ring?"Vjezd na kruhový objezd":n.eff==="merge"?"Napojení na dálnici":n.gate>=0?"Hranice mapy":"Křižovatka";
-    const names={none:"bez řízení",right:"přednost zprava",main:"hlavní silnice",light:"semafor",ring:"přednost má kruh",merge:"nájezd dává přednost dálnici"};sub=names[n.eff]||"";
+    const names={none:"bez řízení",right:"přednost zprava",main:"hlavní silnice",light:"semafor",ring:"přednost má kruh",merge:"z boku jen vpravo, vjíždějící dává přednost dálnici"};sub=names[n.eff]||"";
     let waiting=0;for(const a of n.arms){const e=S.edges[a.e];const lanes=e.q[a.inLink&1];if(!lanes)continue;for(const q of lanes)for(const c of q)if(c.wait>1.5&&e.g.len-c.s<2)waiting++}
     rows.push(["Ramen",String(n.arms.length)],["Čekající auta",String(waiting)]);
     if(n.eff==="main"&&n.mainEdges){const arms=n.arms.filter(a=>n.mainEdges.has(a.e));rows.push(["Hlavní směr",arms.map(a=>COMPASS(a.hx,a.hy)).join("–")])}
@@ -103,9 +108,10 @@ function updateSel(){const t=UI.pinned||(UI.draw?null:UI.hover);const el=$("sel"
 $("sel").addEventListener("click",ev=>{const btn=ev.target.closest("[data-act]");if(!btn)return;const t=UI.pinned||UI.hover;if(!t)return;const a=btn.dataset.act;let r={ok:true};
   if(t.type==="edge"){const e=S.edges[t.id];
     if(a.startsWith("kind:")){runPlan(planKind(S,e,a.slice(5)),commitKind,"Změna druhu silnice");return}
-    if(a.startsWith("lane:")){runPlan(planLanes(S,e,+a.slice(5)),commitLanes,"Změna pruhů");return}
+    if(a.startsWith("lane:")){const q=a.split(":");runPlan(planLanes(S,e,+q[1],q[2]===undefined?undefined:+q[2]),commitLanes,"Změna pruhů");return}
     if(a==="ow"){r=cycleOneway(S,e);if(r.ok)toast(r.state)}
     if(a==="erase"){r=eraseEdge(S,e);if(r.ok){toast("Úsek zbourán");UI.pinned=null}}}
+  else if(t.type==="node"&&a==="unsplit"){r=unsplit(S,S.nodes[t.id]);if(r.ok){toast(r.msg);UI.pinned=null}}
   else if(t.type==="node"){const n=S.nodes[t.id];if(a.startsWith("ctl:"))r=setControl(S,n,+a.slice(4),null);if(a.startsWith("main:"))r=setControl(S,n,2,a.slice(5).split(",").map(Number))}
   else if(t.type==="bld"&&a==="demolish"){r=demolishBuilding(S,t.b,false);if(r.ok){toast("Zbouráno za "+fmt(r.cost)+" Kč");UI.pinned=null}}
   else if(t.type==="cell"&&a.startsWith("zone:"))S.zone[t.c]=+a.slice(5);
