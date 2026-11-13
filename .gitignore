@@ -1,0 +1,18 @@
+# Uložené hry a exporty hráčů
+*.save.json
+ulozene/
+
+# Ladění a výsledky testů
+*.log
+tests/vystup/
+
+# Node.js
+node_modules/
+
+# Přístupové údaje
+.env
+
+# Systém
+Thumbs.db
+desktop.ini
+.DS_Store

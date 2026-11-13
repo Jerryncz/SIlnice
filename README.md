@@ -1,12 +1,28 @@
 # Osady a cesty
 
-2D hra o stavění silnic, ve které rostou obce samy podle toho, kudy a kolik se jezdí.
-Hráč staví jen silnice. Domy, pumpy, hospody, obchody, parkoviště i nové vesnice
-vznikají organicky ze simulace provozu.
+2D hra o stavění silnic, ve které obce rostou samy podle toho, kudy a kolik
+se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
+i nové vesnice vznikají ze simulace provozu.
+
+Aktuální verze: **0.2.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
 Otevři `index.html` v prohlížeči. Nic se nemusí instalovat ani sestavovat.
+Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
+
+## Co kde je
+
+| Soubor / složka | Obsah |
+|---|---|
+| `index.html` | celá hra: `<script id="sim">` = simulace bez DOM, druhý skript = vykreslování a ovládání |
+| `docs/HRA.md` | **základní dokument** – jak se svět hry chová a proč, lidskou řečí |
+| `docs/ROZHODNUTI.md` | záznam rozhodnutí s datem, důvodem a zvažovanými možnostmi |
+| `napady/` | nápady do budoucna (ukládání hry, křižovatky, železnice …) – nic z nich není ve hře |
+| `poznatky/` | poznatky z jednotlivých chatů, čekající na zapracování |
+| `tests/test_simulace.js` | automatický test simulace (`node tests/test_simulace.js`) |
+| `CLAUDE.md` | jak se v repozitáři pracuje (pravidla spolupráce s Claude) |
+| `CHANGELOG.md` | změny podle verzí |
 
 ## Ovládání
 
@@ -20,21 +36,21 @@ Otevři `index.html` v prohlížeči. Nic se nemusí instalovat ani sestavovat.
 | Pauza | mezerník |
 | Vytížení silnic | klávesa `V` |
 
-## Pravidla simulace
+Pravidla světa jsou podrobně v `docs/HRA.md`.
 
-- **Bez silnice nic nevznikne.** Každá budova stojí u silnice a má vlastní vjezd.
-- **Domy mají tvar:** domek, dvojdomek, statky do L, Z a U, ve středu větších obcí bytovky s podzemní garáží.
-- **Auta vyjíždějí z domů.** Vyjedou jen tehdy, když je na silnici místo. Když se dlouho nedostanou ven, lidé cestu vzdají.
-- **Růst obce** závisí na tom, kolik lidí z jiných obcí je po silnici dosažitelných, na službách v okolí a na zácpách.
-- **Zácpy:** auta hledají nejrychlejší cestu (A* s cenou podle vytížení) a objíždějí kolony. Příliš pomalé cesty se ruší.
-- **Služby:** pumpy u rušných silnic (auta na ně cestou zajíždějí), hospody a obchody s parkovištěm, nákupní centra u velkých obcí.
-- **Parkoviště mají kapacitu.** Když je plno, auto čeká na silnici. Kde se to opakuje, vznikne parkovací dům.
-- **Nové osady** vznikají u rušných silnic a křižovatek daleko od ostatních obcí.
+## Postup při změně
 
-## Struktura kódu
+1. Změna pravidel světa začíná návrhem v `docs/HRA.md` a rozhodnutím
+   v `docs/ROZHODNUTI.md`.
+2. Práce ve vlastní větvi, jedna věcná změna = jeden pull request.
+3. `node tests/test_simulace.js` musí projít; hratelnost ověřuje hraní.
+4. Slučuje se do `main` jen na výslovný souhlas („slouč #N“).
+5. Po sloučení se aktualizuje hratelná kopie v OneDrive.
 
-Vše je zatím v `index.html`:
+## Ověřené prostředí
 
-- `<script id="sim">` je čistá simulace bez DOM (terén, obce, budovy, auta, provoz).
-  Dá se spustit i v Node.js pro testy a ladění.
-- druhý `<script>` obsahuje vykreslování na canvas a ovládání.
+| Co | Verze | Ověřeno |
+|---|---|---|
+| Google Chrome (headless, Linux) | aktuální k 13. 11. 2026 | vykreslení, bez chyb v konzoli |
+| Node.js | 22 | `tests/test_simulace.js` |
+| Prohlížeč uživatele (Windows) | – | zatím neověřeno |
