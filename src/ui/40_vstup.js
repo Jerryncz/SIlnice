@@ -121,6 +121,7 @@ $("ovl").addEventListener("click",()=>{overlay=!overlay;$("ovl").setAttribute("a
 let stuckPref=40;try{const v=localStorage.getItem("osady.stuck");if(v!==null&&!isNaN(+v))stuckPref=+v}catch(err){}
 function applySettings(){S.cfg.stuck=stuckPref;document.querySelectorAll("[data-stuck]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.stuck===stuckPref))}
 document.querySelectorAll("[data-stuck]").forEach(b=>b.addEventListener("click",()=>{stuckPref=+b.dataset.stuck;try{localStorage.setItem("osady.stuck",String(stuckPref))}catch(err){}applySettings()}));
+document.querySelectorAll("[data-money]").forEach(b=>b.addEventListener("click",()=>{S.money+=+b.dataset.money;addLog(S,"Test: přidáno "+fmt(+b.dataset.money)+" Kč",-1);toast("Přidáno "+fmt(+b.dataset.money)+" Kč");updateUI()}));
 $("newMap").addEventListener("click",()=>{S=createSim((Math.random()*1e9)|0);applySettings();UI.pinned=null;UI.hover=null;UI.draw=null;UI.plan=null;hideConfirm();readColors();fit();lastLogLen=-1;lastProbKey="";updateUI()});
 $("helpBtn").addEventListener("click",()=>{$("help").hidden=false});$("helpClose").addEventListener("click",()=>{$("help").hidden=true});
 $("help").addEventListener("click",e=>{if(e.target.id==="help")$("help").hidden=true});

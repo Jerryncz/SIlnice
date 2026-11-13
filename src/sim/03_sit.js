@@ -165,7 +165,6 @@ const isRampEdge=(S,e)=>Math.abs(S.nodes[e.a].lvl-S.nodes[e.b].lvl)>0.01;
 function joinedTo(S,sn,e){return sn.type==="edge"&&sn.edge===e.id||sn.type==="node"&&(e.a===sn.node||e.b===sn.node)}
 function checkJoin(S,sn,kind){
   if(kind!=="hwy")return null;
-  if(sn.type==="edge"&&S.edges[sn.edge].ring||sn.type==="node"&&S.nodes[sn.node].ring)return "Dálnice nemůže vést do kruhového objezdu.";
   return null}
 // buňky na zemi, které by silnice o šířce ext=[vpravo, vlevo] zabrala
 function cellsAlong(S,g,ext,lvlFn){return [...bandCells(S,g,ext[0],ext[1],lvlFn).g]}
@@ -257,7 +256,7 @@ function commitRoad(S,plan){
   const sp=plan.spec;
   if(plan.rebuild){const touched=[];
     for(const s of plan.rebuild){if(s.e.dead)continue;const t=cutSection(S,s.e,s.u0,s.u1);
-      reshapeEdge(S,t,()=>{t.kind=sp.kind;t.lf=s.lf;t.lb=s.lb;t.owState=0});touched.push(S.nodes[t.a],S.nodes[t.b])}
+      reshapeEdge(S,t,()=>{t.kind=sp.kind;t.lf=s.lf;t.lb=s.lb;t.owState=0;if(!RK[sp.kind].walk||!RK[sp.kind].side)t.xw=null});touched.push(S.nodes[t.a],S.nodes[t.b])}
     tidyNodes(S,touched);return {ok:true,edges:[],rebuilt:true}}
   const g0=plan.g,K=RK[sp.kind],lanes=plan.lanes;
   const seq=[{u:0,node:resolvePoint(S,plan.start.x,plan.start.y,plan.start.lvl)}];
@@ -284,7 +283,7 @@ function planRoundabout(S,cx,cy,r,kind,lanes){kind=kind||"road";
   plan.cross=[];
   for(const e of S.edges){if(e.dead||!bbOverlap(e.g.bb,g.bb,0.2))continue;
     const xs=polyInter(g,e.g).filter(x=>lvlAt(S,e,x.ub)<0.5);
-    if(xs.length&&e.kind==="hwy"){plan.msg="Kruhový objezd nejde postavit na dálnici.";return plan}
+    if(xs.length&&e.gateEdge){plan.msg="Kruhový objezd nejde postavit na dálnici do světa.";return plan}
     for(const x of xs)plan.cross.push({x:x.x,y:x.y})}
   const cells=cellsAlong(S,g,edgeExt({kind,lf:lanes,lb:0}),()=>0);
   plan.demolish=bldOn(S,cells);plan.cells=cells;
@@ -361,7 +360,7 @@ function planKind(S,e,kind,lanes){if(e.gateEdge)return {ok:false,msg:"Dálnici d
   const dem=bldOn(S,cells);cost+=dem.reduce((s,b)=>s+demolishCost(b),0);
   return {ok:true,e,kind,items,cost,demolish:dem,kindPlan:true}}
 function commitKind(S,p){if(!p.ok)return p;if(S.money<p.cost)return {ok:false,msg:"Málo peněz v pokladně."};S.money-=p.cost;for(const b of p.demolish)if(!b.dead)demolishBuilding(S,b,true);
-  const touched=[];for(const it of p.items){if(it.e.dead)continue;const t=it.e;reshapeEdge(S,t,()=>{t.kind=p.kind;t.lf=it.lf;t.lb=it.lb});touched.push(S.nodes[t.a],S.nodes[t.b])}
+  const touched=[];for(const it of p.items){if(it.e.dead)continue;const t=it.e;reshapeEdge(S,t,()=>{t.kind=p.kind;t.lf=it.lf;t.lb=it.lb;if(!RK[p.kind].walk||!RK[p.kind].side)t.xw=null});touched.push(S.nodes[t.a],S.nodes[t.b])}
   tidyNodes(S,touched);return {ok:true}}
 function setKind(S,e,kind){return commitKind(S,planKind(S,e,kind))}
 // otočí směr jednosměrky (druh Jednosměrka nebo Nájezd); auta na úseku se zruší

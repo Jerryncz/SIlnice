@@ -55,6 +55,9 @@ function foundTown(S,front,roadBorn){let r=-1;for(let d=0;d<4;d++){const n=NB[fr
   if(!b.access){demolishBuilding(S,b,true);return null}S.netDirty=true;return t}
 function updateTownStats(S){
   for(const b of S.buildings)refreshAccess(S,b);
+  // budova bez vjezdu (silnice zbouraná nebo změněná na dálnici) po 60 s zanikne
+  for(const b of [...S.buildings]){if(b.access||b.dead){b.noAccT=null;continue}if(b.noAccT==null){b.noAccT=S.time;continue}
+    if(S.time-b.noAccT>60){addLog(S,(isHome(b)?b.name:KIND[b.type].name)+(b.town?" v obci "+b.town.name:"")+": bez příjezdu, budova zanikla",b.front);demolishBuilding(S,b,true)}}
   for(const t of S.towns){t.accessList=[];t.comps=new Set();let pop=0,tiles=0,kids=0,workers=0;
     for(const b of t.homes){pop+=b.pop;tiles+=units(b);kids+=b.kids;workers+=b.workers-b.ho;if(b.access){t.accessList.push(b);t.comps.add(edgeComp(S,b.access.e))}}
     t.pop=pop;t.tileCount=tiles;t.kids=kids;t.workers=workers;t.world=S.gates.some(g=>t.comps.has(S.nodes[g.node].comp))}}
@@ -111,6 +114,9 @@ function buildTownStreet(S,t){
           if(S.roadCnt[c]){if(k>=2&&frontEdgeAt(S,c))loop={x:qx,y:qy};break}
           let free=true;forCells(qx,qy,0.45,j=>{if(!freeForBuild(S,j)&&!S.roadCnt[j]||S.terrain[j]===WATER)free=false});if(!free)break;
           if(Math.hypot(qx-t.cx,qy-t.cy)>r+2||nearestTown(S,qx,qy)[0]!==t)break;len=k}
+        // rozestup: souběžná silnice nesmí být blíž než 4 pole (mezi nimi se musí vejít domy)
+        let near=false;for(let k=1.5;k<=len-(loop?1:0)&&!near;k+=1){const qx=p.x+nx*k,qy=p.y+ny*k;for(const o of edgesNear(S,qx,qy,4)){if(o===e||loop&&nearestOn(o.g,loop.x,loop.y).d<0.6)continue;if(nearestOn(o.g,qx,qy).d<3.6){near=true;break}}}
+        if(near)continue;
         if(len>=3||loop&&len>=1)opts.push({x0:p.x,y0:p.y,x1:loop?loop.x:p.x+nx*len,y1:loop?loop.y:p.y+ny*len,loop:!!loop,w:(loop?2.5:1)*len*(1+Math.min(along,10)/3)/(1+Math.hypot(p.x-t.cx,p.y-t.cy)*0.3)})}}}
   if(!opts.length)return false;
   for(let tries=0;tries<5&&opts.length;tries++){const o=pickW(S,opts,q=>q.w);opts.splice(opts.indexOf(o),1);

@@ -28,6 +28,11 @@ function bandPath(e,d){const m=edgeCache(e);const key="b"+d.toFixed(3);let p=m.g
   const pt=(k,off)=>k===0&&be.ja?endPt(e,true,off,be.ja):k===g.n-1&&be.jb?endPt(e,false,off,be.jb):[q[2*k]+g.nx[k]*off,q[2*k+1]+g.ny[k]*off];
   for(let k=0;k<g.n;k++){const r=Math.max(0.01,be.R[k]+d),a=pt(k,r);if(k)p.lineTo(a[0],a[1]);else p.moveTo(a[0],a[1])}
   for(let k=g.n-1;k>=0;k--){const l=Math.max(0.01,be.L[k]+d),a=pt(k,-l);p.lineTo(a[0],a[1])}p.closePath();m.set(key,p);return p}
+// stín mostu: posun roste s výškou, u rampy tedy plynule od nuly
+function shadowPath(e){const m=edgeCache(e);let p=m.get("sh");if(p)return p;const be=bandExt(e),g=e.g,q=g.pts;p=new Path2D();const pts=[];
+  for(let k=0;k<g.n;k++){const lv=lvlAt(S,e,g.cum[k]);const r=be.R[k]+0.1;pts.push([q[2*k]+g.nx[k]*r+0.16*lv,q[2*k+1]+g.ny[k]*r+0.26*lv])}
+  for(let k=g.n-1;k>=0;k--){const lv=lvlAt(S,e,g.cum[k]);const l=be.L[k]+0.1;pts.push([q[2*k]-g.nx[k]*l+0.16*lv,q[2*k+1]-g.ny[k]*l+0.26*lv])}
+  pts.forEach((a,i)=>i?p.lineTo(a[0],a[1]):p.moveTo(a[0],a[1]));p.closePath();m.set("sh",p);return p}
 // vodorovná značka: kolik z konce vynechat, když v náběhu pruh končí
 function markTrim(e,o,atA){const be=bandExt(e),t=atA?be.ta:be.tb;if(!t)return 0;const lim=(o>0?t.R:t.L)-RK[e.kind].side;return Math.abs(o)>lim-0.03?t.T:0}
 // konec značení u uzlu: u křižovatky za přechodem, na plynulém spoji nic
@@ -45,10 +50,25 @@ function asphaltColor(e){if(overlay){const c=Math.max(e.cong[0],e.cong[1]);if(e.
 function nodeDiscs(list){const seen=new Set(),out=[];
   for(const e of list)for(const atA of [true,false]){const nid=atA?e.a:e.b;if(seen.has(nid))continue;seen.add(nid);const n=S.nodes[nid];if(n.dead)continue;
     const arms=n.edges.map(id=>S.edges[id]);let main=arms[0];for(const a of arms)if(a.w>main.w)main=a;
-    if(n.edges.length>=3){if(passPair(n))continue;out.push({x:n.x,y:n.y,r:n.rad,e:main,side:Math.max(...arms.map(a=>RK[a.kind].side))});continue}
+    if(n.edges.length>=3){if(passPair(n))continue;out.push({x:n.x,y:n.y,r:n.rad,e:main,side:Math.max(...arms.map(a=>RK[a.kind].side)),node:n});continue}
     if(n.edges.length===1){const a=arms[0],be=bandExt(a),k=a.a===nid?0:a.g.n-1;const R=be.R[k],L=be.L[k],sh=(R-L)/2;out.push({x:n.x+a.g.nx[k]*sh,y:n.y+a.g.ny[k]*sh,r:(R+L)/2,e:a,side:RK[a.kind].side})}}
   return out}
-function fillDiscs(discs,d,colorFn,minSide){for(const q of discs){if(minSide&&!q.side)continue;const r=q.r+d-(minSide===false?q.side:0);if(r<=0.01)continue;ctx.fillStyle=colorFn(q.e);ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill()}}
+// plocha křižovatky podle ramen: rohy ramen na okraji plochy, mezi sousedními rameny oblouk
+// (u rovné strany křižovatky tvaru T zůstane rovná hrana)
+function nodePoly(n,d){const key=n._pv===S.netVer?n._pk:null;if(!key){n._pv=S.netVer;n._pk=new Map()}const k=d.toFixed(3);let p=n._pk.get(k);if(p)return p;
+  const arms=[...n.arms].sort((a,b)=>Math.atan2(a.hy,a.hx)-Math.atan2(b.hy,b.hx));const R=n.rad,c=[];
+  for(const a of arms){const e=S.edges[a.e];const out=e.a===n.id;const er=(out?e.er:e.el)+d,el=(out?e.el:e.er)+d;const rx=-a.hy,ry=a.hx;
+    const bx=n.x+a.hx*R,by=n.y+a.hy*R;c.push({L:[bx-rx*el,by-ry*el],Rt:[bx+rx*er,by+ry*er],h:[a.hx,a.hy]})}
+  p=new Path2D();p.moveTo(c[0].L[0],c[0].L[1]);
+  for(let i=0;i<c.length;i++){const A=c[i],B=c[(i+1)%c.length];p.lineTo(A.Rt[0],A.Rt[1]);
+    // průsečík pravého okraje ramene A s levým okrajem ramene B
+    const den=A.h[0]*B.h[1]-A.h[1]*B.h[0];let ctrl=null;
+    if(Math.abs(den)>0.08){const t=((B.L[0]-A.Rt[0])*B.h[1]-(B.L[1]-A.Rt[1])*B.h[0])/den;const ix=A.Rt[0]+A.h[0]*t,iy=A.Rt[1]+A.h[1]*t;if(Math.hypot(ix-n.x,iy-n.y)<R*2.2+0.5&&t<0.2)ctrl=[ix,iy]}
+    if(ctrl)p.quadraticCurveTo(ctrl[0],ctrl[1],B.L[0],B.L[1]);else p.lineTo(B.L[0],B.L[1])}
+  p.closePath();n._pk.set(k,p);return p}
+function fillDiscs(discs,d,colorFn,minSide){for(const q of discs){if(minSide&&!q.side)continue;const dd=d-(minSide===false?q.side:0);ctx.fillStyle=colorFn(q.e);
+  if(q.node&&q.node.arms.length>=3){ctx.fill(nodePoly(q.node,dd));continue}
+  const r=q.r+dd;if(r<=0.01)continue;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill()}}
 // zebra přes vozovku: střed (x,y), směr silnice (tx,ty), šířky vpravo/vlevo
 function zebra(x,y,tx,ty,er,el,busy){const nx=-ty,ny=tx;ctx.fillStyle=busy?colors.warn:colors["road-edge"];ctx.globalAlpha=busy?0.8:0.55;
   for(let o=-el+0.07;o<=er-0.05;o+=0.11){const cx=x+nx*o,cy=y+ny*o;ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.atan2(ty,tx));ctx.fillRect(-XW*0.42,-0.03,XW*0.84,0.06);ctx.restore()}ctx.globalAlpha=1}
@@ -59,7 +79,7 @@ function drawCrossings(list){const z=cam.z;if(z<9)return;const seen=new Set();
     if(e.xw)for(const x of e.xw){const p=pointAt(e.g,x.u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,e.mbusy&&e.mbusy.some(u=>Math.abs(u-x.u)<0.05))}}}
 function drawRoadLayer(list,layer){const z=cam.z;ctx.lineCap="round";ctx.lineJoin="round";const discs=nodeDiscs(list);
   list=[...list].sort((a,b)=>(a.kind==="hwy")-(b.kind==="hwy"));   // dálnice navrch: napojení z boku se pod ni zasune
-  if(layer>0){ctx.save();ctx.translate(0.16,0.26);ctx.fillStyle="rgba(0,0,0,.22)";for(const e of list)ctx.fill(bandPath(e,0.1));fillDiscs(discs,0.1,()=>"rgba(0,0,0,.22)");ctx.restore()}
+  if(layer>0){ctx.fillStyle="rgba(0,0,0,.22)";for(const e of list)ctx.fill(shadowPath(e));ctx.save();ctx.translate(0.16*layer,0.26*layer);fillDiscs(discs,0.1,()=>"rgba(0,0,0,.22)");ctx.restore()}
   const cd=layer>0?0.08:Math.max(0.04,0.8/z);const edgeCol=e=>layer>0?colors["bridge-edge"]:(e.kind==="hwy"||e.kind==="ramp")?colors["hwy-edge"]:colors["road-edge"];
   for(const e of list){ctx.fillStyle=edgeCol(e);ctx.fill(bandPath(e,cd))}fillDiscs(discs,cd,edgeCol);
   ctx.fillStyle=colors.sidewalk;for(const e of list){if(!RK[e.kind].side)continue;ctx.fill(bandPath(e,0))}fillDiscs(discs,0,()=>colors.sidewalk,true);
@@ -152,7 +172,7 @@ function carPose(c){
   const u=clamp(d?e.g.len-c.s:c.s,0,e.g.len);const p=pointAt(e.g,u,_p);
   // boční posun do nového pruhu plynule
   const off0=laneOffset(e,d,c.lane);if(c._o===undefined||Math.abs(c._o-off0)>0.9)c._o=off0;else c._o+=(off0-c._o)*0.18;
-  const off=c._o,sg=d?-1:1;return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),lvl:lvlAt(S,e,u)}}
+  const off=c._o,sg=d?-1:1;return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),lvl:lvlAt(S,e,u),L:edgeLayer(e)}}
 function walkerPose(w){
   if(w.ph==="cross"&&w.cur){const x=w.cur,t=x.go?clamp(w.t,0,1):0;return [x.x0+(x.x1-x.x0)*t,x.y0+(x.y1-x.y0)*t]}
   const l=w.links[w.li],e=S.edges[l>>1];if(!e||e.dead)return null;const d=l&1;const u=clamp(d?e.g.len-w.s:w.s,0,e.g.len);
@@ -160,7 +180,7 @@ function walkerPose(w){
   if(w.ph==="out"||w.ph==="in"){const dr=doorXY(w.ph==="out"?w.trip.from:w.trip.to);if(dr){const f=w.ph==="out"?1-w.t:w.t;x+=(dr[0]-x)*f*0.85;y+=(dr[1]-y)*f*0.85}}
   return [x,y]}
 function drawVehicles(layer){if(cam.z<3)return;
-  for(const c of S.cars){if(c.dead)continue;const q=carPose(c);if(!q)continue;const L=q.lvl<0.5?0:q.lvl<1.5?1:2;if(L!==layer||!inView(q.x,q.y,1))continue;
+  for(const c of S.cars){if(c.dead)continue;const q=carPose(c);if(!q)continue;const L=q.L!==undefined?q.L:q.lvl<0.5?0:q.lvl<1.5?1:2;if(L!==layer||!inView(q.x,q.y,1))continue;
     if(cam.z<6){ctx.fillStyle=c.trip&&c.trip.truck?"#3b4148":c.color;ctx.fillRect(q.x-0.2,q.y-0.2,0.4,0.4);continue}
     drawCarAt(q.x,q.y,q.ang,c.trip&&c.trip.truck?"#3b4148":c.color,c.trip&&c.trip.truck,c.trip&&c.trip.cargo)}
   if(layer===0&&cam.z>=8){for(const w of S.walkers){if(w.dead)continue;const q=walkerPose(w);if(!q)continue;const [x,y]=q;if(!inView(x,y,1))continue;
