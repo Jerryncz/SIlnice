@@ -62,23 +62,28 @@ function boxFree(S,n,l,nl,lane,cn){
     const p=o.conn;if(segInter(cn.x0,cn.y0,cn.x3,cn.y3,p.x0,p.y0,p.x3,p.y3))return false;
     if(Math.hypot(cn.x3-p.x3,cn.y3-p.y3)<0.3||Math.hypot(cn.x0-p.x0,cn.y0-p.y0)<0.3)return false}
   return true}
+// pruhy, do kterých smí auto vjet: povinný pruh kvůli odbočení, jinak preferovaný a pak ostatní
+function laneOptions(S,c,li){const l=c.links[li],L=linkLanes(S,l);const pref=chooseLane(S,c,li);if(L<=1)return [0];
+  const nl=c.links[li+1];if(nl!==undefined){const t=turnOf(S,l,nl);if(t!==0)return [pref]}
+  const o=[pref];for(let d=1;d<L;d++){if(pref-d>=0)o.push(pref-d);if(pref+d<L)o.push(pref+d)}return o}
 function tryTransition(S,c,l){
   const nl=c.links[c.li+1];const e2=S.edges[nl>>1];if(!e2||e2.dead){killVehicle(S,c);return true}
   const n=S.nodes[linkTo(S,l)];
   if(!permit(S,c,l,nl))return false;
-  const lane=chooseLane(S,c,c.li+1);const q=e2.q[nl&1][lane];if(!q){killVehicle(S,c);return true}
-  const rear=q[q.length-1];
-  if(n.edges.length<3){ // rovné navázání úseků: auto jen pokračuje
-    const over=Math.max(0,c.s-S.edges[l>>1].g.len);
-    if(rear&&rear.s-(rear.len+c.len)/2-0.12<over)return false;
-    c.li++;c.lane=lane;c.s=over;q.push(c);c.sid=S.sid;e2.passes++;c.wait=0;return true}
-  const sIn=linkIn(S,nl);
-  // za křižovatkou musí být místo pro celé auto, jinak by v ní uvízlo
-  if(rear&&rear.s-rear.len/2-0.12<sIn+c.len/2+0.02)return false;
-  const a=lanePose(S,l,c.lane,c.s),b=lanePose(S,nl,lane,sIn);const cn=mkConn(a,b);
-  if(!boxFree(S,n,l,nl,lane,cn))return false;
-  cn.node=n.id;cn.from=l;cn.to=nl;cn.s0=sIn-cn.len;cn.s1=sIn;
-  c.li++;c.lane=lane;c.s=cn.s0;c.conn=cn;q.push(c);n.box.push(c);c.sid=S.sid;e2.passes++;c.wait=0;return true}
+  for(const lane of laneOptions(S,c,c.li+1)){const q=e2.q[nl&1][lane];if(!q){killVehicle(S,c);return true}
+    const rear=q[q.length-1];
+    if(n.edges.length<3){ // rovné navázání úseků: auto jen pokračuje
+      const over=Math.max(0,c.s-S.edges[l>>1].g.len);
+      if(rear&&rear.s-(rear.len+c.len)/2-0.12<over)continue;
+      c.li++;c.lane=lane;c.s=over;q.push(c);c.sid=S.sid;e2.passes++;c.wait=0;return true}
+    const sIn=linkIn(S,nl);
+    // za křižovatkou musí být místo pro celé auto, jinak by v ní uvízlo
+    if(rear&&rear.s-rear.len/2-0.12<sIn+c.len/2+0.02)continue;
+    const a=lanePose(S,l,c.lane,c.s),b=lanePose(S,nl,lane,sIn);const cn=mkConn(a,b);
+    if(!boxFree(S,n,l,nl,lane,cn))continue;
+    cn.node=n.id;cn.from=l;cn.to=nl;cn.s0=sIn-cn.len;cn.s1=sIn;
+    c.li++;c.lane=lane;c.s=cn.s0;c.conn=cn;q.push(c);n.box.push(c);c.sid=S.sid;e2.passes++;c.wait=0;return true}
+  return false}
 function leaveBox(S,c){if(!c.conn)return;const n=S.nodes[c.conn.node];const k=n.box.indexOf(c);if(k>=0)n.box.splice(k,1);c.conn=null}
 // dojel k cíli: zajede do vjezdu (domy, parkoviště), u hranice mapy rovnou zmizí
 function startEnter(S,c,l){const to=c.trip&&c.trip.to;leaveBox(S,c);
@@ -193,7 +198,7 @@ function updateWalkers(S,dt){
       else if(w.ph==="cross"){const x=w.cur;
         if(!x.go){if(!x.held)holdCross(S,x);if(canStartCross(S,w,x))x.go=true}
         if(x.go){const L=Math.hypot(x.x1-x.x0,x.y1-x.y0)||0.1;w.t+=dt*w.speed/L;
-          if(w.t>=1){releaseCross(S,w);w.queue.shift();
+          if(w.t>=1){releaseCross(S,w);S.xCount=(S.xCount||0)+1;w.queue.shift();
             if(w.queue.length){w.cur=w.queue[0];w.t=0}
             else{w.cur=null;w.t=0;if(w.afterIn){const to=w.trip.to;if(to&&!to.dead&&to.front!==undefined)w.ph="in";else walkerEnd(S,w,false)}else{w.ph="road";planFinal(S,w)}}}}}
       else{w.s+=w.speed*dt;

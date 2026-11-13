@@ -158,8 +158,10 @@ function topoNode(S,n){
 // ---- plánování a stavba silnice ----
 function snapPoint(S,x,y,lvl){
   const n=findNode(S,x,y,lvl,0.55);if(n)return {type:"node",node:n.id,x:n.x,y:n.y,lvl:n.lvl};
-  let best=null,bd=0.45;for(const e of edgesNear(S,x,y,1.5)){const r=nearestOn(e.g,x,y);const lv=lvlAt(S,e,r.u);if(Math.abs(lv-lvl)>=0.5)continue;if(r.d<bd){bd=r.d;best={type:"edge",edge:e.id,u:r.u,x:r.x,y:r.y,lvl:lv}}}
+  let best=null,bd=0.45;for(const e of edgesNear(S,x,y,1.5)){if(isRampEdge(S,e))continue;const r=nearestOn(e.g,x,y);const lv=lvlAt(S,e,r.u);if(Math.abs(lv-lvl)>=0.5)continue;if(r.d<bd){bd=r.d;best={type:"edge",edge:e.id,u:r.u,x:r.x,y:r.y,lvl:lv}}}
   if(best)return best;return {type:"free",x:Math.floor(x)+0.5,y:Math.floor(y)+0.5,lvl}}
+const RAMP=3;   // délka rampy mostu na jednu výškovou úroveň (pole)
+const isRampEdge=(S,e)=>Math.abs(S.nodes[e.a].lvl-S.nodes[e.b].lvl)>0.01;
 function joinedTo(S,sn,e){return sn.type==="edge"&&sn.edge===e.id||sn.type==="node"&&(e.a===sn.node||e.b===sn.node)}
 function checkJoin(S,sn,kind){
   if(kind!=="hwy")return null;
@@ -186,7 +188,14 @@ function planRoad(S,spec){
   let g0=geom(spec.pts);plan.g=g0;
   if(g0.len<0.8){plan.msg="Silnice je moc krátká.";return plan}
   for(let k=0;k<g0.n;k++){const x=g0.pts[2*k],y=g0.pts[2*k+1];if(x<0||y<0||x>MW||y>MH){plan.msg="Silnice nesmí vést mimo mapu.";return plan}}
-  const la=spec.start.lvl,lb=spec.end.lvl,lvlNew=u=>la+(lb-la)*u/g0.len;
+  const la=spec.start.lvl,lb=spec.end.lvl;
+  // výškový profil: zvolená výška uprostřed, rampy RAMP polí na každou úroveň u konců v jiné výšce
+  const prof=len=>{const L=spec.level;if(L===undefined||L===null||Math.abs(la-L)<0.01&&Math.abs(lb-L)<0.01)return {r1:0,r2:0,fn:u=>la+(lb-la)*u/(len||1),ramp:u=>Math.abs(la-lb)>0.01};
+    const r1=RAMP*Math.abs(L-la),r2=RAMP*Math.abs(L-lb);
+    return {r1,r2,L,fn:u=>u<r1?la+(L-la)*u/r1:u>len-r2?L+(lb-L)*(u-(len-r2))/r2:L,ramp:u=>u<r1||u>len-r2}};
+  let P=prof(g0.len);
+  if(P.r1+P.r2>0&&P.r1+P.r2>g0.len-0.4){plan.msg="Na most je potřeba aspoň "+Math.ceil(P.r1+P.r2+0.4)+" polí (rampa "+RAMP+" pole na každou výšku).";return plan}
+  const lvlNew=u=>P.fn(u);
   for(const sn of [spec.start,spec.end]){const err=checkJoin(S,sn,spec.kind);if(err){plan.msg=err;plan.bad=sn;return plan}}
   if(spec.start.type==="node"&&spec.end.type==="node"&&spec.start.node===spec.end.node){plan.msg="Začátek a konec jsou stejný bod.";return plan}
   // táhne po existující silnici → přestavba místo druhé silnice přes první
@@ -198,6 +207,8 @@ function planRoad(S,spec){
       if(x.ua<0.45&&joinedTo(S,spec.start,e))continue;if(g0.len-x.ua<0.45&&joinedTo(S,spec.end,e))continue;
       const l1=lvlNew(x.ua),l2=lvlAt(S,e,x.ub);if(Math.abs(l1-l2)>=0.5)continue;
       if(e.kind==="hwy"||spec.kind==="hwy"){plan.msg="Dálnici nejde křížit v úrovni. Zvol most.";plan.bad={x:x.x,y:x.y};return plan}
+      if(isRampEdge(S,e)){plan.msg="Na rampu mostu se napojit nejde. Napoj se na jejím konci.";plan.bad={x:x.x,y:x.y};return plan}
+      if(P.ramp(x.ua)&&Math.abs(l1-Math.round(l1))>0.01){plan.msg="Rampa mostu nemůže křížit jinou silnici. Prodluž most.";plan.bad={x:x.x,y:x.y};return plan}
       plan.junctions.push({ua:x.ua,x:x.x,y:x.y,lvl:l2})}}
   plan.junctions.sort((a,b)=>a.ua-b.ua);
   plan.junctions=plan.junctions.filter((j,k,a)=>k===0||j.ua-a[k-1].ua>0.4);
@@ -206,12 +217,12 @@ function planRoad(S,spec){
   if(spec.end.type==="free"&&J.length&&g0.len-J[J.length-1].ua<0.6){const j=J.pop();g0=geom(subPts(g0,0,j.ua));plan.end={type:"edge",x:j.x,y:j.y,lvl:j.lvl}}
   if(spec.start.type==="free"&&J.length&&J[0].ua<0.6){const j=J.shift();const u0=j.ua;g0=geom(subPts(g0,u0,g0.len));for(const q of J)q.ua-=u0;plan.start={type:"edge",x:j.x,y:j.y,lvl:j.lvl}}
   plan.g=g0;if(g0.len<0.5){plan.msg="Silnice je moc krátká.";return plan}
-  const lvlFix=u=>la+(lb-la)*u/g0.len;
+  P=prof(g0.len);plan.ramps=[P.r1,P.r2,P.L];const lvlFix=u=>P.fn(u);
   const cells=cellsAlong(S,g0,edgeExt({kind:spec.kind,lf:lanes,lb:K.oneway?0:lanes}),lvlFix);let water=0,rough=0;
   for(const c of cells){if(S.terrain[c]===WATER)water++;else if(S.terrain[c]!==GRASS)rough++}
   const dem=bldOn(S,cells);for(const b of dem)if(b.gateLock){plan.msg="Tady stavět nejde.";return plan}
   plan.demolish=dem;plan.cells=cells;
-  const avgLvl=(la+lb)/2;
+  let avgLvl=0;for(let k=0;k<=10;k++)avgLvl+=lvlFix(g0.len*k/10)/11;
   plan.roadCost=Math.round(g0.len*roadCostPerTile(spec.kind,lanes,avgLvl)+(water*(spec.kind==="hwy"?20:8)+rough*3)/4);
   plan.demolishCost=plan.demolish.reduce((s,b)=>s+demolishCost(b),0);
   plan.cost=spec.auto?0:plan.roadCost+plan.demolishCost;
@@ -251,7 +262,11 @@ function commitRoad(S,plan){
   const g0=plan.g,K=RK[sp.kind],lanes=plan.lanes;
   const seq=[{u:0,node:resolvePoint(S,plan.start.x,plan.start.y,plan.start.lvl)}];
   for(const j of plan.junctions)seq.push({u:j.ua,node:resolvePoint(S,j.x,j.y,j.lvl)});
+  // začátek a konec ramp mostu
+  const rp=plan.ramps||[0,0];
+  for(const u of [rp[0],g0.len-rp[1]]){if(u<=0.05||u>=g0.len-0.05||(u===rp[0]&&!rp[0])||(u===g0.len-rp[1]&&!rp[1]))continue;const q=pointAt(g0,u);seq.push({u,node:resolvePoint(S,q.x,q.y,rp[2])})}
   seq.push({u:g0.len,node:resolvePoint(S,plan.end.x,plan.end.y,plan.end.lvl)});
+  seq.sort((a,b)=>a.u-b.u);
   const made=[];
   for(let k=0;k<seq.length-1;k++){const A=seq[k],B=seq[k+1];if(A.node===B.node||B.u-A.u<0.05)continue;
     const pts=subPts(g0,A.u,B.u);pts[0]=A.node.x;pts[1]=A.node.y;pts[pts.length-2]=B.node.x;pts[pts.length-1]=B.node.y;
@@ -261,19 +276,19 @@ function commitRoad(S,plan){
 function buildRoad(S,spec){const p=planRoad(S,spec);if(!p.ok)return {ok:false,msg:p.msg,plan:p};const r=commitRoad(S,p);r.plan=p;return r}
 
 // ---- kruhový objezd ----
-function planRoundabout(S,cx,cy,r){
-  const plan={ok:false,msg:"",cost:0,demolish:[],cx,cy,r,round:true};
+function planRoundabout(S,cx,cy,r,kind,lanes){kind=kind||"road";
+  const plan={ok:false,msg:"",cost:0,demolish:[],cx,cy,r,round:true,kind};
   if(r<1.4){plan.msg="Kruhový objezd je moc malý.";return plan}
   if(cx-r<0.5||cy-r<0.5||cx+r>MW-0.5||cy+r>MH-0.5){plan.msg="Kruhový objezd se nevejde na mapu.";return plan}
-  const pts=mkArc(cx,cy,r,0,Math.PI*2);const g=geom(pts);plan.g=g;const lanes=r>=3?2:1;plan.lanes=lanes;
+  const pts=mkArc(cx,cy,r,0,Math.PI*2);const g=geom(pts);plan.g=g;lanes=clamp(lanes||(r>=3?2:1),1,3);plan.lanes=lanes;
   plan.cross=[];
   for(const e of S.edges){if(e.dead||!bbOverlap(e.g.bb,g.bb,0.2))continue;
     const xs=polyInter(g,e.g).filter(x=>lvlAt(S,e,x.ub)<0.5);
     if(xs.length&&e.kind==="hwy"){plan.msg="Kruhový objezd nejde postavit na dálnici.";return plan}
     for(const x of xs)plan.cross.push({x:x.x,y:x.y})}
-  const cells=cellsAlong(S,g,edgeExt({kind:"road",lf:lanes,lb:0}),()=>0);
+  const cells=cellsAlong(S,g,edgeExt({kind,lf:lanes,lb:0}),()=>0);
   plan.demolish=bldOn(S,cells);plan.cells=cells;
-  plan.roadCost=Math.round(g.len*roadCostPerTile("road",lanes,0)*1.2+20);plan.demolishCost=plan.demolish.reduce((s,b)=>s+demolishCost(b),0);
+  plan.roadCost=Math.round(g.len*roadCostPerTile(kind,lanes,0)*1.2+20);plan.demolishCost=plan.demolish.reduce((s,b)=>s+demolishCost(b),0);
   plan.cost=plan.roadCost+plan.demolishCost;plan.ok=true;return plan}
 function commitRoundabout(S,plan){
   if(!plan.ok)return {ok:false,msg:plan.msg};if(S.money<plan.cost)return {ok:false,msg:"Málo peněz v pokladně."};
@@ -292,7 +307,7 @@ function commitRoundabout(S,plan){
   for(const f of full){f.n.ring=rid;f.n.keep=false;f.n.x=cx+Math.cos(f.a)*r;f.n.y=cy+Math.sin(f.a)*r}
   const lanes=plan.lanes,made=[];
   for(let k=0;k<full.length;k++){const A=full[k],B=full[(k-1+full.length)%full.length];let a1=B.a;if(a1>=A.a)a1-=Math.PI*2;
-    const pts=mkArc(cx,cy,r,A.a,a1);made.push(addEdge(S,A.n,B.n,"road",pts,lanes,0,{ring:rid}))}
+    const pts=mkArc(cx,cy,r,A.a,a1);made.push(addEdge(S,A.n,B.n,plan.kind||"road",pts,lanes,0,{ring:rid}))}
   for(const f of full)topoNode(S,f.n);
   S.rings.push({id:rid,cx,cy,r});
   return {ok:true,edges:made}}
@@ -366,6 +381,13 @@ function splitAt(S,e,u){if(e.ring)return {ok:false,msg:"Kruhový objezd se nedě
   if(u<0.5||e.g.len-u<0.5)return {ok:false,msg:"Moc blízko konce úseku."};const r=splitEdgeR(S,e,u,true);return {ok:true,node:r.node}}
 function unsplit(S,n){if(!n.keep)return {ok:false,msg:"Tady úsek ručně rozdělený není."};n.keep=false;const ne=mergeAt(S,n);
   return ne?{ok:true,msg:"Úseky spojeny"}:{ok:true,msg:"Úseky se liší druhem nebo pruhy, zůstanou zvlášť."}}
+// přechody: na rameni křižovatky se přepínají (jsou tam samy od sebe), v úseku se přidávají a ruší
+function toggleCross(S,n,e){if(n.edges.length<3||!RK[e.kind].walk||!RK[e.kind].side||e.ring)return {ok:false,msg:"Tady přechod být nemůže."};
+  if(!n.xOff)n.xOff=new Set();let on;if(n.xOff.has(e.id)){n.xOff.delete(e.id);on=true}else{n.xOff.add(e.id);on=false}topoNode(S,n);netChanged(S);return {ok:true,on}}
+function toggleMidCross(S,e,u){if(!RK[e.kind].walk||!RK[e.kind].side)return {ok:false,msg:"Na této silnici nejsou chodníky."};
+  e.xw=e.xw||[];const k=e.xw.findIndex(x=>Math.abs(x.u-u)<0.6);if(k>=0){e.xw.splice(k,1);netChanged(S);return {ok:true,on:false}}
+  const t=edgeTrim(e);if(u<t[0]+0.4||u>e.g.len-t[1]-0.4)return {ok:false,msg:"Přechod dej dál od křižovatky."};
+  if(S.money<10)return {ok:false,msg:"Málo peněz v pokladně."};S.money-=10;e.xw.push({u});netChanged(S);return {ok:true,on:true}}
 function eraseEdge(S,e){if(e.gateEdge)return {ok:false,msg:"Dálnici do světa zbourat nejde."};
   const refund=Math.round(e.g.len*RK[e.kind].cost*0.2);const ends=[S.nodes[e.a],S.nodes[e.b]];removeEdge(S,e);S.money+=refund;
   if(e.ring){for(const n of ends){if(!n.edges.some(x=>S.edges[x].ring))n.ring=0;topoNode(S,n)}}

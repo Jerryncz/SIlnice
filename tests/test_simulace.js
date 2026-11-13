@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -72,7 +72,7 @@ function road(S, x0, y0, x1, y1, kind, lvl0, lvl1, lanes) {
   let X = -1, Y = -1;
   for (let y = 4; y < 60 && X < 0; y++) for (let x = 4; x < 100 && X < 0; x++) {
     let free = true;
-    for (let j = y - 2; j < y + 16 && free; j++) for (let i = x - 2; i < x + 24 && free; i++) { if (!A.unitFree(S, i, j)) free = false; }
+    for (let j = y - 2; j < y + 21 && free; j++) for (let i = x - 2; i < x + 24 && free; i++) { if (!A.unitFree(S, i, j)) free = false; }
     if (free) { X = x; Y = y; }
   }
   ok(X >= 0, "na mapě je volné místo pro test sítě");
@@ -106,8 +106,19 @@ function road(S, x0, y0, x1, y1, kind, lvl0, lvl1, lanes) {
   ok(alongY(y).length === 1, `po vyrovnání pruhů se úseky spojily (${alongY(y).length})`);
   const sec = A.planLanes(S, alongY(y)[0], 1, 1, [4, 9]); ok(sec.ok, "pruh na části úseku");
   A.commitLanes(S, sec); ok(alongY(y).length === 3 && alongY(y).filter(e => e.lb === 3).length === 1, "pruh navíc jen na prostředním kusu");
+  // most přes silnici se zvolenou výškou: rampy 3 pole, bez křižovatky
+  const yb = Y + 5.5;
+  ok(road(S, X + 2.5, yb, X + 12.5, yb, "road").ok, "silnice pod most");
+  const nb0 = S.nodes.filter(n => !n.dead).length;
+  const br = A.buildRoad(S, { pts: A.mkLine(X + 7.5, yb - 4.5, X + 7.5, yb + 4.5), kind: "road", lanes: 1, level: 1, start: { type: "free", x: X + 7.5, y: yb - 4.5, lvl: 0 }, end: { type: "free", x: X + 7.5, y: yb + 4.5, lvl: 0 } });
+  ok(br.ok, "most se zvolenou výškou postaven: " + (br.msg || ""));
+  const brE = S.edges.filter(e => !e.dead && Math.abs(e.g.pts[0] - (X + 7.5)) < 0.05 && Math.abs(e.g.pts[e.g.pts.length - 2] - (X + 7.5)) < 0.05);
+  ok(brE.length === 3 && brE.filter(e => A.isRampEdge(S, e)).length === 2, `most má dvě rampy a střed (${brE.length})`);
+  ok(S.nodes.filter(n => !n.dead && n.edges.length >= 3 && Math.abs(n.y - yb) < 0.05 && Math.abs(n.x - (X + 7.5)) < 0.05).length === 0, "most nevytvořil křižovatku");
+  const shortB = A.planRoad(S, { pts: A.mkLine(X + 14.5, yb - 2, X + 14.5, yb + 2), kind: "road", level: 1, start: { type: "free", x: X + 14.5, y: yb - 2, lvl: 0 }, end: { type: "free", x: X + 14.5, y: yb + 2, lvl: 0 } });
+  ok(!shortB.ok, "krátký most bez místa na rampy je odmítnut");
   // dálnice a silnice napojená z boku: jen vpravo
-  const yh = Y + 8.5;
+  const yh = Y + 11.5;
   ok(road(S, X + 0.5, yh, X + 16.5, yh, "hwy").ok, "dálnice postavena");
   const side = road(S, X + 8.5, yh + 5, X + 8.5, yh, "road"); ok(side.ok, "silnice napojená z boku dálnice: " + (side.msg || ""));
   const mn = S.nodes.find(n => !n.dead && Math.abs(n.x - (X + 8.5)) < 0.05 && Math.abs(n.y - yh) < 0.05);
@@ -120,7 +131,7 @@ function road(S, x0, y0, x1, y1, kind, lvl0, lvl1, lanes) {
     ok(!(mn.turns.get(east.inLink) || []).some(t => t.link === arm.outLink), "z protisměru dálnice odbočit nejde");
   }
   // kruhový objezd jde celý přestavět
-  const ry = Y + 13;
+  const ry = Y + 17;
   ok(road(S, X + 2.5, ry, X + 12.5, ry, "road").ok, "silnice pro kruh");
   const rp = A.planRoundabout(S, X + 7.5, ry, 2); ok(rp.ok && A.commitRoundabout(S, rp).ok, "kruhový objezd postaven");
   const re = S.edges.find(e => !e.dead && e.ring);
@@ -193,6 +204,8 @@ for (const seed of [1, 4242, 98765]) {
   ok(pop1 > pop0, `obce po propojení rostou (${pop0} → ${pop1})`);
   ok(S.trips > 50, `lidé dojíždějí do cíle (${S.trips})`);
   ok(S.transits > 0, `projíždí tranzit (${S.transits})`);
+  ok((S.xCount || 0) > 0, `chodci přecházejí po přechodech (${S.xCount || 0})`);
+  souhrn.prechody = (souhrn.prechody || 0) + (S.xCount || 0); souhrn.vzdali = (souhrn.vzdali || 0) + S.stuckN;
   const typy = {}; for (const b of S.buildings) typy[b.type] = (typy[b.type] || 0) + 1;
   for (const t in typy) souhrn[t] = (souhrn[t] || 0) + typy[t];
   // bourání za jízdy
@@ -204,6 +217,6 @@ for (const seed of [1, 4242, 98765]) {
   console.log(`  ${S.towns.length} obcí, ${pop1} obyvatel, ${S.buildings.length} budov, ${S.trips} cest, ${S.transits} tranzitů, vývoz ${S.exported} Kč, aut ${S.cars.length}, chodců ${S.walkers.length}`);
   console.log("  " + JSON.stringify(typy));
 }
-console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno }));
+console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, prechody: souhrn.prechody, vzdali: souhrn.vzdali }));
 console.log(`verze ${A.GAME_VERSION}: ${kontroly} kontrol, ${chyby} chyb`);
 process.exit(chyby ? 1 : 0);
