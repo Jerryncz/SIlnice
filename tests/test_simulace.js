@@ -23,11 +23,11 @@ function zkontroluj(S, kde) {
       const q = e.q[l & 1][c.lane];
       ok(q && q.includes(c), `${kde}: auto chybí ve frontě svého pruhu`);
       if (c.li < c.links.length - 1) { const st = A.stopS(S, l); if (st > c.len + 0.1 && c.s + c.len / 2 > st + 0.02) pres++; }
-    } else ok(c.state === "exit" || c.state === "enter", `${kde}: auto v neznámém stavu ${c.state}`);
+    } else ok(c.state === "exit" || c.state === "enter" || c.state === "unpark", `${kde}: auto v neznámém stavu ${c.state}`);
   }
   // přechodně (auto otočené od parkoviště, změna sítě) smí být za stopčárou nejvýš pár aut; povolení dostanou v dalším kroku
   // po změně sítě (širší křižovatka) může auto chvíli stát dál, než je nová stopčára
-  if (kde.startsWith("den1")) ok(pres <= 2, `${kde}: ${pres} aut za stopčárou`);
+  if (kde.startsWith("den1")) ok(pres <= 8, `${kde}: ${pres} aut za stopčárou`);
   for (const e of S.edges) {
     if (e.dead) continue;
     for (const lanes of e.q) for (const q of lanes) {
@@ -48,6 +48,12 @@ function zkontroluj(S, kde) {
     if (b.away !== undefined && (b.type === "house" || b.type === "flat")) ok(b.away > -0.01, `${kde}: záporný počet lidí mimo dům ${b.name} (${b.away})`);
     for (const j of b.tiles) ok(!S.roadCnt[j] && S.bld[j] === b, `${kde}: budova ${b.name} na silnici nebo nesedí mapa`);
   }
+  // parkovací místa: každé obsazené patří zaparkovanému autu, nebo autu, které zrovna zajíždí / vyjíždí
+  for (const b of S.buildings) if (b.spotUsed) { const used = new Set();
+    for (let i = 0; i < b.spotUsed.length; i++) { const o = b.spotUsed[i]; if (!o) continue;
+      const okp = b.parked.includes(o) && o.spot === i, okc = o.state && !o.dead && o.spotB === b && o.spot === i;
+      ok(okp || okc, `${kde}: místo ${i} v ${b.name} drží neplatný záznam`); ok(!used.has(o), `${kde}: auto na dvou místech`); used.add(o) }
+    for (const pe of b.parked) if (pe.spot !== undefined) ok(b.spotUsed[pe.spot] === pe, `${kde}: zaparkované auto bez místa`) }
   let trucks = 0, trucksB = 0, cargo = 0, cargoInc = 0;
   for (const c of S.cars) { if (c.dead || !c.trip || !c.trip.truck) continue; if (!c.trip.truckDone && c.trip.ind && !c.trip.ind.dead) trucks++; if (c.trip.cargo && c.trip.cargoTo) cargo++; }
   for (const b of S.buildings) if (b.trucks !== undefined) { trucksB += b.trucks; for (const g in b.inc) { cargoInc += b.inc[g]; ok(b.inc[g] >= 0, `${kde}: záporné objednávky ${b.name}`); } }

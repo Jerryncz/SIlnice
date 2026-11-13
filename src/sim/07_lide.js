@@ -24,10 +24,14 @@ function startTrip(S,tr){
   clampTrip(S,c);c.lane=chooseLane(S,c,0);
   if(tr.from.isGate){const l=c.links[0];const q=S.edges[l>>1].q[l&1][c.lane];const rear=q[q.length-1];
     if(rear&&rear.s<c.len+0.3){c.dead=true;c.state="gone";return false}c.s=0;q.push(c);c.state="drive";c.sid=S.sid}
-  else S.exiting.push(c);
+  else{const fb=tr.from;let i=tr.spot;if(i===undefined&&isHome(fb)&&fb.type==="flat"&&lotLayout(S,fb))i=homeCars(fb)-1;
+    const lay=i!==undefined&&i>=0?lotLayout(S,fb):null;
+    // vyjetí z místa na parkovišti po uličce, pak čeká u vjezdu jako dřív
+    if(lay&&i<lay.spots.length){c.path=spotPath(lay,i).reverse();c.plen=pathLen(c.path);c.ps=0;c.state="unpark";if(fb.spotUsed&&!isHome(fb)){fb.spotUsed[i]=c;c.spotB=fb;c.spot=i}S.unparking.push(c)}
+    else S.exiting.push(c)}
   if(tr.customer&&tr.to.cap>0&&!tr.reserved){tr.to.incoming++;tr.reserved=true}
   return true}
-function releaseVehicle(S,c){const tr=c.trip;if(!tr)return;
+function releaseVehicle(S,c){if(c.spotB){releaseSpot(c.spotB,c.spot,c);c.spotB=null}const tr=c.trip;if(!tr)return;
   if(tr.reserved){tr.to.incoming--;tr.reserved=false}
   if(tr.cargo&&tr.cargoTo){if(tr.cargoTo.isTown)tr.cargoTo.matInc--;else if(tr.cargoTo.inc)tr.cargoTo.inc[tr.cargo]--;tr.cargoTo=null}
   if(tr.truck&&tr.ind&&tr.ind.trucks!==undefined&&!tr.truckDone){tr.ind.trucks--;tr.truckDone=true}
@@ -44,7 +48,7 @@ function lotFailed(S,c){const tr=c.trip,to=tr.to;to.overflow++;to.ofRecent+=1;S.
   const p=homeEp?findPath(S,{e:e.id,u:clamp((l&1)?e.g.len-c.s:c.s,0,e.g.len),dirs:[l&1]},homeEp):null;
   if(!p||p.links[0]!==l){c.dead=true;c.state="gone";if(isHome(tr.home))tr.home.away-=tr.group;tr.handled=true;return}
   c.trip=back;c.goalEp=homeEp;c.links=p.links;c.li=0;const lz=p.links[p.links.length-1];c.sEnd=clamp(p.sEnd,linkIn(S,lz)+0.3,Math.max(linkIn(S,lz)+0.3,linkOut(S,lz)-0.3));if(p.links.length===1)c.sEnd=Math.max(c.sEnd,c.s);c.wait=0;insertQ(e.q[l&1][c.lane],c)}
-function arriveVehicle(S,c){c.dead=true;c.state="gone";handleArrival(S,c.trip,"car",c,false)}
+function arriveVehicle(S,c){c.dead=true;c.state="gone";handleArrival(S,c.trip,"car",c,false);if(c.spotB){releaseSpot(c.spotB,c.spot,c);c.spotB=null}}
 function walkerArrived(S,w,aborted){handleArrival(S,w.trip,"walk",null,aborted)}
 function handleArrival(S,tr,mode,c,silent){
   if(tr.handled)return;tr.handled=true;const to=tr.to;
@@ -61,7 +65,7 @@ function handleArrival(S,tr,mode,c,silent){
   if(!silent){S.trips++;const pay=1+Math.floor((c?c.links.length:2)/4);S.money+=pay;S.earned+=pay;
     if(c&&tr.home&&tr.home.town){const t=tr.home.town;const ratio=(S.time-c.start)/Math.max(0.5,c.free);t.delay+=(clamp(ratio,0.5,6)-t.delay)*0.1}
     const K=KIND[to.type];if(K&&K.pay&&tr.customer){S.money+=K.pay;S.earned+=K.pay}}
-  if(mode==="car"&&!silent)to.parked.push({home:tr.home,color:tr.color});
+  if(mode==="car"&&!silent){const pe={home:tr.home,color:tr.color,spot:c&&c.spotB===to?c.spot:undefined};to.parked.push(pe);if(pe.spot!==undefined){to.spotUsed[pe.spot]=pe;c.spotB=null}}
   if(tr.purpose==="commute"){to.staff+=tr.group;to.staffInc-=tr.group}else if(tr.purpose==="school")to.kidsIn+=tr.group;else to.guests+=tr.group;
   to.visits++;
   const h=hourOf(S);let dur;
@@ -74,10 +78,13 @@ function decPresence(tr){const place=tr.to;if(place.isGate)return;if(tr.purpose=
 function processReturns(S){let guard=0;
   while(S.returns.size&&S.returns.peekP()<=S.time&&guard++<300){const r=S.returns.pop();const tr=r.tr,place=tr.to,home=tr.home;
     let mode=r.mode,k=-1;if(mode==="car"&&!place.isGate){k=place.parked.findIndex(p=>p.home===home);if(k<0)mode="walk"}
-    const gone=()=>{decPresence(tr);if(k>=0)place.parked.splice(k,1);if(isHome(home))home.away-=tr.group};
+    const pe=k>=0?place.parked[k]:null;
+    const gone=()=>{decPresence(tr);if(k>=0){place.parked.splice(k,1);if(pe&&pe.spot!==undefined)releaseSpot(place,pe.spot,pe)}if(isHome(home))home.away-=tr.group};
     if(!home||home.dead||(!home.isGate&&!home.access)||place.dead){gone();continue}
-    const back={purpose:"return",ret:true,from:place,to:home,home,group:tr.group,mode,color:tr.color};
+    const back={purpose:"return",ret:true,from:place,to:home,home,group:tr.group,mode,color:tr.color,spot:pe&&pe.spot!==undefined?pe.spot:undefined};
+    if(pe&&pe.spot!==undefined)releaseSpot(place,pe.spot,pe);
     if(startTrip(S,back)){decPresence(tr);if(k>=0)place.parked.splice(k,1)}
+    else if(pe&&pe.spot!==undefined&&!place.spotUsed[pe.spot])place.spotUsed[pe.spot]=pe
     else{r.tries=(r.tries||0)+1;if(r.tries<5)S.returns.push(r,S.time+3);else gone()}}}
 function due(S,rem,h,dh,a,b){if(rem<=0||h<a||h>=b)return 0;const exp=rem*dh/Math.max(0.05,b-h);let n=Math.floor(exp);if(S.R()<exp-n)n++;return Math.min(n,rem)}
 function walkOr(d,lim){return d<lim?"walk":"car"}

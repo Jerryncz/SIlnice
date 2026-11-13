@@ -19,10 +19,10 @@ function createBuilding(S,type,town,tiles,front,name){
     born:S.time,dead:false,staff:0,staffInc:0,guests:0,kidsIn:0,away:0};
   let lots=0;
   for(const [j,r] of tiles){if(S.terrain[j]!==GRASS){S.terrain[j]=GRASS;S.dirty.push(j)}S.bld[j]=b;
-    S.role[j]=type==="house"?R_HOUSE:type==="flat"?R_FLAT:ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
+    S.role[j]=type==="house"?R_HOUSE:type==="flat"?(r==="p"?R_LOT:R_FLAT):ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
   const K=KIND[type];
   if(type==="house"){b.pop=housePop(units(b));fillHousehold(S,b)}
-  else if(type==="flat"){b.pop=Math.round(10*units(b));fillHousehold(S,b)}
+  else if(type==="flat"){b.pop=Math.round(10*b.tiles.filter(j=>S.role[j]===R_FLAT).length/4);fillHousehold(S,b)}
   else if(type==="park")b.cap=K.cap;
   else b.cap=Math.max(Math.round(lots/4*K.slots),type==="office"?Math.round(units(b)*3):0);
   b.jobs=jobsOf(b);if(type==="house"&&units(b)>=3)b.jobs=Math.round(units(b)); // statky dávají práci na poli

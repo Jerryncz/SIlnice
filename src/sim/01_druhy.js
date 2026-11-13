@@ -49,10 +49,11 @@ const HOUSE_SHAPES=[
   {name:"Statek do Z",w:1.2,min:24,cells:[[0,0],[1,0],[1,1],[2,1]]},
   {name:"Statek do U",w:1,min:40,cells:[[0,0],[0,1],[1,1],[2,1],[2,0]]}
 ];
+// bytovky mají před domem venkovní stání (p)
 const FLAT_SHAPES=[
-  {name:"Bytový dům",w:3,cells:[[0,0],[1,0],[0,1],[1,1]]},
-  {name:"Panelový dům",w:2,cells:[[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]]},
-  {name:"Bytový blok",w:1.5,cells:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]]}
+  {name:"Bytový dům",w:3,cells:[[0,0,"p"],[1,0,"p"],[0,1],[1,1]]},
+  {name:"Panelový dům",w:2,cells:[[0,0,"p"],[1,0,"p"],[2,0,"p"],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]]},
+  {name:"Bytový blok",w:1.5,cells:[[0,0,"p"],[1,0,"p"],[0,1],[0,2],[1,1],[1,2]]}
 ];
 const row=(v,n,r)=>Array.from({length:n},(_,u)=>[u,v,r]);
 const SVC_SHAPES={

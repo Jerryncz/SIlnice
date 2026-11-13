@@ -95,7 +95,11 @@ function leaveBox(S,c){if(!c.conn)return;const n=S.nodes[c.conn.node];const k=n.
 // dojel k cíli: zajede do vjezdu (domy, parkoviště), u hranice mapy rovnou zmizí
 function startEnter(S,c,l){const to=c.trip&&c.trip.to;leaveBox(S,c);
   if(!to||to.isGate||to.dead||to.front===undefined){c.state="arrived";arriveVehicle(S,c);return}
-  const p=lanePose(S,l,c.lane,c.s);c.state="enter";c.t=0;c.ex=p.x;c.ey=p.y;c.eang=p.ang;S.entering.push(c)}
+  const p=lanePose(S,l,c.lane,c.s);c.state="enter";c.t=0;c.ex=p.x;c.ey=p.y;c.eang=p.ang;
+  // na parkoviště: rezervované místo a cesta po uličce
+  const lay=lotLayout(S,to);if(lay){let i=-1;if(isHome(to)){if(to.type==="flat")i=Math.min(lay.spots.length-1,homeCars(to))}else{i=freeSpot(S,to);if(i>=0){to.spotUsed[i]=c;c.spotB=to;c.spot=i}}
+    if(i>=0){c.path=[[p.x,p.y],...spotPath(lay,i)];c.plen=pathLen(c.path);c.ps=0}}
+  S.entering.push(c)}
 function tryExit(S,c){const l=c.links[0];const e=S.edges[l>>1];if(e.dead){killVehicle(S,c);return true}
   const q=e.q[l&1][c.lane];if(!q){killVehicle(S,c);return true}
   for(const o of q){if(o.s>c.s+o.len/2+c.len/2+0.25)continue;if(o.s<c.s-1.1)break;return false}
@@ -111,7 +115,9 @@ function updateVehicles(S,dt){
     c.wait+=dt;if(c.firstExit&&c.wait>8){S.exiting.splice(k,1);exitFailed(S,c)}
     else if(!c.firstExit&&lim>0&&c.wait>Math.max(8,lim)){S.exiting.splice(k,1);c.dead=true;c.state="gone";releaseVehicle(S,c)}}
   for(let k=S.entering.length-1;k>=0;k--){const c=S.entering[k];if(c.dead||c.state!=="enter"){S.entering.splice(k,1);continue}
-    c.t+=dt/0.8;if(c.t>=1){S.entering.splice(k,1);arriveVehicle(S,c)}}
+    if(c.path){c.ps+=dt*1.2;c.t=c.ps/c.plen}else c.t+=dt/0.8;if(c.t>=1){S.entering.splice(k,1);arriveVehicle(S,c)}}
+  for(let k=S.unparking.length-1;k>=0;k--){const c=S.unparking[k];if(c.dead||c.state!=="unpark"){S.unparking.splice(k,1);continue}
+    c.ps+=dt*1.2;if(c.ps>=c.plen){S.unparking.splice(k,1);if(c.spotB){releaseSpot(c.spotB,c.spot,c);c.spotB=null}const z=c.path[c.path.length-2]||c.path[c.path.length-1];c.ux=z[0];c.uy=z[1];c.state="exit";c.wait=0;S.exiting.push(c)}}
   for(const e of S.edges){if(e.dead)continue;const len=e.g.len,vb=BASE_SPEED*RK[e.kind].speed*(e.ring?0.75:1);const mb=e.mbusy&&e.mbusy.length?e.mbusy:null;
     for(let d=0;d<2;d++){const lanes=e.q[d];if(!lanes.length)continue;const l=e.id*2+d;const box=S.nodes[d?e.a:e.b].edges.length>=3;const sOut=box?linkOut(S,l):len;
       for(let k=0;k<lanes.length;k++){const q=lanes[k];let leader=null;
@@ -124,11 +130,11 @@ function updateVehicles(S,dt){
           c.v=(ns-c.s)/dt;if(c.v<0.1*vt)c.wait+=dt;else if(!leader)c.wait=0;else c.wait=Math.max(0,c.wait-dt);
           c.s=ns;
           if(c.conn&&c.s>=c.conn.s1+c.len/2)leaveBox(S,c);
-          if(lim>0&&c.wait>lim){q.splice(i,1);giveUp(S,c);continue}
+          if(lim>0&&c.wait>lim){(q[i]===c&&q.splice(i,1));giveUp(S,c);continue}
           if(!leader){
-            if(last&&c.s>=c.sEnd-0.03){if(canArrive(S,c)){q.splice(i,1);startEnter(S,c,l);continue}
-              else if(c.wait>4){q.splice(i,1);lotFailed(S,c);continue}}
-            else if(!last&&c.s>=(box?sOut-c.len/2-0.04:len)-0.03){if(tryTransition(S,c,l)){q.splice(i,1);continue}}}
+            if(last&&c.s>=c.sEnd-0.03){if(canArrive(S,c)){(q[i]===c&&q.splice(i,1));startEnter(S,c,l);continue}
+              else if(c.wait>4){(q[i]===c&&q.splice(i,1));lotFailed(S,c);continue}}
+            else if(!last&&c.s>=(box?sOut-c.len/2-0.04:len)-0.03){if(tryTransition(S,c,l)){(q[i]===c&&q.splice(i,1));continue}}}
           leader=c;i++}}}}}
 function killVehicle(S,c){if(c.dead)return;if(c.state==="drive")removeQ(S,c);leaveBox(S,c);c.dead=true;c.state="gone";releaseVehicle(S,c)}
 // poloha startu a cíle auta leží mimo plochu křižovatek
