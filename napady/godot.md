@@ -8,7 +8,8 @@ prohlížeč a jeden HTML soubor přestanou stačit. Godot je zdarma a na 2D
 výborný.
 
 ## Představa
-Simulace je už teď oddělená od vykreslování (R4), takže jde přepsat do
+Simulace je už teď oddělená od vykreslování (R4) a od verze 0.4 rozdělená do
+modulů v `src/sim` (R26), takže jde přepsat do
 GDScriptu nebo C# skoro jedna k jedné; vykreslování se udělá v Godotu znovu.
 
 ## Otevřené otázky

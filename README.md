@@ -4,18 +4,25 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.3.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.4.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
-Otevři `index.html` v prohlížeči. Nic se nemusí instalovat ani sestavovat.
+Otevři `index.html` v prohlížeči. Nic se nemusí instalovat.
+
+Po změně zdrojů v `src/` se `index.html` sestaví příkazem `node build.js`
+(Node.js 18 nebo novější). `index.html` se commituje, aby šel hrát rovnou.
 Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 
 ## Co kde je
 
 | Soubor / složka | Obsah |
 |---|---|
-| `index.html` | celá hra: `<script id="sim">` = simulace bez DOM, druhý skript = vykreslování a ovládání |
+| `index.html` | sestavená hra (needitovat ručně, vzniká z `src/`) |
+| `src/template.html` | HTML a CSS stránky |
+| `src/sim/*.js` | simulace bez DOM: síť silnic, hledání cest, doprava, obce, lidé, hospodářství, svět |
+| `src/ui/*.js` | vykreslování, panely a ovládání |
+| `build.js` | skládá `src/` do `index.html` |
 | `docs/HRA.md` | **základní dokument** – jak se svět hry chová a proč, lidskou řečí |
 | `docs/ROZHODNUTI.md` | záznam rozhodnutí s datem, důvodem a zvažovanými možnostmi |
 | `napady/` | nápady do budoucna (ukládání hry, křižovatky, železnice …) – nic z nich není ve hře |
@@ -28,18 +35,20 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 
 | Akce | Ovládání |
 |---|---|
-| Silnice / Dálnice | tah myší nebo prstem, klávesy `1` / `2` |
-| Přidat pruh | klávesa `3`, tah přes silnici (Shift ubere) |
-| Jednosměrka | klávesa `4`, tah ve směru jízdy; klik na jednosměrku ji zruší |
-| Pravidlo křižovatky | klávesa `5`, klik na křižovatku přepíná |
-| Bourat silnice / budovy | klávesa `6` nebo pravé tlačítko myši |
-| Stavební uzávěra | klávesa `7` |
-| Ruka (posun, výběr) | klávesa `8` |
-| Přiblížení | kolečko myši, `+` / `-`, sevření prstů |
-| Posun mapy | prostřední tlačítko, Ruka, šipky, dva prsty |
-| Výběr / zrušení výběru | klik Rukou / `Esc` |
-| Pauza | mezerník |
-| Vytížení silnic | klávesa `V` |
+| Silnice rovně | `1`, tah myší (0°, 45°, 90°; Shift libovolný úhel) |
+| Oblouk | `2`, klik začátek, směr, konec |
+| Kruhový objezd | `3`, tah od středu |
+| Pruhy | `4`, klik na úsek (Shift ubere) |
+| Jednosměrka | `5`, klik na úsek přepíná směr |
+| Pravidlo křižovatky | `6`, klik na křižovatku |
+| Bourat | `7`, tah přes silnice nebo budovy |
+| Stavební uzávěra | `8` |
+| Ruka (posun, výběr) | `9` |
+| Druh, pruhy, výška | panel nad nástroji; výška také `Q` / `E` |
+| Posun mapy | pravé nebo prostřední tlačítko, Ruka, šipky, dva prsty |
+| Přiblížení | kolečko, `+` / `-`, sevření prstů |
+| Zrušit kreslení / výběr | pravý klik, `Esc` |
+| Pauza, vytížení silnic | mezerník, `V` |
 
 Pravidla světa jsou podrobně v `docs/HRA.md`.
 
@@ -48,7 +57,7 @@ Pravidla světa jsou podrobně v `docs/HRA.md`.
 1. Změna pravidel světa začíná návrhem v `docs/HRA.md` a rozhodnutím
    v `docs/ROZHODNUTI.md`.
 2. Práce ve vlastní větvi, jedna věcná změna = jeden pull request.
-3. `node tests/test_simulace.js` musí projít; hratelnost ověřuje hraní.
+3. `node build.js` a `node tests/test_simulace.js` musí projít; hratelnost ověřuje hraní.
 4. Slučuje se do `main` jen na výslovný souhlas („slouč #N“).
 5. Po sloučení se aktualizuje hratelná kopie v OneDrive.
 
@@ -57,5 +66,5 @@ Pravidla světa jsou podrobně v `docs/HRA.md`.
 | Co | Verze | Ověřeno |
 |---|---|---|
 | Google Chrome (headless, Linux) | aktuální k 13. 11. 2026 | vykreslení 1440 × 900 a 390 × 800, světlý i tmavý režim, bez chyb v konzoli |
-| Node.js | 22 | `tests/test_simulace.js` |
+| Node.js | 22 | `build.js`, `tests/test_simulace.js` |
 | Prohlížeč uživatele (Windows) | – | zatím neověřeno |

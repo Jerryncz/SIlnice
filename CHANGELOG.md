@@ -3,6 +3,25 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.4.0 – 13. 11. 2026
+
+- Silnice jako graf s křivkami: kreslení rovně (0°, 45°, 90° nebo volně),
+  obloukem a kruhové objezdy libovolné velikosti (R23, R29).
+- Druhy ulice, silnice, bulvár se zeleným středem, dálnice, nájezd; 1–4 pruhy;
+  jednosměrky; auta jezdí v pruzích a volí pruh podle odbočení.
+- Mosty a vysoké mosty, mimoúrovňová křížení; dálnici nejde křížit v úrovni,
+  napojení jen nájezdem z boku (R27, R28).
+- Náhled stavby s cenou, křižovatkami a budovami v cestě; „Postavit a zbourat“
+  (R30). I rozšíření a změna druhu nabídnou zbourání.
+- Křižovatky: automaticky podle šířky, přednost zprava, hlavní silnice
+  (libovolná dvojice ramen), semafor, napojení na dálnici.
+- Lidé a den: domácnosti s dětmi, dospělými a seniory, program dne, home office,
+  chodci na chodnících, noc (R25, R31).
+- Nové budovy: škola, kanceláře; statky dávají práci; průmyslové zóny
+  a kancelářské čtvrti (R32).
+- Obce si častěji staví ulice a propojují je do bloků.
+- Kód rozdělen do `src/sim` a `src/ui`, sestavení `node build.js` (R26).
+
 ## 0.3.0 – 13. 11. 2026
 
 - Hra přes celou obrazovku, panely plavou nad mapou (R15).
