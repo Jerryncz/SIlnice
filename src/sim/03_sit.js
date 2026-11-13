@@ -18,7 +18,9 @@ function netChanged(S){S.netDirty=true;S.netVer=(S.netVer||0)+1}
 // vrací {g: buňky na zemi, b: buňky pod mostem}
 const RMARG=0.2;
 function bandCells(S,g,er,el,lvlFn,m){m=m===undefined?RMARG:m;const G=new Set(),B=new Set();const p=g.pts,R=Math.max(er,el)+m;
-  for(let k=0;k<g.n;k++){const x=p[2*k],y=p[2*k+1],nx=g.nx[k],ny=g.ny[k],dx=ny,dy=-nx,lv=lvlFn(g.cum[k]);const end=k===0||k===g.n-1;
+  // vzorky po 0,2 pole (i dlouhé rovné kusy bez mezilehlých bodů)
+  const us=[];for(let u=0;u<g.len;u+=0.2)us.push(u);us.push(g.len);const q={};
+  for(let k=0;k<us.length;k++){pointAt(g,us[k],q);const x=q.x,y=q.y,nx=q.nx,ny=q.ny,dx=ny,dy=-nx,lv=lvlFn(us[k]);const end=k===0||k===us.length-1;
     forCells(x,y,R+0.3,c=>{const px=wxOf(c)-x,py=wyOf(c)-y;const al=px*dx+py*dy,of=px*nx+py*ny;
       if(Math.abs(al)<=0.2&&of<=er+m&&of>=-el-m||end&&Math.hypot(px,py)<=R)(lv<0.5?G:B).add(c)})}
   for(const c of B)if(G.has(c))B.delete(c);return {g:G,b:B}}
@@ -119,7 +121,9 @@ function remapEdges(S,map){
 // rameno uzlu: směr ven podél úseku, příjezdový a odjezdový směr (link = id úseku*2 + směr)
 function armOf(S,n,eid){const e=S.edges[eid];const atA=e.a===n.id;const g=e.g;const u=atA?Math.min(0.5,g.len*0.3):Math.max(g.len-0.5,g.len*0.7);
   const p=pointAt(g,u);let hx=p.x-n.x,hy=p.y-n.y;const l=Math.hypot(hx,hy)||1;hx/=l;hy/=l;
-  return {e:eid,hx,hy,inLink:eid*2+(atA?1:0),outLink:eid*2+(atA?0:1),axis:Math.abs(hx)>=Math.abs(hy)?0:1}}
+  // vzdálenější směr ramene: strana, na kterou plynulá odbočka odchází (u tečného napojení je blízký směr skoro rovný)
+  const uf=atA?Math.min(2.5,g.len*0.45):Math.max(g.len-2.5,g.len*0.55);const pf=pointAt(g,uf);let sx=pf.x-n.x,sy=pf.y-n.y;const lf=Math.hypot(sx,sy)||1;sx/=lf;sy/=lf;
+  return {e:eid,hx,hy,sx,sy,inLink:eid*2+(atA?1:0),outLink:eid*2+(atA?0:1),axis:Math.abs(hx)>=Math.abs(hy)?0:1}}
 const linkLanes=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.lb:e.lf};
 const linkFrom=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.b:e.a};
 const linkTo=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.a:e.b};
@@ -138,8 +142,8 @@ function topoNode(S,n){
       const turn=ao.e===ai.e?2:(cr>0.35?1:cr<-0.35?-1:0);
       if(isH(ei)&&isH(eo)&&dt<0.3)continue;
       if(hw>=2){ // napojení z boku dálnice: sjet jen vpravo, najet jen ve směru jízdy, dálnici nepřejet
-        if(isH(ei)&&!isH(eo)&&cr<0.05)continue;
-        if(!isH(ei)&&isH(eo)&&(ai.hx*(-ao.hy)+ai.hy*ao.hx)<0.05)continue;
+        if(isH(ei)&&!isH(eo)&&(hix*ao.sy-hiy*ao.sx)<0.02)continue;
+        if(!isH(ei)&&isH(eo)&&(ai.sx*(-ao.hy)+ai.sy*ao.hx)<0.02)continue;
         if(!isH(ei)&&!isH(eo))continue}
       if(n.ring&&!ei.ring&&!eo.ring)continue;
       list.push({link:ao.outLink,turn})}

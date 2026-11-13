@@ -219,8 +219,10 @@ function drawPreview(){const P=UI.plan;const z=cam.z;
     ctx.beginPath();ctx.moveTo(p.x+p.nx*(e.er+0.2),p.y+p.ny*(e.er+0.2));ctx.lineTo(p.x-p.nx*(e.el+0.2),p.y-p.ny*(e.el+0.2));ctx.stroke()}}
   if(UI.draw&&UI.draw.ghost){const g=UI.draw.ghost;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,1.5/z);ctx.setLineDash([0.2,0.15]);ctx.beginPath();ctx.moveTo(g[0],g[1]);for(let k=2;k<g.length;k+=2)ctx.lineTo(g[k],g[k+1]);ctx.stroke();ctx.setLineDash([])}
   if(!P)return;
-  if(P.g&&!P.rebuild){ctx.lineCap="round";ctx.lineJoin="round";const p=new Path2D();const q=P.g.pts;p.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)p.lineTo(q[k],q[k+1]);
-    const w=P.round?(P.lanes*LW+0.24):P.spec?(P.lanes*(RK[P.spec.kind].oneway?1:2)*LW+RK[P.spec.kind].median+2*RK[P.spec.kind].side):0.6;
+  if(P.gs){ctx.lineCap="round";ctx.globalAlpha=0.5;ctx.strokeStyle=P.ok?colors.accent:colors.bad;ctx.lineWidth=0.5;for(const g of P.gs){const p=new Path2D();const q=g.pts;p.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)p.lineTo(q[k],q[k+1]);ctx.stroke(p)}ctx.globalAlpha=1}
+  if(P.lanes&&P.lanes.ok&&P.lanes.range){const lp=P.lanes;drawLaneHint({e:lp.e.id,u0:lp.range[0],u1:lp.range[1],dir:lp.dir,rem:false})}
+  if(P.g&&!P.rebuild&&!P.gs){ctx.lineCap="round";ctx.lineJoin="round";const p=new Path2D();const q=P.g.pts;p.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)p.lineTo(q[k],q[k+1]);
+    const w=P.branch?(P.road.lanes*LW+0.2):P.round?(P.lanes*LW+0.24):P.spec?(P.lanes*(RK[P.spec.kind].oneway?1:2)*LW+RK[P.spec.kind].median+2*RK[P.spec.kind].side):0.6;
     ctx.globalAlpha=0.55;ctx.strokeStyle=P.ok?colors.accent:colors.bad;ctx.lineWidth=w;ctx.stroke(p);ctx.globalAlpha=1}
   if(P.rebuild){ctx.globalAlpha=0.5;ctx.fillStyle=colors.accent;for(const r of P.rebuild){if(r.e.dead)continue;const g=geom(subPts(r.e.g,r.u0,r.u1));const ext=edgeExt({kind:P.spec.kind,lf:r.lf,lb:r.lb});
     const p=new Path2D();for(let k=0;k<g.n;k++){const x=g.pts[2*k]+g.nx[k]*ext[0],y=g.pts[2*k+1]+g.ny[k]*ext[0];if(k)p.lineTo(x,y);else p.moveTo(x,y)}for(let k=g.n-1;k>=0;k--)p.lineTo(g.pts[2*k]-g.nx[k]*ext[1],g.pts[2*k+1]-g.ny[k]*ext[1]);p.closePath();ctx.fill(p)}ctx.globalAlpha=1}

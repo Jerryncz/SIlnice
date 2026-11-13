@@ -17,22 +17,25 @@ $("problems").addEventListener("click",e=>{const b=e.target.closest("[data-p]");
 $("log").addEventListener("click",e=>{const b=e.target.closest("[data-l]");if(!b)return;const l=S.log[+b.dataset.l];if(l&&l.tile>=0)focusXY(wxOf(l.tile),wyOf(l.tile))});
 
 // ---- volby nástroje ----
-const SHAPES=[["line","Rovně","A"],["curve","Oblouk","S"],["round","Kruh","D"],["connect","Napojit","F"]];
+const SHAPES=[["line","Rovně","A"],["curve","Oblouk","S"],["round","Kruh","D"],["connect","Napojit","F"],["branch","Odbočka","G"],["template","Vzor","H"]];
 const SHAPE_HINT={line:"Táhni po mapě. Ze silnice se úhly drží vůči ní, ve volném terénu 0°, 45° a 90° (Shift = volně). Tah po silnici ji přestaví.",
   curve:"Klikni začátek, pak bod, kterým oblouk směřuje, a konec. Pravý klik zruší.",
   round:"Táhni od středu: velikost kruhu je na tobě. Silnice, které kruh protne, se na něj napojí.",
-  connect:"Klikni na dvě místa: z boku silnice se napojí kolmo, z konce silnice v jejím směru, mezi nimi plynulá křivka."};
+  connect:"Klikni na dvě místa: z boku silnice se napojí kolmo, z konce silnice v jejím směru, mezi nimi plynulá křivka.",
+  branch:"Táhni ze silnice: ve směru jízdy vznikne odbočka, proti směru nájezd. Silnice dostane odbočovací nebo připojovací pruh s náběhem. Strana tahu určuje jízdní pás.",
+  template:"Najeď na rovnou dálnici a klikni: postaví se celá mimoúrovňová křižovatka se silnicí přes dálnici (druh a pruhy silnice podle volby vlevo)."};
 const TOOL_HINT={lane:"Klikni na polovinu silnice: přidá pruh v tom směru. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
   split:"Klikni na silnici: rozdělí úsek, aby šel kus přestavět nebo rozšířit zvlášť. Klik na značku rozdělení úseky zase spojí.",
   cross:"Klikni u křižovatky: přechod přes rameno zruší nebo vrátí. Klik jinde na silnici přidá přechod doprostřed úseku (10 Kč), klik na něj ho zruší.",
   junction:"Klikni na křižovatku: přepíná přednost zprava, hlavní silnici a semafor.",erase:"Táhni přes silnice nebo budovy. Tah začatý na budově bourá budovy (za peníze).",
   zone:"Táhni přes pole, kde se nesmí stavět. Tahem přes šrafy uzávěru zrušíš.",hand:"Táhni mapou, klikni pro výběr."};
-function updateOpts(){const t=UI.tool,K=RK[UI.kind];const key=[t,UI.kind,UI.lanes,UI.level,UI.shape,UI.rebuild,UI.draw&&UI.draw.r].join("|");if(key===lastOptsKey)return;lastOptsKey=key;
+function updateOpts(){const t=UI.tool,K=RK[UI.kind];const key=[t,UI.kind,UI.lanes,UI.level,UI.shape,UI.tpl,UI.rebuild,UI.draw&&UI.draw.r].join("|");if(key===lastOptsKey)return;lastOptsKey=key;
   let html="";
   if(t==="build"){
     html+=`<div class="grp"><span class="lbl">Druh</span>${ROAD_KINDS.map(k=>`<button data-kind="${k}" aria-pressed="${UI.kind===k}">${RK[k].name}<small>${RK[k].cost} Kč</small></button>`).join("")}</div>`;
     html+=`<div class="grp"><span class="lbl">Pruhy${K.oneway?"":" v každém směru"}</span><button data-lanes="-1" ${UI.lanes<=K.min?"disabled":""}>−</button><span class="num">${UI.lanes}</span><button data-lanes="1" ${UI.lanes>=K.max?"disabled":""}>+</button></div>`;
     html+=`<div class="grp"><span class="lbl">Tvar</span>${SHAPES.map(([k,n,h])=>`<button data-shape="${k}" aria-pressed="${!UI.rebuild&&UI.shape===k}">${n}<small>${h}</small></button>`).join("")}</div>`;
+    if(UI.shape==="template"&&!UI.rebuild)html+=`<div class="grp"><span class="lbl">Vzor</span>${Object.keys(TEMPLATES).map(k=>`<button data-tpl="${k}" aria-pressed="${UI.tpl===k}">${TEMPLATES[k].name}</button>`).join("")}</div>`;
     html+=`<div class="grp"><span class="lbl">Výška</span>${LEVEL_NAMES.map((n,k)=>`<button data-level="${k}" aria-pressed="${UI.level===k}">${n}</button>`).join("")}</div>`;
     html+=`<div class="grp"><label class="chk"><input type="checkbox" id="rebuildChk" ${UI.rebuild?"checked":""}>Přestavět kliknutím</label></div>`;
     html+=`<div class="grp"><span class="hint">${esc(UI.rebuild?"Klikni na úsek: změní se na "+K.name.toLowerCase()+" s "+UI.lanes+" "+(UI.lanes===1?"pruhem":"pruhy")+". Kruhový objezd se změní celý.":SHAPE_HINT[UI.shape])}${UI.shape==="round"&&UI.draw&&UI.draw.r?" Poloměr "+UI.draw.r.toFixed(1)+" pole.":""}</span></div>`}
@@ -42,7 +45,8 @@ $("opts").addEventListener("click",e=>{const b=e.target.closest("button");if(!b|
   if(b.dataset.kind){UI.kind=b.dataset.kind;const K=RK[UI.kind];UI.lanes=K.lanes}
   if(b.dataset.lanes){const K=RK[UI.kind];UI.lanes=clamp(UI.lanes+(+b.dataset.lanes),K.min,K.max)}
   if(b.dataset.level)UI.level=+b.dataset.level;
-  if(b.dataset.shape){UI.shape=b.dataset.shape;UI.rebuild=false;UI.draw=null;UI.plan=null}
+  if(b.dataset.shape){UI.shape=b.dataset.shape;UI.rebuild=false;UI.draw=null;UI.plan=null;UI.tplKey=""}
+  if(b.dataset.tpl){UI.tpl=b.dataset.tpl;UI.plan=null;UI.tplKey=""}
   lastOptsKey="";updateOpts();refreshPlan()});
 $("opts").addEventListener("change",e=>{if(e.target.id==="rebuildChk"){UI.rebuild=e.target.checked;UI.draw=null;UI.plan=null;lastOptsKey="";updateOpts()}});
 
