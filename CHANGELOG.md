@@ -3,6 +3,28 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.6.0 – 13. 11. 2026
+
+- Jemná síť po půl poli pro terén a budovy; silnice zabírá každou dotčenou
+  buňku, domy nelezou do silnic a stojí těsně u nich (R40).
+- Průjezd křižovatkou po oblouku, auta se nepřekrývají, žádné protlačení;
+  plocha křižovatky, stopčára před přechodem (R41).
+- Zaseknuté auto to vzdá po nastaveném limitu, nastavení v okně Pravidla;
+  „Zablokovaná doprava“ v Co řešit (R42).
+- Přechody pro chodce: samy na ramenech křižovatek, nástroj Přechod; chodci
+  přecházejí jen po nich, auta jim dávají přednost (R43).
+- Nové druhy Ulička a Jednosměrka, Silnice má plnou čáru; obce si staví
+  uličky a rostou do bloků (R44).
+- Nástroj Stavět: druh, tvar (Rovně, Oblouk, Kruh, Napojit), výška,
+  Přestavět kliknutím; přichytávání na uzly a body silnic, úhly vůči
+  silnici (R45).
+- Mosty s rampami 3 pole na úroveň, na most a rampu se nic nepřipojí (R46).
+- Kruhový objezd z libovolného druhu silnice a s 1–3 pruhy.
+- Grafika: pokosové rohy, čáry a svodidla přes spoje, dálnice průběžně přes
+  napojení z boku, zebry, stopčáry.
+- Auta zůstávají ve svém pruhu a při plném pruhu použijí sousední.
+- Oprava: cesta mezi obcemi (a stará cesta) se nestaví po existující silnici.
+
 ## 0.5.0 – 13. 11. 2026
 
 - Pruhy po směrech: pruh navíc jen v jednom směru i jen na kusu úseku,

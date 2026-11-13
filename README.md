@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.5.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.6.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -35,21 +35,20 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 
 | Akce | Ovládání |
 |---|---|
-| Silnice rovně | `1`, tah myší (0°, 45°, 90°; Shift libovolný úhel); tah po silnici ji přestaví |
-| Oblouk | `2`, klik začátek, směr, konec |
-| Kruhový objezd | `3`, tah od středu |
-| Pruhy | `4`, klik na polovinu silnice = pruh v tom směru, tah podél = jen kus úseku, Shift ubere |
-| Jednosměrka | `5`, klik na úsek přepíná směr |
-| Pravidlo křižovatky | `6`, klik na křižovatku |
-| Rozdělit úsek | `R`, klik na silnici; klik na značku rozdělení ho zruší |
-| Bourat | `7`, tah přes silnice nebo budovy |
-| Stavební uzávěra | `8` |
-| Ruka (posun, výběr) | `9` |
-| Druh, pruhy, výška | panel nad nástroji; výška také `Q` / `E` |
+| Stavět silnici | `1`; tvar `A` rovně (tah), `S` oblouk (3 kliky), `D` kruh (tah od středu), `F` napojit (2 kliky); tah po silnici ji přestaví |
+| Druh, pruhy, tvar, výška | panel nad nástroji; výška také `Q` / `E`; zaškrtávátko „Přestavět kliknutím“ |
+| Pruhy | `2`, klik na polovinu silnice = pruh v tom směru, tah podél = jen kus úseku, Shift ubere |
+| Pravidlo křižovatky | `3`, klik na křižovatku |
+| Přechod pro chodce | `4`, klik u křižovatky přepne, jinde přidá / zruší |
+| Rozdělit úsek | `5`, klik na silnici; klik na značku rozdělení ho zruší |
+| Bourat | `6`, tah přes silnice nebo budovy |
+| Stavební uzávěra | `7` (po celých polích) |
+| Ruka (posun, výběr) | `8` |
 | Posun mapy | pravé nebo prostřední tlačítko, Ruka, šipky, dva prsty |
 | Přiblížení | kolečko, `+` / `-`, sevření prstů |
 | Zrušit kreslení / výběr | pravý klik, `Esc` |
 | Pauza, vytížení silnic | mezerník, `V` |
+| Nastavení (zaseknutá auta) | Pravidla → Nastavení |
 
 Pravidla světa jsou podrobně v `docs/HRA.md`.
 

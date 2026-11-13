@@ -3,6 +3,9 @@
 function mkLine(x0,y0,x1,y1){const L=Math.hypot(x1-x0,y1-y0),n=Math.max(1,Math.ceil(L/0.25)),p=[];for(let k=0;k<=n;k++){const t=k/n;p.push(x0+(x1-x0)*t,y0+(y1-y0)*t)}return p}
 function mkBezier(x0,y0,cx,cy,x1,y1){const L=Math.hypot(cx-x0,cy-y0)+Math.hypot(x1-cx,y1-cy);const n=Math.max(2,Math.ceil(L/0.2)),p=[];
   for(let k=0;k<=n;k++){const t=k/n,a=(1-t)*(1-t),b=2*(1-t)*t,c=t*t;p.push(a*x0+b*cx+c*x1,a*y0+b*cy+c*y1)}return p}
+// kubická Bézierova křivka (plynulé napojení)
+function mkCubic(x0,y0,x1,y1,x2,y2,x3,y3){const L=Math.hypot(x1-x0,y1-y0)+Math.hypot(x2-x1,y2-y1)+Math.hypot(x3-x2,y3-y2);const n=Math.max(3,Math.ceil(L/0.2)),p=[];
+  for(let k=0;k<=n;k++){const t=k/n,u=1-t,a=u*u*u,b=3*u*u*t,c=3*u*t*t,d=t*t*t;p.push(a*x0+b*x1+c*x2+d*x3,a*y0+b*y1+c*y2+d*y3)}return p}
 function mkArc(cx,cy,r,a0,a1){const n=Math.max(2,Math.ceil(Math.abs(a1-a0)*r/0.2)),p=[];for(let k=0;k<=n;k++){const a=a0+(a1-a0)*k/n;p.push(cx+Math.cos(a)*r,cy+Math.sin(a)*r)}return p}
 function geom(pts){
   const n=pts.length/2,cum=new Float64Array(n),nx=new Float64Array(n),ny=new Float64Array(n);

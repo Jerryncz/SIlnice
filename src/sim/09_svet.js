@@ -117,6 +117,10 @@ function computeProblems(S){const P=[];
     if(t.jobless>5&&t.pop>=20&&t.jobless>t.workers*0.25&&t.accessList.length)add(1,t.name+": lidé nemají práci","Napoj obec na podniky a obce s prací. Kanceláře vzniknou v obci od 70 obyvatel.",hx,hy);
     if(t.noSchool>3&&t.pop>=20&&t.accessList.length)add(1,t.name+": děti nemají školu","Škola vznikne v obci s dost dětmi. Napoj obec na sousední se školou.",hx,hy);
     if(t.noSpace>=4&&t.pop>=20&&t.accessList.length&&P.filter(p=>p.kind==="space").length<2)add(1,t.name+" nemá kam růst","Postav silnici do volné krajiny nebo zruš uzávěru.",hx,hy,"space")}
+  // zablokovaná doprava: auta, která to po nastaveném limitu vzdala
+  {const rec=S.stuck.filter(q=>S.time-q.t<90);const used=new Set();
+    for(const q of rec){if(used.has(q))continue;const grp=rec.filter(o=>!used.has(o)&&Math.hypot(o.x-q.x,o.y-q.y)<3);if(grp.length<2)continue;for(const o of grp)used.add(o);
+      const [t]=nearestTown(S,q.x,q.y);add(2,"Zablokovaná doprava"+(t?" u obce "+t.name:""),grp.length+" aut tu stálo tak dlouho, že to vzdala. Přidej pruh, uprav křižovatku nebo veď dopravu jinudy.",q.x,q.y)}}
   const jams=[];for(const e of S.edges){if(e.dead||e.flow<10)continue;const c=Math.max(e.cong[0],e.cong[1]);if(c>0.8)jams.push([c,e])}
   jams.sort((a,b)=>b[0]-a[0]);
   for(const [c,e] of jams.slice(0,20)){const m=pointAt(e.g,e.g.len/2);const [t]=nearestTown(S,m.x,m.y);add(2,"Kolona"+(t?" u obce "+t.name:""),"Přidej pruh, postav objížďku nebo uprav křižovatku na konci.",m.x,m.y);if(P.length>8)break}

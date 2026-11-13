@@ -100,6 +100,11 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
 .opts button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .opts .num{font-family:var(--f-mono);min-width:24px;text-align:center}
 .opts .hint{font-size:12px;color:var(--muted);max-width:280px}
+.opts label.chk{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;padding:4px 6px;border:1px solid var(--line);border-radius:8px}
+.opts label.chk input{accent-color:var(--accent);margin:0}
+.modal .set{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 4px}
+.modal .set button{border:1px solid var(--line);background:var(--panel);font-size:12.5px;padding:5px 10px}
+.modal .set button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .confirm{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px;max-width:100%}
 .confirm p{margin:0;font-weight:500;max-width:46ch}
 .confirm .acts{display:flex;gap:6px}
@@ -184,18 +189,16 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
     </div>
     <div class="card opts" id="opts"></div>
     <nav class="card tools" id="tools" aria-label="Nástroje">
-      <button data-tool="line" aria-pressed="true">Rovně<small>1</small></button>
-      <button data-tool="curve" aria-pressed="false">Oblouk<small>2</small></button>
-      <button data-tool="round" aria-pressed="false">Kruháč<small>3</small></button>
+      <button data-tool="build" aria-pressed="true">Stavět<small>1</small></button>
+      <button data-tool="lane" aria-pressed="false">Pruhy<small>2</small></button>
       <span class="sep"></span>
-      <button data-tool="lane" aria-pressed="false">Pruhy<small>4</small></button>
-      <button data-tool="oneway" aria-pressed="false">Jednosměrka<small>5</small></button>
-      <button data-tool="junction" aria-pressed="false">Křižovatka<small>6</small></button>
-      <button data-tool="split" aria-pressed="false">Rozdělit<small>R</small></button>
+      <button data-tool="junction" aria-pressed="false">Křižovatka<small>3</small></button>
+      <button data-tool="cross" aria-pressed="false">Přechod<small>4</small></button>
+      <button data-tool="split" aria-pressed="false">Rozdělit<small>5</small></button>
       <span class="sep"></span>
-      <button data-tool="erase" aria-pressed="false">Bourat<small>7</small></button>
-      <button data-tool="zone" aria-pressed="false">Uzávěra<small>8</small></button>
-      <button data-tool="hand" aria-pressed="false">Ruka<small>9</small></button>
+      <button data-tool="erase" aria-pressed="false">Bourat<small>6</small></button>
+      <button data-tool="zone" aria-pressed="false">Uzávěra<small>7</small></button>
+      <button data-tool="hand" aria-pressed="false">Ruka<small>8</small></button>
     </nav>
   </div>
 
@@ -207,15 +210,16 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
       <h2 id="helpTitle">Jak krajina žije</h2>
       <p>Stavíš a řídíš silnice. Všechno ostatní vzniká samo podle toho, kudy, kdy a kolik se jezdí. Verze {{VERSION}}.</p>
       <div class="grid">
-        <div><h3>Kreslení silnic</h3><p>Rovně: táhni, silnice se drží 0°, 45° a 90° (Shift = libovolný úhel). Oblouk: klikni začátek, směr a konec. Kruháč: táhni od středu. Náhled ukáže cenu a domy, které by se musely zbourat. Tah po existující silnici ji přestaví na zvolený druh, silnice přes silnici nevznikne.</p></div>
-        <div><h3>Úseky a pruhy</h3><p>Silnice se dělí na úseky mezi křižovatkami; rovně navazující stejné úseky se spojí samy. Rozdělit: klik rozdělí úsek, aby šel kus přestavět. Pruhy: klik na polovinu silnice přidá pruh v tom směru, tah podél silnice jen na kus úseku, Shift ubírá.</p></div>
-        <div><h3>Druhy silnic a výška</h3><p>Ulice, silnice, bulvár se zeleným středem, dálnice a nájezd. Dálnici nejde křížit v úrovni. Silnice nebo nájezd připojený z boku dálnice funguje jen vpravo: najet ve směru jízdy, sjet doprava, přejet na druhou stranu nejde. Výška Most nebo Vysoký most vede silnici přes jinou bez křižovatky.</p></div>
-        <div><h3>Křižovatky</h3><p>Auta zastaví před křižovatkou a vjedou, až mají přednost a místo za ní. Výchozí je přednost zprava nebo hlavní silnice podle šířky. Semafor střídá směry podle front. Na kruhovém objezdu má přednost ten, kdo je v kruhu.</p></div>
-        <div><h3>Lidé a den</h3><p>Děti ráno do školy, dospělí do práce, část pracuje z domu. Odpoledne nákupy a hospody, senioři dopoledne. Blízko se chodí pěšky po chodnících. Lidé i auta do budov vcházejí a zajíždějí.</p></div>
-        <div><h3>Obce a zóny</h3><p>Domy rostou podél silnic, obce si samy staví uličky. Ve větších obcích vznikají školy a kanceláře, u těžby průmyslové zóny.</p></div>
+        <div><h3>Stavění</h3><p>Nástroj Stavět má tři volby: druh silnice, tvar (Rovně, Oblouk, Kruh, Napojit) a výšku. Napojit vede plynulou křivku mezi dvěma body: z boku silnice kolmo, z konce silnice v jejím směru. Tah po existující silnici ji přestaví. „Přestavět kliknutím“ mění každý úsek, na který klikneš, na zvolený druh a pruhy.</p></div>
+        <div><h3>Druhy silnic a mosty</h3><p>Ulička (bez středové čáry), ulice, silnice (plná čára), jednosměrka, bulvár se zeleným středem, dálnice a nájezd. Most a vysoký most mají na koncích rampu 3 pole na výšku; na most ani na rampu se nic nepřipojí. Dálnici nejde křížit v úrovni; silnice napojená z boku dálnice funguje jen vpravo.</p></div>
+        <div><h3>Úseky a pruhy</h3><p>Silnice se dělí na úseky mezi křižovatkami; rovně navazující stejné úseky se spojí samy. Rozdělit: klik rozdělí úsek. Pruhy: klik na polovinu silnice přidá pruh v tom směru, tah podél silnice jen na kus úseku, Shift ubírá.</p></div>
+        <div><h3>Křižovatky a přechody</h3><p>Auta stojí na stopčáře a křižovatkou projedou po oblouku, až mají přednost, volnou křižovatku i místo za ní. Na ramenech křižovatek jsou přechody samy; nástroj Přechod je ruší a přidává i doprostřed úseku. Chodci přecházejí jen po nich a auta jim dávají přednost.</p></div>
+        <div><h3>Lidé a obce</h3><p>Děti ráno do školy, dospělí do práce, odpoledne nákupy. Domy stojí podél silnic na jemné síti (půl pole), obce si samy staví uličky a rostou do bloků.</p></div>
         <div><h3>Vnější svět</h3><p>Dálnice na okrajích vedou do měst. Po napojení přijedou turisté a tranzit a průmysl vyváží zboží.</p></div>
       </div>
-      <p class="keys">Myš: levé tlačítko kreslí, pravé nebo prostřední tlačítko posouvá mapu, kolečko přibližuje, pravý klik zruší rozkreslenou silnici. Dotyk: jeden prst kreslí, dva posouvají a přibližují. Klávesy 1–9 a R nástroje, Q/E výška, mezerník pauza, V vytížení, Esc zrušit.</p>
+      <h3>Nastavení</h3>
+      <div class="set" id="setStuck"><span>Zaseknuté auto to vzdá po</span><button data-stuck="0">Nikdy</button><button data-stuck="20">20 s</button><button data-stuck="40">40 s</button><button data-stuck="120">2 min</button></div>
+      <p class="keys">Myš: levé tlačítko kreslí, pravé nebo prostřední tlačítko posouvá mapu, kolečko přibližuje, pravý klik zruší rozkreslenou silnici. Dotyk: jeden prst kreslí, dva posouvají a přibližují. Klávesy 1–8 nástroje, A S D F tvar silnice, Q/E výška, mezerník pauza, V vytížení, Esc zrušit.</p>
     </div>
   </div>
 </div>

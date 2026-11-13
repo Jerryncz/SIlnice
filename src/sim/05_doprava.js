@@ -13,7 +13,7 @@ function laneOffset(e,d,k){const L=d?e.lb:e.lf;if(e.lb===0||e.lf===0)return -(L*
 function lanePose(S,l,lane,s,out){const e=S.edges[l>>1],d=l&1;const u=clamp(d?e.g.len-s:s,0,e.g.len);const p=pointAt(e.g,u,out||{});const off=laneOffset(e,d,lane),sg=d?-1:1;
   return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),u,off}}
 // přechod na rameni křižovatky: uzel se 3+ rameny, silnice s chodníkem, hráč ho nezrušil
-function crossOn(S,n,e){return n.edges.length>=3&&RK[e.kind].walk&&RK[e.kind].side>0&&!e.ring&&!(n.xOff&&n.xOff.has(e.id))}
+function crossOn(S,n,e){return n.edges.length>=3&&RK[e.kind].walk&&RK[e.kind].side>0&&!e.ring&&!(n.xOff&&n.xOff.has(e.id))&&!n.arms.some(a=>S.edges[a.e].kind==="hwy")}
 // zkrácení úseku na koncích [u a, u b] (plocha křižovatky + přechod), u krátkých úseků poměrně
 function edgeTrim(e){let ta=e.ta||0,tb=e.tb||0;const av=Math.max(0.1,e.g.len-0.25);if(ta+tb>av){const f=av/(ta+tb);ta*=f;tb*=f}return [ta,tb]}
 function linkIn(S,l){const e=S.edges[l>>1],t=edgeTrim(e);return (l&1)?t[1]:t[0]}
@@ -59,7 +59,8 @@ function bezTan(c,t){const u=1-t;return Math.atan2(3*u*u*(c.y1-c.y0)+6*u*t*(c.y2
 function boxFree(S,n,l,nl,lane,cn){
   if(n.xBusy){const a=n.xBusy.get(l>>1),b=n.xBusy.get(nl>>1);if(a>0||b>0)return false}
   for(const o of n.box){if(o.dead||!o.conn||o.conn.node!==n.id)continue;if(o.conn.from===l)continue;if(o.conn.to===nl&&o.lane===lane)continue;
-    const p=o.conn;if(segInter(cn.x0,cn.y0,cn.x3,cn.y3,p.x0,p.y0,p.x3,p.y3))return false;
+    const p=o.conn;const x=segInter(cn.x0,cn.y0,cn.x3,cn.y3,p.x0,p.y0,p.x3,p.y3);
+    if(x){const pr=(o.s-p.s0)/p.len;if(pr<x[1]+0.2)return false}   // jiné auto ještě místem křížení neprojelo
     if(Math.hypot(cn.x3-p.x3,cn.y3-p.y3)<0.3||Math.hypot(cn.x0-p.x0,cn.y0-p.y0)<0.3)return false}
   return true}
 // pruhy, do kterých smí auto vjet: povinný pruh kvůli odbočení, jinak preferovaný a pak ostatní
@@ -196,7 +197,8 @@ function updateWalkers(S,dt){
       if(w.ph==="out"){w.t+=dt*w.speed/0.7;if(w.t>=1){w.ph="road";planFinal(S,w)}}
       else if(w.ph==="in"){w.t+=dt*w.speed/0.7;if(w.t>=1)walkerEnd(S,w,false)}
       else if(w.ph==="cross"){const x=w.cur;
-        if(!x.go){if(!x.held)holdCross(S,x);if(canStartCross(S,w,x))x.go=true}
+        // chodec počká na mezeru; po 3 s si přechod „vyžádá“ a auta mu zastaví
+        if(!x.go){w.cw=(w.cw||0)+dt;if(canStartCross(S,w,x)){if(!x.held)holdCross(S,x);x.go=true;w.cw=0}else if(!x.held&&w.cw>3)holdCross(S,x)}
         if(x.go){const L=Math.hypot(x.x1-x.x0,x.y1-x.y0)||0.1;w.t+=dt*w.speed/L;
           if(w.t>=1){releaseCross(S,w);S.xCount=(S.xCount||0)+1;w.queue.shift();
             if(w.queue.length){w.cur=w.queue[0];w.t=0}
