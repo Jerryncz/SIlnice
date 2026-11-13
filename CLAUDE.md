@@ -85,8 +85,9 @@ Viz `.gitignore`.
   ve složce synchronizované OneDrive – synchronizace ho poškodí (převzato
   z BIMPOLIS).
 - `%USERPROFILE%\OneDrive\GIT\Silnice` – **jen hratelná kopie** aktuální
-  verze (`index.html` + `NEEDITOVAT.txt` s verzí a commitem). Při další verzi
-  se přepíše; ručně se v ní needituje.
+  verze (`index.html` + `NEEDITOVAT.txt` s verzí, větví, commitem a zda je
+  sloučeno). Přepíše se po každém sestavení, i před sloučením (R59); ručně
+  se v ní needituje.
 - Uživatel pracuje na víc počítačích (`C:\Users\jnovotny\…`, `C:\Users\jaros\…`);
   složka je vždy `%USERPROFILE%\OneDrive\GIT\Silnice`.
 

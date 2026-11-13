@@ -61,3 +61,7 @@ nepřepisuje, ale označí „nahrazeno R<číslo>“ a připíše se nové.
 | R53 | 13. 11. 2026 | Přechod na rameni křižovatky jen tam, kde se vejde (délka ramene, úhel k sousednímu rameni aspoň ~50°); ne u dálnice. | Přechody ležely přes jiné silnice nebo dálnici. | – |
 | R54 | 13. 11. 2026 | Dálnice smí ústit do kruhového objezdu (kromě dálnice do světa). | Přání uživatele. | Zákaz (do 0.6). |
 | R55 | 13. 11. 2026 | Tlačítka Test (+10 000 / +100 000 Kč) v okně Pravidla. | Přání uživatele pro zkoušení. | Neomezené peníze. |
+| R56 | 13. 11. 2026 | Konce přidaných pruhů jsou body pro napojení: nová silnice začne v ose krajního pruhu a pokračuje jeho směrem; spoj zůstává uzlem grafu. | Přání uživatele: napojit libovolnou silnici na pruh, plynule. | Pruhy jako samostatné objekty se svými uzly (styl CS2) – velká přestavba, odloženo (R50). |
+| R57 | 13. 11. 2026 | Boční napojení jednosměrek na průběžnou silnici: přednost průběžné, bez stopčar a přechodů. | Odbočky a nájezdy vypadaly jako křižovatky a zdržovaly provoz. | Dál jako obyčejná křižovatka. |
+| R58 | 13. 11. 2026 | Kurzor stavění je křížek v bodě mezi poli (osa silnice), ne zvýrazněné pole. | Přání uživatele. | – |
+| R59 | 13. 11. 2026 | Po každém sestavení se hratelná kopie zapíše do `%USERPROFILE%\OneDrive\GIT\Silnice` i před sloučením; `NEEDITOVAT.txt` uvádí verzi, větev, commit a zda je sloučeno. | Přání uživatele. | Kopie jen po sloučení (do 0.7). |

@@ -3,6 +3,17 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.8.0 – 13. 11. 2026
+
+- Napojení na konec přidaného pruhu: silnice vyjde plynule z krajního pruhu
+  (R56).
+- Boční napojení jednosměrek: přednost průběžné silnice, bez stopčar
+  a přechodů, uzel se nekreslí jako křižovatka (R57).
+- Kurzor stavění jako křížek v bodě osy silnice (R58).
+- Čtyřlístek: větší smyčky (poloměr 4), rampy se napojují na jejich konce;
+  potřebuje 38 polí rovné dálnice.
+- Hratelná kopie v OneDrive po každém sestavení (R59).
+
 ## 0.7.0 – 13. 11. 2026
 
 - Odbočka a nájezd (tvar G): odbočovací / připojovací pruh s náběhem

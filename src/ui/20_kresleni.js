@@ -7,6 +7,7 @@ function nodeR(n){return n.edges.length>=3?n.rad:0.05}
 // dvojice dálničních ramen, která uzlem napojení z boku plynule prochází (svodidla a čáry pokračují)
 function passPair(n){if(n._ppv===S.netVer)return n._pp;n._ppv=S.netVer;n._pp=null;
   if(n.edges.length>=3&&n.eff==="merge"){const h=n.arms.filter(a=>S.edges[a.e].kind==="hwy");if(h.length===2&&h[0].hx*h[1].hx+h[0].hy*h[1].hy<-0.7)n._pp=new Set([h[0].e,h[1].e])}
+  else if(n.pass)n._pp=new Set(n.pass);
   return n._pp}
 // plynulé navázání konce úseku na jiný úsek (dva úseky v uzlu, nebo dálnice přes napojení): pokos
 function joinAt(e,atA){const nd=S.nodes[atA?e.a:e.b];let oid=-1;
@@ -78,7 +79,8 @@ function drawCrossings(list){const z=cam.z;if(z<9)return;const seen=new Set();
       const d=n.rad+0.05+XW/2;const u=atA?d:e.g.len-d;if(u<0||u>e.g.len)continue;const p=pointAt(e.g,u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,n.xBusy&&n.xBusy.get(e.id)>0)}
     if(e.xw)for(const x of e.xw){const p=pointAt(e.g,x.u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,e.mbusy&&e.mbusy.some(u=>Math.abs(u-x.u)<0.05))}}}
 function drawRoadLayer(list,layer){const z=cam.z;ctx.lineCap="round";ctx.lineJoin="round";const discs=nodeDiscs(list);
-  list=[...list].sort((a,b)=>(a.kind==="hwy")-(b.kind==="hwy"));   // dálnice navrch: napojení z boku se pod ni zasune
+  // jednosměrky a nájezdy dospod, dálnice navrch: odbočka se pod průběžnou silnici zasune a vychází z jejího okraje
+  const ord=e=>e.kind==="hwy"?2:(RK[e.kind].oneway||e.lf===0||e.lb===0)?0:1;list=[...list].sort((a,b)=>ord(a)-ord(b));
   if(layer>0){ctx.fillStyle="rgba(0,0,0,.22)";for(const e of list)ctx.fill(shadowPath(e));ctx.save();ctx.translate(0.16*layer,0.26*layer);fillDiscs(discs,0.1,()=>"rgba(0,0,0,.22)");ctx.restore()}
   const cd=layer>0?0.08:Math.max(0.04,0.8/z);const edgeCol=e=>layer>0?colors["bridge-edge"]:(e.kind==="hwy"||e.kind==="ramp")?colors["hwy-edge"]:colors["road-edge"];
   for(const e of list){ctx.fillStyle=edgeCol(e);ctx.fill(bandPath(e,cd))}fillDiscs(discs,cd,edgeCol);
@@ -237,7 +239,11 @@ function drawLaneHint(L){const e=S.edges[L.e];if(!e||e.dead)return;const z=cam.z
   ctx.globalAlpha=0.6;ctx.strokeStyle=L.rem?colors.bad:colors.accent;ctx.lineWidth=LW*0.9;ctx.lineCap="butt";ctx.stroke(p);ctx.globalAlpha=1;ctx.lineCap="round"}
 function drawPreview(){const P=UI.plan;const z=cam.z;
   if(UI.tool==="lane"&&(UI.laneDrag||UI.laneHover))drawLaneHint(UI.laneDrag||UI.laneHover);
-  if(UI.snapHint&&UI.snapHint.type!=="free"&&UI.mouse.in){const q=UI.snapHint;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,2/z);ctx.beginPath();ctx.arc(q.x,q.y,q.type==="node"?0.3:0.18,0,Math.PI*2);ctx.stroke()}
+  // místa napojení na pruh (konce přidaných pruhů)
+  if(UI.tool==="build"&&!UI.rebuild&&z>=8){ctx.fillStyle=colors.accent;ctx.globalAlpha=0.55;for(const n of S.nodes){if(n.dead||n.edges.length!==2||!inView(n.x,n.y,1))continue;for(const p of lanePorts(S,n)){ctx.beginPath();ctx.arc(p.x,p.y,0.09,0,Math.PI*2);ctx.fill()}}ctx.globalAlpha=1}
+  // kurzor: křížek na ose budoucí silnice (střed pole), u silnice kroužek přichycení
+  if(UI.snapHint&&UI.mouse.in){const q=UI.snapHint;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,2/z);ctx.beginPath();
+    if(q.type==="free"){const s=0.28;ctx.moveTo(q.x-s,q.y);ctx.lineTo(q.x+s,q.y);ctx.moveTo(q.x,q.y-s);ctx.lineTo(q.x,q.y+s)}else ctx.arc(q.x,q.y,q.port?0.16:q.type==="node"?0.3:0.18,0,Math.PI*2);ctx.stroke()}
   if((UI.tool==="split"||UI.tool==="cross")&&UI.splitHover){const e=S.edges[UI.splitHover.e];if(e&&!e.dead){const p=pointAt(e.g,UI.splitHover.u);ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.06,2/z);
     ctx.beginPath();ctx.moveTo(p.x+p.nx*(e.er+0.2),p.y+p.ny*(e.er+0.2));ctx.lineTo(p.x-p.nx*(e.el+0.2),p.y-p.ny*(e.el+0.2));ctx.stroke()}}
   if(UI.draw&&UI.draw.ghost){const g=UI.draw.ghost;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,1.5/z);ctx.setLineDash([0.2,0.15]);ctx.beginPath();ctx.moveTo(g[0],g[1]);for(let k=2;k<g.length;k+=2)ctx.lineTo(g[k],g[k+1]);ctx.stroke();ctx.setLineDash([])}
@@ -271,7 +277,7 @@ function render(){
   const na=nightAlpha();if(na>0){ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=na;ctx.fillStyle=colors.night;ctx.fillRect(0,0,vw,vh);ctx.restore();
     if(z>=7){ctx.fillStyle="rgba(255,214,120,"+(na*2.2).toFixed(2)+")";for(const b of S.buildings){if(!isHome(b)||b.away>=b.pop*0.8)continue;const x=tx(b.front),y=ty(b.front);if(x<x0-1||x>x1+1||y<y0-1||y>y1+1)continue;ctx.fillRect(wxOf(b.front)-0.11,wyOf(b.front)-0.11,0.22,0.22)}}}
   ctx.setTransform(dpr*z,0,0,dpr*z,-cam.x*dpr,-cam.y*dpr);
-  strokeTarget(UI.pinned,colors.ink);if(UI.hover&&!UI.draw)strokeTarget(UI.hover,colors.accent);
+  strokeTarget(UI.pinned,colors.ink);if(UI.hover&&!UI.draw&&!(UI.tool==="build"&&!UI.rebuild))strokeTarget(UI.hover,colors.accent);
   drawPreview();
   if(flash){const age=(performance.now()-flash.t)/1000;if(age>2.4)flash=null;else{ctx.strokeStyle=colors.accent;ctx.globalAlpha=Math.max(0,1-age/2.4);ctx.lineWidth=3/z;ctx.beginPath();ctx.arc(flash.x,flash.y,0.8+age*1.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}}
   drawLabels();drawCursorLabel()}

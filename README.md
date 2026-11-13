@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.7.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.8.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -59,7 +59,8 @@ Pravidla světa jsou podrobně v `docs/HRA.md`.
 2. Práce ve vlastní větvi, jedna věcná změna = jeden pull request.
 3. `node build.js` a `node tests/test_simulace.js` musí projít; hratelnost ověřuje hraní.
 4. Slučuje se do `main` jen na výslovný souhlas („slouč #N“).
-5. Po sloučení se aktualizuje hratelná kopie v OneDrive.
+5. Po každém sestavení (i před sloučením) se přepíše hratelná kopie v OneDrive;
+   `NEEDITOVAT.txt` říká verzi, větev, commit a zda je sloučeno.
 
 ## Ověřené prostředí
 
