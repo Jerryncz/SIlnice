@@ -3,6 +3,25 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.5.0 – 13. 11. 2026
+
+- Pruhy po směrech: pruh navíc jen v jednom směru i jen na kusu úseku,
+  náběh mezi širším a užším úsekem; nástroj Pruhy podle poloviny silnice
+  a tahem (R33).
+- Silnice i nájezd napojené z boku dálnice: jen vpravo, dálnici nejde přejet
+  (R34).
+- Tah po existující silnici ji přestaví místo stavby silnice přes silnici;
+  částečný souběh se odmítne (R35).
+- Rovně navazující stejné úseky se spojí samy; nový nástroj Rozdělit
+  (klávesa R) a „Spojit úseky“ (R36).
+- Rozdělení, spojení a úpravy úseku auta a chodce nemažou (R37).
+- Auta stojí na stopčáře před křižovatkou (R38).
+- Lidé vcházejí do budov, auta zajíždějí do vjezdů (R39).
+- Kruhový objezd jde přestavět celý (druh, pruhy).
+- Vjezdy k domům se kreslí pod silnicí.
+- Oprava: volný konec silnice těsně za jinou silnicí už nenechá pahýl.
+- Oprava: otočení jednosměrky přepočítá vjezdy domů na úseku.
+
 ## 0.4.0 – 13. 11. 2026
 
 - Silnice jako graf s křivkami: kreslení rovně (0°, 45°, 90° nebo volně),

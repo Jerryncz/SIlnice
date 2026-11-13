@@ -14,7 +14,7 @@ function entDist(S,a,b){const [ax,ay]=entXY(S,a),[bx,by]=entXY(S,b);return Math.
 function startTrip(S,tr){
   const fromEp=entEp(S,tr.from),toEp=entEp(S,tr.to);if(!fromEp||!toEp)return false;
   if(tr.mode==="walk"){if(tr.from.isGate||tr.to.isGate||S.walkers.length>=MAX_WALKERS)tr.mode="car";
-    else{const p=findPath(S,fromEp,toEp,true);if(p&&p.len<10){S.walkers.push({id:S.vid++,links:p.links,li:0,s:p.s0,sEnd:p.sEnd,trip:tr,speed:tr.purpose==="senior"?0.38:0.5,side:S.R()<0.5?1:-1,dead:false,kid:tr.purpose==="school"});return true}tr.mode="car"}}
+    else{const p=findPath(S,fromEp,toEp,true);if(p&&p.len<10){S.walkers.push({id:S.vid++,links:p.links,li:0,s:p.s0,sEnd:p.sEnd,trip:tr,ph:tr.from.front!==undefined?"out":"road",t:0,speed:tr.purpose==="senior"?0.38:0.5,side:S.R()<0.5?1:-1,dead:false,kid:tr.purpose==="school"});return true}tr.mode="car"}}
   if(S.cars.length>=MAX_CARS)return false;
   const p=findPath(S,fromEp,toEp);if(!p)return false;
   const c=newVehicle(S,{links:p.links,s:p.s0,sEnd:p.sEnd,trip:tr,startEp:fromEp,goalEp:toEp,truck:!!tr.truck,color:tr.color,start:S.time,free:p.len/BASE_SPEED,firstExit:!tr.ret&&!tr.truck});

@@ -4,9 +4,9 @@ function createSim(seed){
   const R=mulberry32(seed);
   const S={R,seed,version:GAME_VERSION,terrain:new Uint8Array(N),zone:new Uint8Array(N),role:new Uint8Array(N),bld:new Array(N).fill(null),
     roadCnt:new Uint16Array(N),bridgeCnt:new Uint16Array(N),cellG:new Array(N).fill(null),cellB:new Array(N).fill(null),
-    nodes:[],edges:[],towns:[],buildings:[],cars:[],exiting:[],walkers:[],gates:[],returns:new Heap(),reroute:[],rings:[],work:[],zones:[],regrow:[],problems:[],log:[],dirty:[],
+    nodes:[],edges:[],towns:[],buildings:[],cars:[],exiting:[],entering:[],walkers:[],gates:[],returns:new Heap(),reroute:[],rings:[],work:[],zones:[],regrow:[],problems:[],log:[],dirty:[],
     money:2000,time:0,trips:0,transits:0,exported:0,cancelled:0,turnedAway:0,earned:0,income:0,
-    netDirty:true,usedNames:new Set(),secAcc:0,svcTick:0,homesteadAcc:0,congTick:0,pTick:0,zoneTick:0,nextId:1,lastJamAny:-99,vid:0,sid:0,curDay:1};
+    netDirty:true,usedNames:new Set(),secAcc:0,svcTick:0,homesteadAcc:0,congTick:0,pTick:0,zoneTick:0,nextId:1,netVer:0,lastJamAny:-99,vid:0,sid:0,curDay:1};
   genTerrain(S);
   for(let k=0;k<3;k++)makeGate(S);
   for(let k=0;k<10;k++)seedSettlement(S);
@@ -101,7 +101,7 @@ function computeProblems(S){const P=[];
   const jams=[];for(const e of S.edges){if(e.dead||e.flow<10)continue;const c=Math.max(e.cong[0],e.cong[1]);if(c>0.8)jams.push([c,e])}
   jams.sort((a,b)=>b[0]-a[0]);
   for(const [c,e] of jams.slice(0,20)){const m=pointAt(e.g,e.g.len/2);const [t]=nearestTown(S,m.x,m.y);add(2,"Kolona"+(t?" u obce "+t.name:""),"Přidej pruh, postav objížďku nebo uprav křižovatku na konci.",m.x,m.y);if(P.length>8)break}
-  for(const n of S.nodes){if(n.dead||n.eff==="none"||n.eff==="merge")continue;let waiting=0;for(const a of n.arms){const e=S.edges[a.e];const lanes=e.q[a.inLink&1];if(!lanes)continue;for(const q of lanes){const f=q[0];if(f&&f.wait>3&&e.g.len-f.s<0.6)waiting++}}
+  for(const n of S.nodes){if(n.dead||n.eff==="none"||n.eff==="merge")continue;let waiting=0;for(const a of n.arms){const e=S.edges[a.e];const lanes=e.q[a.inLink&1];if(!lanes)continue;for(const q of lanes){const f=q[0];if(f&&f.wait>3&&e.g.len-f.s<n.rad+0.5)waiting++}}
     if(waiting>=2){const [t]=nearestTown(S,n.x,n.y);add(2,(n.eff==="ring"?"Ucpaný kruhový objezd":"Ucpaná křižovatka")+(t?" u obce "+t.name:""),n.eff==="ring"?"Zvětši kruh, přidej pruh nebo odveď část dopravy jinudy.":"Zkus semafor, kruhový objezd nebo hlavní silnici.",n.x,n.y)}}
   for(const b of S.buildings){const K=KIND[b.type];if(!K)continue;const [bx,by]=cxy(b.front);
     if(K.pull&&b.ofRecent>1.5)add(1,"Plné parkoviště: "+K.name.toLowerCase()+(b.town?" v obci "+b.town.name:""),"Auta čekají na silnici. Parkovací dům vznikne sám; pomůže zbourat dům vedle.",bx,by);
