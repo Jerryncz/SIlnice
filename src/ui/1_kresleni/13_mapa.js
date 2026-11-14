@@ -40,7 +40,18 @@ function drawTrace(){const t=UI.pinned;if(!t||!(t.type==="car"||t.type==="walker
   const mark=(b,col)=>{if(!b||b.isGate||b.dead||b.front===undefined)return;ctx.strokeStyle=col;ctx.beginPath();ctx.arc(wxOf(b.front),wyOf(b.front),0.45,0,Math.PI*2);ctx.stroke()};
   const ends=new Set();for(const q of ts){const tr=q.m.trip;if(!tr)continue;if(t.type!=="bld"||q.cls===1){if(!ends.has(tr.to)){ends.add(tr.to);mark(tr.to,"#1f6fe0")}}if(t.type!=="bld"||q.cls===0){if(!ends.has(tr.from)){ends.add(tr.from);mark(tr.from,"#e0752d")}}
     const p=q.car?carPose(q.m):null,w=q.car?null:walkerPose(q.m);const x=p?p.x:w?w[0]:null,y=p?p.y:w?w[1]:null;if(x!==null&&(ts.length<=60)){ctx.strokeStyle="#111";ctx.beginPath();ctx.arc(x,y,q.car?0.32:0.16,0,Math.PI*2);ctx.stroke()}}}
-function drawPreview(){const P=UI.plan;const z=cam.z;
+// nástroj Spojení: zvýrazněné křižovatky, u vybrané křivky spojení, konce a začátky pruhů
+function drawConnTool(){if(UI.tool!=="conn")return;const z=cam.z;
+  ctx.lineWidth=Math.max(0.04,1.5/z);for(const n of S.nodes){if(!connNodeOk(n)||n.id===UI.connNode||!inView(n.x,n.y,2))continue;ctx.strokeStyle=connCustom(S,n)?colors.accent:"rgba(31,95,174,.4)";ctx.beginPath();ctx.arc(n.x,n.y,Math.max(0.3,n.rad*0.7),0,Math.PI*2);ctx.stroke()}
+  const n=UI.connNode!=null?S.nodes[UI.connNode]:null;if(!connNodeOk(n))return;
+  const pal=["#1f6fe0","#e0752d","#2e9e5b","#b03fb0","#c9a227","#d23c3c"];const ai=new Map();n.arms.forEach((a,i)=>ai.set(a.inLink,i));
+  ctx.lineCap="round";ctx.lineWidth=Math.max(0.035,1.6/z);
+  for(const q of connCurves(n)){ctx.strokeStyle=pal[ai.get(q.l)%pal.length];ctx.globalAlpha=0.85;const c=q.c;ctx.beginPath();ctx.moveTo(c.x0,c.y0);ctx.bezierCurveTo(c.x1,c.y1,c.x2,c.y2,c.x3,c.y3);ctx.stroke()}
+  ctx.globalAlpha=1;const mk=connMarks(n);
+  for(const q of mk.ins){ctx.fillStyle=pal[ai.get(q.l)%pal.length];ctx.beginPath();ctx.arc(q.x,q.y,0.075,0,Math.PI*2);ctx.fill()}
+  ctx.strokeStyle="#1d2420";ctx.lineWidth=Math.max(0.025,1/z);for(const q of mk.outs){ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(q.x,q.y,0.07,0,Math.PI*2);ctx.fill();ctx.stroke()}
+  const d=UI.connDrag;if(d){const a=mk.ins.find(q=>q.l===d.l&&q.k===d.k);if(a){ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.04,2/z);ctx.setLineDash([0.12,0.08]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(d.x,d.y);ctx.stroke();ctx.setLineDash([])}}}
+function drawPreview(){drawConnTool();const P=UI.plan;const z=cam.z;
   if(UI.tool==="lane"&&(UI.laneDrag||UI.laneHover))drawLaneHint(UI.laneDrag||UI.laneHover);
   // místa napojení na pruh (konce přidaných pruhů)
   if(UI.tool==="build"&&!UI.rebuild&&z>=8){ctx.fillStyle=colors.accent;ctx.globalAlpha=0.55;for(const n of S.nodes){if(n.dead||n.edges.length!==2||!inView(n.x,n.y,1))continue;for(const p of lanePorts(S,n)){ctx.beginPath();ctx.arc(p.x,p.y,0.09,0,Math.PI*2);ctx.fill()}}ctx.globalAlpha=1}

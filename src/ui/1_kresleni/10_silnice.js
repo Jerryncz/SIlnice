@@ -85,7 +85,7 @@ function laneDash(aux,lw){if(aux){ctx.lineWidth=lw*2.2;ctx.setLineDash([0.1,0.1]
 // šipky řazení na pruzích před křižovatkou (bity 1 vlevo, 2 rovně, 4 vpravo)
 function drawLaneArrows(layer){const z=cam.z;if(z<13)return;ctx.lineCap="round";ctx.lineJoin="round";
   for(const n of S.nodes){if(n.dead||n.edges.length<3||n.port||n.ring||!n.lm)continue;if((n.lvl<0.5?0:n.lvl<1.5?1:2)!==layer)continue;if(!inView(n.x,n.y,3))continue;
-    for(const a of n.arms){const l=a.inLink,L=linkLanes(S,l),ms=n.lm.get(l);if(!L||!ms)continue;const e=S.edges[a.e];const user=e.arw&&e.arw[l&1];if(L<2&&!user)continue;
+    for(const a of n.arms){const l=a.inLink,L=linkLanes(S,l),ms=n.lm.get(l);if(!L||!ms)continue;const e=S.edges[a.e];const user=e.uc&&e.uc[l&1];if(L<2&&!user)continue;
       const st=stopS(S,l);if(st<0||st<1.1)continue;
       for(let k=0;k<L;k++){const m=ms[k];if(!m)continue;const p=lanePose(S,l,k,st-0.55);const fx=Math.cos(p.ang),fy=Math.sin(p.ang),rx=-fy,ry=fx;const P=(f,r)=>[p.x+fx*f+rx*r,p.y+fy*f+ry*r];
         ctx.strokeStyle=user&&user[k]?colors.accent:colors["road-edge"];ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=0.032;

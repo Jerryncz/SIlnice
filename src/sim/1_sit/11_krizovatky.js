@@ -83,8 +83,9 @@ function topoNode(S,n){
   laneLinks(S,n)}
 // ---- spojení pruhů v uzlu: z každého pruhu každého příjezdu seznam {link, lane, turn, free} ----
 // Rovně se pruhy párují podle polohy (pruh pokračuje tam, kde na něj navazuje jiný), vlevo se jede
-// z vnitřních pruhů, vpravo z krajních. Šipky od hráče (e.arw[směr][pruh], bity 1 vlevo, 2 rovně, 4 vpravo)
-// mají přednost. Pruh bez pokračování (konec přídavného pruhu) nemá žádné spojení: auto se musí přeřadit.
+// z vnitřních pruhů, vpravo z krajních. Spojení nastavená hráčem (e.uc[směr][pruh] = [{h: směr cílového ramene,
+// m: cílový pruh}], nástroj Spojení) platí místo samočinných. Pruh bez pokračování (konec přídavného pruhu)
+// nemá žádné spojení: auto se musí přeřadit. Odbočení, ke kterému žádné spojení nevede, nejde ani naplánovat.
 function laneLinks(S,n){n.lc=new Map();n.lm=new Map();const deg=n.arms.length,cnt=new Map(),late=[];const TOL=LW*0.55;
   for(const ai of n.arms){const l=ai.inLink,L=linkLanes(S,l);if(!L)continue;const ei=S.edges[ai.e],d=l&1;const exits=n.turns.get(l)||[];
     const lc=[];for(let k=0;k<L;k++)lc.push([]);
@@ -93,7 +94,9 @@ function laneLinks(S,n){n.lc=new Map();n.lm=new Map();const deg=n.arms.length,cn
     const Sx=exits.filter(x=>x.turn===0),Lx=exits.filter(x=>x.turn===-1||x.turn===2),Rx=exits.filter(x=>x.turn===1);
     const geo=Sx.map(x=>{const M=linkLanes(S,x.link);const po=[];for(let m=0;m<M;m++)po.push(lanePose(S,x.link,m,0));
       return {x,M,po,byK:pin.map(a=>{let bm=0,bd=1e9;po.forEach((b,m)=>{const dd=Math.hypot(a.x-b.x,a.y-b.y);if(dd<bd){bd=dd;bm=m}});return {m:bm,d:bd}})}});
-    const through=deg<3||n.port;const user=!through&&ei.arw&&ei.arw[d]&&ei.arw[d].length===L?ei.arw[d]:null;
+    const through=deg<3||n.port;const user=null;
+    const ov=!through&&ei.uc&&ei.uc[d]&&ei.uc[d].length===L?ei.uc[d]:null;
+    if(ov){for(let k=0;k<L;k++)for(const q of ov[k]){const x=exitByDir(S,n,exits,q.h);if(x)add(k,x,Math.min(q.m,linkLanes(S,x.link)-1))}n.lc.set(l,lc);continue}
     const al=[];for(let k=0;k<L;k++)al.push(geo.some(G=>G.byK[k].d<TOL));
     const anyAl=al.some(v=>v);
     // samočinné šipky
@@ -121,14 +124,27 @@ function laneLinks(S,n){n.lc=new Map();n.lm=new Map();const deg=n.arms.length,cn
   for(const [l,lc] of n.lc){n.lm.set(l,lc.map(r=>r.reduce((b,q)=>b|(q.turn===0?2:q.turn===1?4:1),0)));
     for(const r of lc)for(const q of r){const key=q.link*16+q.lane;cnt.set(key,(cnt.get(key)||0)+1)}}
   // spojení, které nikomu nekříží cestu (pokračování pruhu přes napojení): jede bez dávání přednosti
-  const soft=deg<3||n.pass||n.port;if(soft)for(const lc of n.lc.values())for(const r of lc)for(const q of r)if(q.turn===0&&cnt.get(q.link*16+q.lane)===1)q.free=true}
-// šipky pruhu od hráče: postupně další možnost; null = zpět na samočinné
-function arrowOptions(S,e,d){const l=e.id*2+d,n=S.nodes[linkTo(S,l)];if(!n||n.edges.length<3||n.port||n.ring)return null;const ex=n.turns.get(l)||[];
-  const has=[ex.some(x=>x.turn===-1||x.turn===2)?1:0,ex.some(x=>x.turn===0)?2:0,ex.some(x=>x.turn===1)?4:0];const bits=has.filter(b=>b);if(bits.length<2)return null;
-  const out=[0];for(let m=1;m<8;m++){if((m&~(has[0]|has[1]|has[2]))!==0)continue;if(m===5&&has[1])continue;out.push(m)}return out}
-function cycleArrow(S,e,d,k){const L=d?e.lb:e.lf;if(k<0||k>=L)return {ok:false,msg:"Tady pruh není."};const opts=arrowOptions(S,e,d);if(!opts)return {ok:false,msg:"Šipky jdou měnit jen před křižovatkou s více směry."};
-  if(L<2)return {ok:false,msg:"Jediný pruh jede všemi směry. Přidej pruh nástrojem Pruhy."};
-  if(!e.arw)e.arw=[null,null];if(!e.arw[d]||e.arw[d].length!==L)e.arw[d]=new Array(L).fill(0);
-  const cur=e.arw[d][k];e.arw[d][k]=opts[(opts.indexOf(cur)+1)%opts.length];if(e.arw[d].every(v=>!v))e.arw[d]=null;
-  const n=S.nodes[linkTo(S,e.id*2+d)];topoNode(S,n);netChanged(S);for(const c of S.cars)if(!c.dead)c.needLi=-1;
-  const v=e.arw[d]?e.arw[d][k]:0;return {ok:true,state:v?"Šipka: "+[v&1?"vlevo":"",v&2?"rovně":"",v&4?"vpravo":""].filter(x=>x).join(" + "):"Šipka: samočinně"}}
+  const soft=deg<3||n.pass||n.port;if(soft)for(const lc of n.lc.values())for(const r of lc)for(const q of r)if(q.turn===0&&cnt.get(q.link*16+q.lane)===1)q.free=true;
+  // odbočení bez spojení se z hledání cest vyřadí (n.turnsAll zůstane pro nástroj Spojení)
+  n.turnsAll=n.turns;n.turns=new Map();for(const [l,list] of n.turnsAll){const lc=n.lc.get(l);n.turns.set(l,lc?list.filter(x=>lc.some(r=>r.some(q=>q.link===x.link))):list)}}
+// výjezd z uzlu ve směru h (směr ramene ven z uzlu)
+function exitByDir(S,n,exits,h){let best=null,bd=0.85;for(const x of exits){const a=n.arms.find(q=>q.outLink===x.link);if(!a)continue;const d=a.hx*h[0]+a.hy*h[1];if(d>bd){bd=d;best=x}}return best}
+const armDirOut=(n,link)=>{const a=n.arms.find(q=>q.outLink===link);return a?[a.hx,a.hy]:[0,0]};
+// ---- nástroj Spojení: hráč přidává a ruší spojení pruh → pruh ----
+const connNodeOk=n=>n&&!n.dead&&n.edges.length>=3&&!n.port&&!n.ring;
+// spojení příjezdu l převezme jako ruční (podle současných), aby šlo upravit
+function connMaterialize(S,n,l){const e=S.edges[l>>1],d=l&1;if(!e.uc)e.uc=[null,null];if(e.uc[d]&&e.uc[d].length===linkLanes(S,l))return e.uc[d];
+  const lc=n.lc.get(l)||[];e.uc[d]=lc.map(r=>r.map(q=>({h:armDirOut(n,q.link),m:q.lane})));return e.uc[d]}
+function connApply(S,n){topoNode(S,n);netChanged(S);
+  // auta, která už nemají jak pokračovat, si najdou jinou cestu
+  for(const c of S.cars){if(c.dead)continue;c.needLi=-1;for(let k=Math.max(0,c.li);k<c.links.length-1;k++){if(linkTo(S,c.links[k])!==n.id)continue;const list=n.turns.get(c.links[k])||[];if(!list.some(x=>x.link===c.links[k+1])){S.reroute.push(c);break}}}}
+function connAdd(S,n,l,k,nl,m){if(!connNodeOk(n))return {ok:false,msg:"Spojení jde upravit jen v křižovatce."};
+  const all=n.turnsAll&&n.turnsAll.get(l)||[];if(!all.some(x=>x.link===nl))return {ok:false,msg:"Tímhle směrem se z tohoto ramene jet nesmí."};
+  if(k<0||k>=linkLanes(S,l)||m<0||m>=linkLanes(S,nl))return {ok:false,msg:"Tady pruh není."};
+  const ov=connMaterialize(S,n,l),h=armDirOut(n,nl);if(ov[k].some(q=>q.h[0]*h[0]+q.h[1]*h[1]>0.85&&q.m===m))return {ok:false,msg:"Toto spojení už je."};
+  ov[k].push({h,m});connApply(S,n);return {ok:true}}
+function connRemove(S,n,l,k,nl,m){if(!connNodeOk(n))return {ok:false,msg:"Spojení jde upravit jen v křižovatce."};
+  const ov=connMaterialize(S,n,l),h=armDirOut(n,nl);const i=ov[k].findIndex(q=>q.h[0]*h[0]+q.h[1]*h[1]>0.85&&q.m===m);if(i<0)return {ok:false,msg:"Toto spojení není."};
+  ov[k].splice(i,1);connApply(S,n);return {ok:true}}
+function connReset(S,n){for(const a of n.arms){const e=S.edges[a.e];if(e.uc)e.uc[a.inLink&1]=null}connApply(S,n);return {ok:true}}
+const connCustom=(S,n)=>n.arms.some(a=>{const e=S.edges[a.e];return e.uc&&e.uc[a.inLink&1]})

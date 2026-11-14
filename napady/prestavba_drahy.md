@@ -27,8 +27,8 @@ smysl.
 
 ## Postup (zaškrtává se v průběhu)
 - [x] Rozdělení kódu do složek
-- [ ] Křižovatka: skutečný začátek každého ramene, stopčára a přechod tam
-- [ ] Nástroj Spojení
+- [x] Křižovatka: skutečný začátek každého ramene, stopčára a přechod tam
+- [x] Nástroj Spojení
 - [ ] Chodníky jako dráhy, rohy, přechody, volné přecházení uliček
 - [ ] Chodci jako agenti na drahách (odstup, míjení, žádné mizení)
 - [ ] Dráhy pozemků: příjezd, uličky, stání; vjezd a výjezd s mezerou

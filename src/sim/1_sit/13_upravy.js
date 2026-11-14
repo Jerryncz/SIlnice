@@ -94,7 +94,7 @@ function setKind(S,e,kind){return commitKind(S,planKind(S,e,kind))}
 // otočí směr jednosměrky (druh Jednosměrka nebo Nájezd); auta na úseku se zruší
 function cycleOneway(S,e){if(e.ring)return {ok:false,msg:"Kruhový objezd je jednosměrný sám."};if(e.gateEdge)return {ok:false,msg:"Dálnici do světa měnit nejde."};
   if(e.lf>0&&e.lb>0)return {ok:false,msg:"Obousměrná silnice. Jednosměrku udělá změna druhu na Jednosměrku."};
-  reshapeEdge(S,e,()=>{if(e.lf===0){e.lf=e.lb;e.lb=0}else{const t=e.a;e.a=e.b;e.b=t;const tp=e.pa;e.pa=e.pb;e.pb=tp;e.sh=-(e.sh||0);e.g=geom(reversePts(e.g.pts));
+  reshapeEdge(S,e,()=>{if(e.lf===0){e.lf=e.lb;e.lb=0}else{const t=e.a;e.a=e.b;e.b=t;const tp=e.pa;e.pa=e.pb;e.pb=tp;e.sh=-(e.sh||0);e.uc=null;e.g=geom(reversePts(e.g.pts));
       for(const b of S.buildings)if(b.access&&b.access.e===e.id)b.access={e:e.id,u:e.g.len-b.access.u,side:-b.access.side,x:b.access.x,y:b.access.y}}
     for(const nid of [e.a,e.b])S.nodes[nid].armLast.clear()},true);
   tidyNodes(S,[S.nodes[e.a],S.nodes[e.b]]);

@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,cycleArrow,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,connAdd,connRemove,connReset,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -261,19 +261,26 @@ for (const type of ["diamond", "clover", "trumpet"]) {
   ok(!lowB.ok && /nízko/.test(lowB.msg), "most nejde vést přes silnici tam, kde ještě není dost vysoko (" + lowB.msg + ")");
   for (let k = 0; k < 300; k++) A.step(S, A.STEP); zkontroluj(S, "konec silnice");
 }
-// ---- šipky: hráč změní řazení, spojení pruhů se přepočítá ----
+// ---- spojení pruhů: hráč přidá a zruší spojení, hledání cest to respektuje ----
 {
   const S = A.createSim(11); S.money = 1e8;
   for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
   const F = (x, yy) => ({ type: "free", x, y: yy, lvl: 0 });
   A.buildRoad(S, { pts: A.mkLine(20.5, 40.5, 40.5, 40.5), kind: "road", lanes: 2, start: F(20.5, 40.5), end: F(40.5, 40.5), auto: true });
   A.buildRoad(S, { pts: A.mkLine(30.5, 32.5, 30.5, 48.5), kind: "road", lanes: 2, start: F(30.5, 32.5), end: F(30.5, 48.5), auto: true });
-  const n = S.nodes.find(n => !n.dead && n.edges.length === 4); ok(!!n, "šipky: křižovatka");
-  const a = n.arms[0], l = a.inLink, e = S.edges[a.e];
-  ok(n.lm.get(l)[0] === 3 && n.lm.get(l)[1] === 6, "šipky: samočinně vlevo+rovně a rovně+vpravo (" + n.lm.get(l) + ")");
-  const r = A.cycleArrow(S, e, l & 1, 0); ok(r.ok && n.lm.get(l)[0] === 1, "šipky: vnitřní pruh jen vlevo");
-  ok(n.lc.get(l)[1].some(q => q.turn === 0) && n.lc.get(l)[0].every(q => q.turn !== 0), "šipky: rovně jen z druhého pruhu");
-  for (const t of n.turns.get(l)) ok(n.lc.get(l).some(row => row.some(q => q.link === t.link)), "šipky: každý směr má pruh");
+  const n = S.nodes.find(n => !n.dead && n.edges.length === 4); ok(!!n, "spojení: křižovatka");
+  const a = n.arms[0], l = a.inLink;
+  ok(n.lm.get(l)[0] === 3 && n.lm.get(l)[1] === 6, "spojení: samočinně vlevo+rovně a rovně+vpravo (" + n.lm.get(l) + ")");
+  const left = n.lc.get(l)[0].find(q => q.turn === -1); ok(!!left, "spojení: z vnitřního pruhu vede vlevo");
+  // zrušit odbočení vlevo: z příjezdu pak vlevo naplánovat nejde
+  ok(A.connRemove(S, n, l, 0, left.link, left.lane).ok, "spojení: zrušeno vlevo");
+  ok(!(n.turns.get(l) || []).some(x => x.link === left.link), "spojení: odbočení bez spojení nejde naplánovat");
+  // přidat vlevo z vnějšího pruhu do vnějšího pruhu cíle
+  ok(A.connAdd(S, n, l, 1, left.link, 1).ok, "spojení: přidáno vlevo z druhého pruhu");
+  ok(n.lc.get(l)[1].some(q => q.link === left.link && q.lane === 1) && (n.turns.get(l) || []).some(x => x.link === left.link), "spojení: nové spojení platí a jde po něm jet");
+  ok(!A.connAdd(S, n, l, 0, a.outLink, 0).ok, "spojení: otočit se do stejného ramene nejde");
+  ok(A.connReset(S, n).ok && n.lm.get(l)[0] === 3, "spojení: vrátit samočinná");
+  for (let k = 0; k < 300; k++) A.step(S, A.STEP); zkontroluj(S, "spojení");
 }
 
 // ---- napojení na pruh: z konce přidaného pruhu vede jednosměrka, silnice má přednost ----

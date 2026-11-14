@@ -52,6 +52,7 @@ function splitEdgeR(S,e,u,keep){
   pa[pa.length-2]=n.x;pa[pa.length-1]=n.y;pb[0]=n.x;pb[1]=n.y;
   const e1=addEdge(S,a,n,e.kind,pa,e.lf,e.lb,Object.assign(edgeProps(e),{pa:e.pa})),e2=addEdge(S,n,b,e.kind,pb,e.lf,e.lb,Object.assign(edgeProps(e),{pb:e.pb}));
   if(e.xw){e1.xw=e.xw.filter(x=>x.u<u-0.3);e2.xw=e.xw.filter(x=>x.u>u+0.3).map(x=>({u:x.u-u}))}
+  if(e.uc){e1.uc=[null,e.uc[1]];e2.uc=[e.uc[0],null]}   // ruční spojení pruhů zůstanou u svých křižovatek
   remapEdges(S,new Map([[e.id,[{e:e1,u0:0,u1:u,off:0,rev:false},{e:e2,u0:u,u1:e.g.len,off:0,rev:false}]]]));
   removeEdge(S,e,true);return {node:n,e1,e2}}
 function splitEdge(S,e,u,keep){return splitEdgeR(S,e,u,keep).node}
@@ -77,6 +78,7 @@ function mergeAt(S,n){const m=canMerge(S,n);if(!m)return null;const {e1,e2,a,b,r
   const ne=addEdge(S,a,b,e1.kind,pts,m.lf,m.lb,{auto:e1.auto&&e2.auto,owState:e1.owState,sh:e1.sh||0,pa:r1?e1.pb:e1.pa,pb:r2?e2.pa:e2.pb});
   const L1=e1.g.len,L2=e2.g.len;
   const xs=[];for(const x of e1.xw||[])xs.push({u:r1?L1-x.u:x.u});for(const x of e2.xw||[])xs.push({u:L1+(r2?L2-x.u:x.u)});if(xs.length)ne.xw=xs;
+  if(e1.uc||e2.uc)ne.uc=[e2.uc?e2.uc[r2?1:0]:null,e1.uc?e1.uc[r1?0:1]:null];
   remapEdges(S,new Map([[e1.id,[{e:ne,u0:0,u1:L1,off:0,rev:r1}]],[e2.id,[{e:ne,u0:0,u1:L2,off:L1,rev:r2}]]]));
   removeEdge(S,e1,true);removeEdge(S,e2,true);return ne}
 // po stavbě nebo úpravě spojí rovně navazující úseky stejného druhu v zadaných uzlech

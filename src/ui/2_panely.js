@@ -27,10 +27,10 @@ const SHAPE_HINT={line:"Táhni po mapě. Ze silnice se úhly drží vůči ní, 
 const TOOL_HINT={lane:"Klikni na polovinu silnice: přidá pruh v tom směru. U jednosměrky přidá pruh na tom okraji, kam klikneš; ostatní pruhy zůstanou na místě. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
   split:"Klikni na silnici: rozdělí úsek, aby šel kus přestavět nebo rozšířit zvlášť. Klik na značku rozdělení úseky zase spojí.",
   cross:"Klikni u křižovatky: přechod přes rameno zruší nebo vrátí. Klik jinde na silnici přidá přechod doprostřed úseku (10 Kč), klik na něj ho zruší.",
-  arrow:"Klikni na pruh před křižovatkou: přepíná, kam se z pruhu smí jet (vlevo, rovně, vpravo). Modrá šipka je nastavená ručně, další kliky vrátí samočinnou.",
+  conn:"Klikni na křižovatku: ukáže spojení pruhů. Tah z barevného konce pruhu na bílý začátek pruhu za křižovatkou spojení přidá, klik na křivku ho zruší. Křižovatky s ručními spojeními jsou zvýrazněné.",
   junction:"Klikni na křižovatku: přepíná přednost zprava, hlavní silnici a semafor.",erase:"Táhni přes silnice nebo budovy. Tah začatý na budově bourá budovy (za peníze).",
   zone:"Táhni přes pole, kde se nesmí stavět. Tahem přes šrafy uzávěru zrušíš.",hand:"Táhni mapou, klikni pro výběr."};
-function updateOpts(){const t=UI.tool,K=RK[UI.kind];const key=[t,UI.kind,UI.lanes,UI.level,UI.shape,UI.tpl,UI.rebuild,UI.draw&&UI.draw.r].join("|");if(key===lastOptsKey)return;lastOptsKey=key;
+function updateOpts(){const t=UI.tool,K=RK[UI.kind];const key=[t,UI.kind,UI.lanes,UI.level,UI.shape,UI.tpl,UI.rebuild,UI.draw&&UI.draw.r,UI.connNode,t==="conn"&&UI.connNode!=null&&S.nodes[UI.connNode]&&connCustom(S,S.nodes[UI.connNode])].join("|");if(key===lastOptsKey)return;lastOptsKey=key;
   let html="";
   if(t==="build"){
     html+=`<div class="grp"><span class="lbl">Druh</span>${ROAD_KINDS.map(k=>`<button data-kind="${k}" aria-pressed="${UI.kind===k}">${RK[k].name}<small>${RK[k].cost} Kč</small></button>`).join("")}</div>`;
@@ -41,6 +41,7 @@ function updateOpts(){const t=UI.tool,K=RK[UI.kind];const key=[t,UI.kind,UI.lane
     html+=`<div class="grp"><label class="chk"><input type="checkbox" id="rebuildChk" ${UI.rebuild?"checked":""}>Přestavět kliknutím</label></div>`;
     html+=`<div class="grp"><span class="hint">${esc(UI.rebuild?"Klikni na úsek: změní se na "+K.name.toLowerCase()+" s "+UI.lanes+" "+(UI.lanes===1?"pruhem":"pruhy")+". Kruhový objezd se změní celý.":SHAPE_HINT[UI.shape])}${UI.shape==="round"&&UI.draw&&UI.draw.r?" Poloměr "+UI.draw.r.toFixed(1)+" pole.":""}</span></div>`}
   else html+=`<div class="grp"><span class="hint">${esc(TOOL_HINT[t]||"")}</span></div>`;
+  if(t==="conn"&&UI.connNode!=null&&connNodeOk(S.nodes[UI.connNode]))html+=`<div class="grp"><button data-connreset="1" ${connCustom(S,S.nodes[UI.connNode])?"":"disabled"}>Vrátit samočinná</button></div>`;
   $("opts").innerHTML=html}
 $("opts").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;
   if(b.dataset.kind){UI.kind=b.dataset.kind;const K=RK[UI.kind];UI.lanes=K.lanes}
@@ -48,6 +49,7 @@ $("opts").addEventListener("click",e=>{const b=e.target.closest("button");if(!b|
   if(b.dataset.level)UI.level=+b.dataset.level;
   if(b.dataset.shape){UI.shape=b.dataset.shape;UI.rebuild=false;UI.draw=null;UI.plan=null;UI.tplKey=""}
   if(b.dataset.tpl){UI.tpl=b.dataset.tpl;UI.plan=null;UI.tplKey=""}
+  if(b.dataset.connreset){const n=S.nodes[UI.connNode];if(connNodeOk(n)){connReset(S,n);toast("Spojení vrácena na samočinná")}}
   lastOptsKey="";updateOpts();refreshPlan()});
 $("opts").addEventListener("change",e=>{if(e.target.id==="rebuildChk"){UI.rebuild=e.target.checked;UI.draw=null;UI.plan=null;lastOptsKey="";updateOpts()}});
 
@@ -139,7 +141,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
   let groups="",cur=null;for(const a of acts){if(a.group!==cur){cur=a.group;groups+=`<span class="lbl">${esc(cur)}</span>`}groups+=`<button data-act="${a.act}" aria-pressed="${a.pressed?"true":"false"}">${esc(a.label)}</button>`}
   return`<span class="pin">${UI.pinned?"vybráno · Esc":"klikni Rukou pro výběr"}</span><h3>${esc(title)}</h3>${sub?`<div class="sub">${esc(sub)}</div>`:""}
     <div class="rows">${rows.map(r=>`<span>${esc(r[0])}</span><b>${esc(r[1])}</b>`).join("")}</div>${why?`<p class="why${ok?" ok":""}">${esc(why)}</p>`:""}${acts.length?`<div class="acts">${groups}</div>`:""}`}
-function updateSel(){const t=UI.pinned||(UI.draw?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
+function updateSel(){const t=UI.pinned||(UI.draw||UI.connDrag||UI.tool==="conn"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
 $("sel").addEventListener("click",ev=>{const btn=ev.target.closest("[data-act]");if(!btn)return;const t=UI.pinned||UI.hover;if(!t)return;const a=btn.dataset.act;let r={ok:true};
   if(t.type==="edge"){const e=S.edges[t.id];
     if(a.startsWith("kind:")){runPlan(planKind(S,e,a.slice(5)),commitKind,"Změna druhu silnice");return}

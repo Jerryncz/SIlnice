@@ -70,6 +70,7 @@ cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);const [s
     else if(sh==="round"){UI.draw={tool:"round",cx:Math.round(wx*2)/2,cy:Math.round(wy*2)/2};refreshPlan()}
     else if(sh==="branch"){const s=snapAny(wx,wy,UI.level);UI.draw={tool:"branch",start:s.type==="edge"?s:null};if(!UI.draw.start){toast("Odbočka začíná na silnici mimo křižovatku");UI.draw=null}else refreshPlan()}}
   else if(t==="lane"){const h=hitTest(wx,wy);if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy);UI.laneDrag={e:h.id,u0:r.u,u1:r.u,dir:laneSide(ed,wx,wy,r.u),rem:e.shiftKey}}else UI.laneDrag=null;UI.laneHover=null}
+  else if(t==="conn")connDown(wx,wy);
   else if(t==="erase"||t==="zone"){const h=hitTest(wx,wy);stroke={tool:t,mode:t==="erase"?(h&&h.type==="bld"?"bld":"road"):(S.zone[cellAt(wx,wy)]?"clear":"set"),spent:0,done:new Set()};applyStroke(wx,wy)}});
 function applyStroke(wx,wy){const st=stroke;if(!st)return;
   // uzávěra po celých polích (2 × 2 buňky)
@@ -89,6 +90,7 @@ cv.addEventListener("pointermove",e=>{const [sx,sy]=local(e);const p=ptrs.get(e.
   if(UI.tool==="lane"){if(UI.laneDrag){const ed=S.edges[UI.laneDrag.e];if(ed&&!ed.dead)UI.laneDrag.u1=nearestOn(ed.g,wx,wy).u}
     else{UI.laneHover=null;if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy);UI.laneHover={e:h.id,u0:0,u1:0,dir:laneSide(ed,wx,wy,r.u),rem:e.shiftKey}}}}
   if(UI.tool==="split"||UI.tool==="cross"){UI.splitHover=null;if(h&&h.type==="edge"){const ed=S.edges[h.id];UI.splitHover={e:h.id,u:nearestOn(ed.g,wx,wy).u}}}
+  if(UI.tool==="conn")connMove(wx,wy);
   if(stroke)applyStroke(wx,wy)});
 function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.delete(e.pointerId);
   if(pinch){if(ptrs.size<2)pinch=null;return}
@@ -99,6 +101,7 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
     return}
   const [wx,wy]=toWorld(sx,sy);const t=UI.tool,d=UI.draw;
   if(stroke){if(stroke.spent)toast("Zbouráno za "+fmt(stroke.spent)+" Kč");stroke=null;return}
+  if(t==="conn"){connUp(wx,wy);UI.selDirty=true;return}
   if(t==="build"&&UI.rebuild){if(moved)return;const h=hitTest(wx,wy);
     if(h&&h.type==="edge")runPlan(planKind(S,S.edges[h.id],UI.kind,UI.lanes),commitKind,"Přestavěno na "+RK[UI.kind].name.toLowerCase());else toast("Klikni na silnici, kterou chceš přestavět");UI.selDirty=true;return}
   if(t==="build"&&!UI.rebuild&&UI.shape==="template"&&!moved){const P=planTemplate(S,UI.tpl,wx,wy,UI.kind,UI.lanes);if(P.ok)finishBuild(P,"Křižovatka "+P.name.toLowerCase());else toast(P.msg);UI.selDirty=true;return}
@@ -124,9 +127,6 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
   else if(t==="cross"){if(h&&h.type==="edge"){const ed=S.edges[h.id];const u=nearestOn(ed.g,wx,wy).u;const tr=edgeTrim(ed);
       let r;if(u<tr[0]+0.6&&S.nodes[ed.a].edges.length>=3)r=toggleCross(S,S.nodes[ed.a],ed);else if(ed.g.len-u<tr[1]+0.6&&S.nodes[ed.b].edges.length>=3)r=toggleCross(S,S.nodes[ed.b],ed);else r=toggleMidCross(S,ed,u);
       toast(r.ok?(r.on?"Přechod přidán":"Přechod zrušen"):r.msg)}else toast("Klikni na silnici: u křižovatky přepneš přechod, jinde ho přidáš")}
-  else if(t==="arrow"){if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy),p=pointAt(ed.g,r.u);const d=r.u>ed.g.len/2?0:1;
-      const L=d?ed.lb:ed.lf;if(!L)toast("Tímhle směrem se tu ke křižovatce nejede.");else{const off=((wx-p.x)*p.nx+(wy-p.y)*p.ny)*(d?-1:1);let k=0;for(let i=1;i<L;i++)if(Math.abs(laneOffset(ed,d,i)-off)<Math.abs(laneOffset(ed,d,k)-off))k=i;
-        const q=cycleArrow(S,ed,d,k);toast(q.ok?q.state:q.msg)}}else toast("Klikni na pruh před křižovatkou")}
   else if(t==="junction"){if(h&&h.type==="node"){const n=S.nodes[h.id];let next=(n.ctl+1)%4;let pair=null;
       if(next===2){let best=null,bd=2;for(let i=0;i<n.arms.length;i++)for(let j=i+1;j<n.arms.length;j++){const a=n.arms[i],b=n.arms[j];const dt=a.hx*b.hx+a.hy*b.hy;if(dt<bd){bd=dt;best=[a.e,b.e]}}pair=best}
       const r=setControl(S,n,next,pair);toast(r.ok?["Automaticky","Přednost zprava","Hlavní silnice","Semafor"][next]:r.msg);UI.pinned=h}else toast("Klikni na křižovatku")}
@@ -151,7 +151,7 @@ $("helpBtn").addEventListener("click",()=>{$("help").hidden=false});$("helpClose
 $("help").addEventListener("click",e=>{if(e.target.id==="help")$("help").hidden=true});
 let prevSpeed=1;const keysDown=new Set();
 window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;
-  const m={"1":"build","2":"lane","3":"junction","4":"cross","5":"split","6":"erase","7":"zone","8":"hand","9":"arrow"};const shp={a:"line",s:"curve",d:"round",f:"connect",g:"branch",h:"template"};
+  const m={"1":"build","2":"lane","3":"junction","4":"cross","5":"split","6":"erase","7":"zone","8":"hand","9":"conn"};const shp={a:"line",s:"curve",d:"round",f:"connect",g:"branch",h:"template"};
   const k=e.key.toLowerCase();
   if(m[e.key])setTool(m[e.key]);
   else if(shp[k]&&!e.ctrlKey&&!e.metaKey)setShape(shp[k]);
@@ -164,3 +164,19 @@ window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("inp
   else if(e.key.startsWith("Arrow")){e.preventDefault();keysDown.add(e.key)}
   else if(e.key==="+"||e.key==="=")zoomAt(vw/2,vh/2,1.2);else if(e.key==="-")zoomAt(vw/2,vh/2,1/1.2)});
 window.addEventListener("keyup",e=>{keysDown.delete(e.key);if(e.key==="Shift"){UI.mouse.shift=false;if(UI.draw)refreshPlan()}});
+
+// ---- nástroj Spojení: křivky pruh → pruh v jedné křižovatce ----
+function connMarks(n){const ins=[],outs=[];for(const a of n.arms){const L=linkLanes(S,a.inLink);for(let k=0;k<L;k++){const p=lanePose(S,a.inLink,k,linkOut(S,a.inLink));ins.push({l:a.inLink,k,x:p.x,y:p.y})}
+  const M=linkLanes(S,a.outLink);for(let m=0;m<M;m++){const p=lanePose(S,a.outLink,m,linkIn(S,a.outLink));outs.push({l:a.outLink,k:m,x:p.x,y:p.y})}}return {ins,outs}}
+function nearMark(list,x,y,r){let b=null,bd=r;for(const q of list){const d=Math.hypot(q.x-x,q.y-y);if(d<bd){bd=d;b=q}}return b}
+function connCurves(n){const out=[];for(const [l,lc] of n.lc){lc.forEach((row,k)=>{for(const q of row){const a=lanePose(S,l,k,linkOut(S,l)),b=lanePose(S,q.link,q.lane,linkIn(S,q.link));out.push({l,k,nl:q.link,m:q.lane,c:mkConn(a,b)})}})}return out}
+function bezDist(c,x,y){let bd=1e9;for(let i=0;i<=20;i++){const p=bez(c,i/20);bd=Math.min(bd,Math.hypot(p[0]-x,p[1]-y))}return bd}
+const connSel=()=>{const n=UI.connNode!=null?S.nodes[UI.connNode]:null;return connNodeOk(n)?n:null};
+function connDown(wx,wy){const n=connSel();UI.connDrag=null;if(!n)return;const m=nearMark(connMarks(n).ins,wx,wy,0.2);if(m)UI.connDrag={l:m.l,k:m.k,x:wx,y:wy}}
+function connMove(wx,wy){if(UI.connDrag){UI.connDrag.x=wx;UI.connDrag.y=wy}}
+function connUp(wx,wy){const n=connSel(),dr=UI.connDrag;UI.connDrag=null;
+  if(n&&dr&&moved){const m=nearMark(connMarks(n).outs,wx,wy,0.25);if(m){const r=connAdd(S,n,dr.l,dr.k,m.l,m.k);toast(r.ok?"Spojení přidáno":r.msg)}else toast("Táhni na začátek pruhu za křižovatkou (bílé kolečko)");lastOptsKey="";updateOpts();return}
+  if(moved)return;
+  if(n){let best=null,bd=0.09;for(const q of connCurves(n)){const d=bezDist(q.c,wx,wy);if(d<bd){bd=d;best=q}}
+    if(best){const r=connRemove(S,n,best.l,best.k,best.nl,best.m);toast(r.ok?"Spojení zrušeno":r.msg);lastOptsKey="";updateOpts();return}}
+  const h=hitTest(wx,wy);const nn=h&&h.type==="node"?S.nodes[h.id]:null;if(connNodeOk(nn))UI.connNode=nn.id;else{UI.connNode=null;if(!n)toast("Klikni na křižovatku")}lastOptsKey="";updateOpts()}
