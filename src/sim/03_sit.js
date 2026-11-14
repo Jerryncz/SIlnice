@@ -154,10 +154,12 @@ function topoNode(S,n){
   const isH=e=>e.kind==="hwy";
   const hw=n.arms.filter(a=>isH(S.edges[a.e])).length;
   n.pass=sideJoinPair(S,n);
-  n.port=!!(n.pass&&n.arms.every(a=>n.pass.includes(a.e)||a.port));
+  // konec silnice, na jehož pruhy jsou napojené jednosměrky (jediné rameno bez napojení na pruh)
+  n.endPort=!n.ring&&deg>=2&&n.arms.filter(a=>!a.port).length===1;
+  n.port=!!(n.pass&&n.arms.every(a=>n.pass.includes(a.e)||a.port))||n.endPort;
   n.rad=0;if(deg>=3)for(const a of n.arms){const e=S.edges[a.e];n.rad=Math.max(n.rad,e.er,e.el)}
   // plocha křižovatky na každém rameni (+ přechod)
-  for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3?(n.port?0.3:n.rad+0.05+(crossOn(S,n,e)?XW:0)):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
+  for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3||n.endPort?(n.port?0.3:n.rad+0.05+(crossOn(S,n,e)?XW:0)):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
   n.turns=new Map();
   for(const ai of n.arms){if(!linkLanes(S,ai.inLink))continue;const list=[];const hix=-ai.hx,hiy=-ai.hy;const ei=S.edges[ai.e];
     for(const ao of n.arms){if(!linkLanes(S,ao.outLink))continue;const eo=S.edges[ao.e];
@@ -227,7 +229,7 @@ function laneLinks(S,n){n.lc=new Map();n.lm=new Map();const deg=n.arms.length,cn
   for(const [l,lc] of n.lc){n.lm.set(l,lc.map(r=>r.reduce((b,q)=>b|(q.turn===0?2:q.turn===1?4:1),0)));
     for(const r of lc)for(const q of r){const key=q.link*16+q.lane;cnt.set(key,(cnt.get(key)||0)+1)}}
   // spojení, které nikomu nekříží cestu (pokračování pruhu přes napojení): jede bez dávání přednosti
-  const soft=deg<3||n.pass;if(soft)for(const lc of n.lc.values())for(const r of lc)for(const q of r)if(q.turn===0&&cnt.get(q.link*16+q.lane)===1)q.free=true}
+  const soft=deg<3||n.pass||n.port;if(soft)for(const lc of n.lc.values())for(const r of lc)for(const q of r)if(q.turn===0&&cnt.get(q.link*16+q.lane)===1)q.free=true}
 // šipky pruhu od hráče: postupně další možnost; null = zpět na samočinné
 function arrowOptions(S,e,d){const l=e.id*2+d,n=S.nodes[linkTo(S,l)];if(!n||n.edges.length<3||n.port||n.ring)return null;const ex=n.turns.get(l)||[];
   const has=[ex.some(x=>x.turn===-1||x.turn===2)?1:0,ex.some(x=>x.turn===0)?2:0,ex.some(x=>x.turn===1)?4:0];const bits=has.filter(b=>b);if(bits.length<2)return null;
@@ -287,7 +289,17 @@ function joinInfo(S,sn,pts,atStart,k){
   const vx=far.x-z.x,vy=far.y-z.y,vl=Math.hypot(vx,vy)||1;const entry=!atStart;
   const okDir=(T)=>{const side=(vx*-T[1]+vy*T[0])/vl,al=(vx*T[0]+vy*T[1])/vl;return side>0.02&&(entry?al<0.4:al>-0.4)};
   let e,u,d,T=null,atNode=false;
-  if(sn.type==="node"){const n=S.nodes[sn.node];if(!n||n.dead||n.ring||n.gate>=0||n.edges.length<2)return null;
+  if(sn.type==="node"){const n=S.nodes[sn.node];if(!n||n.dead||n.ring||n.gate>=0)return null;
+    // konec silnice: jednosměrka se napojí na pruhy toho směru – podle kurzoru na jeden pruh, nebo mezi pruhy (vede pak do obou)
+    const np=n.arms.filter(a=>!a.port);
+    if(np.length===1&&(n.edges.length===1||n.endPort)){const a=np[0],e0=S.edges[a.e];if(e0.ring||e0.gateEdge||isRampEdge(S,e0))return null;
+      const T0=entry?[a.hx,a.hy]:[-a.hx,-a.hy];if((vx*T0[0]+vy*T0[1])/vl*(entry?1:-1)>0.4)return null;
+      const link=entry?a.outLink:a.inLink,L=linkLanes(S,link);if(!L)return null;const s0=entry?0:e0.g.len,kk=Math.min(k,L);
+      const cand=[];for(let j=0;j+kk<=L;j++){const p0=lanePose(S,link,j,s0),p1=lanePose(S,link,j+kk-1,s0);cand.push([(p0.x+p1.x)/2,(p0.y+p1.y)/2])}
+      for(let j=0;j+kk<L;j++)cand.push([(cand[j][0]+cand[j+1][0])/2,(cand[j][1]+cand[j+1][1])/2]);   // mezi pruhy
+      const cx=sn.cx!==undefined?sn.cx:cand[0][0],cy=sn.cy!==undefined?sn.cy:cand[0][1];let b=cand[0],bd=1e9;for(const q of cand){const dd=Math.hypot(q[0]-cx,q[1]-cy);if(dd<bd){bd=dd;b=q}}
+      return {entry,k,x:b[0],y:b[1],Td:T0,ax:n.x,ay:n.y,lvl:n.lvl,add:false,endJoin:true,cost:0,demolish:[]}}
+    if(n.edges.length<2)return null;
     for(const a of n.arms){const t=[a.hx,a.hy];if(!okDir(t))continue;const r=throughArm(S,n,t,entry);if(r){e=r.e;u=r.u;d=r.d;T=t;atNode=true;break}}
     if(!T)return null}
   else if(sn.type==="edge"){e=S.edges[sn.edge];if(!e||e.dead)return null;u=sn.u;if(u<0.8||u>e.g.len-0.8)return null}
@@ -317,7 +329,7 @@ function applyJoin(S,J){
       if(auxFits(S,e,d,r,J.entry)){const lp=planLanes(S,e,J.k,(e.lf===0||e.lb===0)?undefined:d,r);if(lp.ok){lp.cost=0;lp.demolish=lp.demolish.filter(b=>!b.dead);commitLanes(S,lp);n=findNode(S,J.ax,J.ay,J.lvl,0.2)}}}}
   n=n||resolvePoint(S,J.ax,J.ay,J.lvl);
   // nájezd uvnitř už existujícího přídavného pruhu: zbytek pruhu před nájezdem (za sjezdem) se zruší, pruh je průpletový
-  if(J.Td&&n.edges.length===2){const want=J.entry?-1:1;
+  if(J.Td&&!J.endJoin&&n.edges.length===2&&!n.endPort){const want=J.entry?-1:1;
     for(const a of n.arms){if((a.hx*J.Td[0]+a.hy*J.Td[1])*want<0.7)continue;const e=S.edges[a.e];if(e.ring||e.gateEdge||e.g.len>AUX+0.6)continue;
       const d=J.entry?(a.inLink&1):(a.outLink&1);const far=S.nodes[e.a===n.id?e.b:e.a];if(far.edges.length!==2||auxCount(S,e,d)<J.k)continue;
       const o=S.edges[far.edges[0]===e.id?far.edges[1]:far.edges[0]];const od=(e.a===far.id?o.b===far.id:o.a===far.id)?d:1-d;if(((od?o.lb:o.lf)||99)>=(d?e.lb:e.lf))continue;
@@ -351,7 +363,8 @@ function planRoad(S,spec){
   for(const e of S.edges){if(e.dead||!bbOverlap(e.g.bb,g0.bb,0.1))continue;
     for(const x of polyInter(g0,e.g)){
       if(x.ua<0.45&&joinedTo(S,spec.start,e))continue;if(g0.len-x.ua<0.45&&joinedTo(S,spec.end,e))continue;
-      const l1=lvlNew(x.ua),l2=lvlAt(S,e,x.ub);if(Math.abs(l1-l2)>=0.5)continue;
+      const l1=lvlNew(x.ua),l2=lvlAt(S,e,x.ub);if(Math.abs(l1-l2)>=0.9)continue;
+      if(Math.abs(l1-l2)>0.1){plan.msg="Tady je most moc nízko. Pod mostem nebo nad silnicí se dá projet až tam, kde je celé patro místa.";plan.bad={x:x.x,y:x.y};return plan}
       if(e.kind==="hwy"||spec.kind==="hwy"){plan.msg="Dálnici nejde křížit v úrovni. Zvol most.";plan.bad={x:x.x,y:x.y};return plan}
       if(isRampEdge(S,e)){plan.msg="Na rampu mostu se napojit nejde. Napoj se na jejím konci.";plan.bad={x:x.x,y:x.y};return plan}
       if(P.ramp(x.ua)&&Math.abs(l1-Math.round(l1))>0.01){plan.msg="Rampa mostu nemůže křížit jinou silnici. Prodluž most.";plan.bad={x:x.x,y:x.y};return plan}

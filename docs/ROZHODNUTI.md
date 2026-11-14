@@ -79,3 +79,7 @@ nepřepisuje, ale označí „nahrazeno R<číslo>“ a připíše se nové.
 | R71 | 14. 11. 2026 | Výběr auta, chodce, budovy a silnice ukazuje trasy na mapě. | Přání uživatele (tři způsoby, jak zjistit, kdo kam jede). | – |
 | R72 | 14. 11. 2026 | Se třemi a více pruhy: vnitřní jen vlevo, krajní jen vpravo, ostatní rovně; hráč mění nástrojem Šipky. | Přání uživatele. | Sdílené pruhy vlevo+rovně a rovně+vpravo (zůstává u dvou pruhů). |
 | R73 | 14. 11. 2026 | Parkoviště s plnou uličkou a místy vedle ní; hlubší tvary podniků; kapacita = počet míst. | Přání uživatele: auta nemají stát v uličce. | Ulička mezi dvěma řadami bez vlastní šířky (do 0.9). |
+| R74 | 14. 11. 2026 | Jednosměrky se na slepý konec silnice napojují na jednotlivé pruhy (podle kurzoru na pruh nebo mezi pruhy), víc jednosměrek na jeden konec. | Přání uživatele. | Obyčejná křižovatka na konci (do 0.10). |
+| R75 | 14. 11. 2026 | Křížení v jiné výšce jen s celým patrem mezi silnicemi (rozdíl aspoň 0,9). | Přání uživatele: silnice vedla skrz nízkou část mostu. | Stačila půlka patra (do 0.10). |
+| R76 | 14. 11. 2026 | Přichytávání ve stylu CAD: střed úseku, kolmice, prodloužení slepých konců s průsečíkem. | Přání uživatele (Revit / AutoCAD). | – |
+| R77 | 14. 11. 2026 | Parkoviště: uličky kolmo k silnici s místy po obou stranách, větší tvary. | Přání uživatele; nahrazuje R73 v části rozvržení. | Řady rovnoběžně se silnicí (0.10). |

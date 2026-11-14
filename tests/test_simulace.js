@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,cycleArrow,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,cycleArrow,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -113,10 +113,10 @@ function road(S, x0, y0, x1, y1, kind, lvl0, lvl1, lanes) {
   const sec = A.planLanes(S, alongY(y)[0], 1, 1, [4, 9]); ok(sec.ok, "pruh na části úseku");
   A.commitLanes(S, sec); ok(alongY(y).length === 3 && alongY(y).filter(e => e.lb === 3).length === 1, "pruh navíc jen na prostředním kusu");
   // most přes silnici se zvolenou výškou: rampy 3 pole, bez křižovatky
-  const yb = Y + 5.5;
+  const yb = Y + 7.5;
   ok(road(S, X + 2.5, yb, X + 12.5, yb, "road").ok, "silnice pod most");
   const nb0 = S.nodes.filter(n => !n.dead).length;
-  const br = A.buildRoad(S, { pts: A.mkLine(X + 7.5, yb - 4.5, X + 7.5, yb + 4.5), kind: "road", lanes: 1, level: 1, start: { type: "free", x: X + 7.5, y: yb - 4.5, lvl: 0 }, end: { type: "free", x: X + 7.5, y: yb + 4.5, lvl: 0 } });
+  const br = A.buildRoad(S, { pts: A.mkLine(X + 7.5, yb - 3.5, X + 7.5, yb + 3.5), kind: "road", lanes: 1, level: 1, start: { type: "free", x: X + 7.5, y: yb - 3.5, lvl: 0 }, end: { type: "free", x: X + 7.5, y: yb + 3.5, lvl: 0 } });
   ok(br.ok, "most se zvolenou výškou postaven: " + (br.msg || ""));
   const brE = S.edges.filter(e => !e.dead && Math.abs(e.g.pts[0] - (X + 7.5)) < 0.05 && Math.abs(e.g.pts[e.g.pts.length - 2] - (X + 7.5)) < 0.05);
   ok(brE.length === 3 && brE.filter(e => A.isRampEdge(S, e)).length === 2, `most má dvě rampy a střed (${brE.length})`);
@@ -225,6 +225,28 @@ for (const type of ["diamond", "clover", "trumpet"]) {
   ok(A.commitLanes(S, A.planLanes(S, ramp, 1, 1)).ok, "jednosměrka: pruh vlevo"); ramp = S.edges.find(e => !e.dead && e.kind === "ramp");
   const p3 = A.lanePose(S, ramp.id * 2, 1, 0); ok(ramp.lf === 3 && Math.hypot(p3.x - p0.x, p3.y - p0.y) < 0.01, "jednosměrka: po přidání vlevo je původní pruh druhý a na místě");
   ok(A.planLanes(S, S.edges.find(e => !e.dead && !e.gateEdge && e.kind === "hwy" && e.lf === 2), 8, 0).ok, "dálnice: až 10 pruhů v jednom směru");
+}
+// ---- konec silnice: jednosměrky napojené na jednotlivé pruhy, 10 pruhů, nízký most ----
+{
+  const S = A.createSim(11); S.money = 1e8;
+  for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
+  for (const b of [...S.buildings]) A.demolishBuilding(S, b, true);
+  const F = (x, y) => ({ type: "free", x, y, lvl: 0 });
+  ok(A.buildRoad(S, { pts: A.mkLine(8.5, 15.5, 24.5, 15.5), kind: "road", lanes: 2, start: F(8.5, 15.5), end: F(24.5, 15.5) }).ok, "konec: silnice 2+2");
+  const nd = S.nodes.find(n => !n.dead && Math.abs(n.x - 24.5) < 0.1 && Math.abs(n.y - 15.5) < 0.1);
+  const sn = cy => ({ type: "node", node: nd.id, x: nd.x, y: nd.y, lvl: 0, cx: 24.5, cy });
+  ok(A.buildRoad(S, { pts: A.mkCubic(34.5, 8.5, 30, 8.5, 28, 15.3, 24.5, 15.3), kind: "oneway", lanes: 1, start: F(34.5, 8.5), end: sn(15.37) }).ok, "konec: příjezd");
+  const o1 = A.buildRoad(S, { pts: A.mkCubic(24.5, 15.9, 28, 15.9, 30, 22.5, 34.5, 22.5), kind: "oneway", lanes: 1, start: sn(15.9), end: F(34.5, 22.5) });
+  const o2 = A.buildRoad(S, { pts: A.mkLine(24.5, 15.63, 36.5, 15.63), kind: "oneway", lanes: 1, start: sn(15.63), end: F(36.5, 15.63) });
+  ok(o1.ok && o2.ok && nd.endPort && nd.port, "konec: dva odjezdy, uzel je napojení na pruhy");
+  const rin = [...nd.lc].find(([l]) => S.edges[l >> 1].kind === "road")[1];
+  ok(rin[0].length === 1 && rin[1].length === 1 && rin[0][0].link === o2.edges[0].id * 2 && rin[1][0].link === o1.edges[0].id * 2 && rin[0][0].free && rin[1][0].free, "konec: každý pruh vede do své jednosměrky bez dávání přednosti");
+  ok(A.buildRoad(S, { pts: A.mkLine(8.5, 30.5, 24.5, 30.5), kind: "road", lanes: 10, start: F(8.5, 30.5), end: F(24.5, 30.5) }).ok, "silnice s 10 pruhy v každém směru jde postavit");
+  // most začínající těsně u silnice: rampa by ji křížila v půli výšky
+  ok(A.buildRoad(S, { pts: A.mkLine(4.5, 40.5, 20.5, 40.5), kind: "road", lanes: 1, start: F(4.5, 40.5), end: F(20.5, 40.5) }).ok, "silnice pod most");
+  const lowB = A.planRoad(S, { pts: A.mkLine(12.5, 39.5, 12.5, 48.5), kind: "road", lanes: 1, level: 1, start: F(12.5, 39.5), end: F(12.5, 48.5) });
+  ok(!lowB.ok && /nízko/.test(lowB.msg), "most nejde vést přes silnici tam, kde ještě není dost vysoko (" + lowB.msg + ")");
+  for (let k = 0; k < 300; k++) A.step(S, A.STEP); zkontroluj(S, "konec silnice");
 }
 // ---- šipky: hráč změní řazení, spojení pruhů se přepočítá ----
 {

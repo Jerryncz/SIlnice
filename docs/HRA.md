@@ -95,6 +95,18 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
       se Shiftem ubere).
     Jednosměrka napojená z levé strany, do křižovatky nebo na dálnici do
     světa je obyčejná křižovatka.
+  - **Napojení na konec silnice**: jednosměrka, která začíná nebo končí
+    na slepém konci silnice, se napojí na pruhy příslušného směru. Podle
+    polohy kurzoru na jeden pruh, nebo mezi dva pruhy (pak vede do obou).
+    Na jeden konec jde napojit víc jednosměrek, každá má svůj pruh a nikdo
+    nedává přednost; pruh, na který nic nenavazuje, tam končí.
+  - **Most a volná výška**: silnice smí jinou křížit v jiné výšce jen tam,
+    kde je mezi nimi celé patro. Přes rampu mostu ani těsně u ní to nejde.
+  - **Přichytávání při stavění** (značky u kurzoru): kroužek = uzel nebo
+    bod na silnici, trojúhelník = střed úseku, pravý úhel = kolmice ze
+    začátku tahu na silnici, čárkovaná čára s křížkem = prodloužení slepého
+    konce jiné silnice (křížek sedne na průsečík s taženou čarou). Shift
+    přichytávání vypne.
   - Odbočka: tah ze silnice (mimo křižovatku). Strana tahu určuje jízdní
     pás, tah ve směru jízdy udělá **odbočku**, proti směru **nájezd**; napojí
     se na pruh podle pravidla výše. Druh odbočky: zvolená Jednosměrka nebo
@@ -325,10 +337,11 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 - **Hospoda** (od 24 obyvatel), **obchod** (od 40), **nákupní centrum**
   (od 90), **obchodní zóna** (od 150, nebo od 100 při napojení na svět).
   Všechny s parkovištěm.
-- **Parkoviště** má od silnice řady: místa – ulička – místa (u mělkého
-  ulička – místa). Ulička je celé půlpole široká, auta stojí vedle ní, ne
-  v ní; od vjezdu k uličkám vede příčná ulička. Větší podniky mají hlubší
-  parkoviště; kapacita je počet vyznačených míst.
+- **Parkoviště**: od silnice vede dovnitř ulička (u širšího parkoviště
+  obousměrná, pole široká) a po obou jejích stranách jsou kolmá místa;
+  široké parkoviště má uliček víc, spojuje je příjezd podél silnice. Auta
+  stojí vedle uličky, ne v ní. Podniky mají větší parkoviště; kapacita je
+  počet vyznačených míst.
   Auto zajede po uličce na volné místo, které si při příjezdu zamluví,
   a při odjezdu po ní vyjede k silnici. Dvě auta nikdy nestojí na jednom
   místě. Parkovací dům má víc míst (patra), než je vidět.
@@ -402,6 +415,8 @@ Nástroj Ruka ukáže trasy na mapě:
   vlevo ani nastavení časů.
 - Konec připojovacího pruhu nejde chytit a táhnout; délka se mění nástrojem
   Pruhy.
+- Postavenou silnici nejde přetvarovat ani přepojit tahem za konec; musí se
+  zbourat a postavit znovu (návrh režimu úprav čeká na rozhodnutí).
 - Nemá tunely (`napady/tunely.md`).
 - Budovy nejsou natočené podél šikmých silnic; u diagonál zůstávají zubaté
   mezery.

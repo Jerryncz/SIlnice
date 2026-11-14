@@ -16,7 +16,7 @@ function lanePose(S,l,lane,s,out){const e=S.edges[l>>1],d=l&1;const u=clamp(d?e.
 // přechod na rameni křižovatky: uzel se 3+ rameny bez dálnice, silnice s chodníkem, hráč ho nezrušil,
 // rameno je dost dlouhé a nesvírá se sousedním ramenem moc ostře (přechod by ležel na jiné silnici)
 function crossOn(S,n,e){if(n.edges.length<3||!RK[e.kind].walk||!RK[e.kind].side||e.ring||n.xOff&&n.xOff.has(e.id))return false;
-  if(n.arms.some(a=>S.edges[a.e].kind==="hwy")||n.pass)return false;
+  if(n.arms.some(a=>S.edges[a.e].kind==="hwy")||n.pass||n.port)return false;
   if(e.g.len<n.rad+0.05+XW+0.5)return false;
   const a=n.arms.find(q=>q.e===e.id);if(!a)return false;for(const b of n.arms){if(b===a)continue;if(a.hx*b.hx+a.hy*b.hy>0.64)return false}
   return true}
@@ -25,7 +25,9 @@ function edgeTrim(e){let ta=e.ta||0,tb=e.tb||0;const av=Math.max(0.1,e.g.len-0.2
 function linkIn(S,l){const e=S.edges[l>>1],t=edgeTrim(e);return (l&1)?t[1]:t[0]}
 function linkOut(S,l){const e=S.edges[l>>1],t=edgeTrim(e);return e.g.len-((l&1)?t[0]:t[1])}
 // stopčára (konec úseku před křižovatkou); -1 = rovné navázání bez křižovatky
-function stopS(S,l){const n=S.nodes[linkTo(S,l)];if(n.edges.length<3)return -1;return linkOut(S,l)}
+// uzel s plochou, kterou auta projíždějí po oblouku: křižovatka, nebo konec silnice s jednosměrkami na pruzích
+const isBox=n=>n.edges.length>=3||!!n.endPort;
+function stopS(S,l){const n=S.nodes[linkTo(S,l)];if(!isBox(n))return -1;return linkOut(S,l)}
 function newVehicle(S,o){const c=Object.assign({id:S.vid++,li:0,s:0,v:0,lane:0,len:o.truck?0.8:0.5,state:"exit",wait:0,sid:0,dead:false,ang:0,firstExit:true,conn:null},o);S.cars.push(c);return c}
 function qOf(S,c){const l=c.links[c.li];return S.edges[l>>1].q[l&1][c.lane]}
 function removeQ(S,c){const q=qOf(S,c);if(!q)return;const k=q.indexOf(c);if(k>=0)q.splice(k,1)}
@@ -106,7 +108,7 @@ function tryTransition(S,c,l){
   for(const x of cands){const lane=x.lane;const q=e2.q[nl&1][lane];if(!q)continue;
     if(!x.free){if(pm===null)pm=permit(S,c,l,nl,x.turn);if(!pm)continue}
     const rear=q[q.length-1];
-    if(n.edges.length<3){ // rovné navázání úseků: auto jen pokračuje
+    if(!isBox(n)){ // rovné navázání úseků: auto jen pokračuje
       const over=Math.max(0,c.s-S.edges[l>>1].g.len);
       if(rear&&rear.s-(rear.len+c.len)/2-0.12<over)continue;
       c.li++;c.lane=lane;c.s=over;q.push(c);c.sid=S.sid;e2.passes++;c.wait=0;c.zip=0;return true}
@@ -146,7 +148,7 @@ function updateVehicles(S,dt){
   for(let k=S.unparking.length-1;k>=0;k--){const c=S.unparking[k];if(c.dead||c.state!=="unpark"){S.unparking.splice(k,1);continue}
     c.ps+=dt*1.2;if(c.ps>=c.plen){S.unparking.splice(k,1);if(c.spotB){releaseSpot(c.spotB,c.spot,c);c.spotB=null}const z=c.path[c.path.length-2]||c.path[c.path.length-1];c.ux=z[0];c.uy=z[1];c.state="exit";c.wait=0;S.exiting.push(c)}}
   for(const e of S.edges){if(e.dead)continue;const len=e.g.len,vb=BASE_SPEED*RK[e.kind].speed*(e.ring?0.75:1);const mb=e.mbusy&&e.mbusy.length?e.mbusy:null;
-    for(let d=0;d<2;d++){const lanes=e.q[d];if(!lanes.length)continue;const l=e.id*2+d;const box=S.nodes[d?e.a:e.b].edges.length>=3;const sOut=box?linkOut(S,l):len;
+    for(let d=0;d<2;d++){const lanes=e.q[d];if(!lanes.length)continue;const l=e.id*2+d;const box=isBox(S.nodes[d?e.a:e.b]);const sOut=box?linkOut(S,l):len;
       let zl=e.zl&&e.zl[d];if(zl&&zl.length){zl=e.zl[d]=zl.filter(z=>!z.dead&&z.zip&&z.state==="drive"&&z.links[z.li]===l);if(!zl.length)zl=null}else zl=null;
       for(let k=0;k<lanes.length;k++){const q=lanes[k];let leader=null;
         for(let i=0;i<q.length;){const c=q[i];
