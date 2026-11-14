@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.8.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.9.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -39,6 +39,7 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | Druh, pruhy, tvar, výška | panel nad nástroji; výška také `Q` / `E`; zaškrtávátko „Přestavět kliknutím“ |
 | Pruhy | `2`, klik na polovinu silnice = pruh v tom směru, tah podél = jen kus úseku, Shift ubere |
 | Pravidlo křižovatky | `3`, klik na křižovatku |
+| Šipky pruhů | `9`, klik na pruh před křižovatkou přepíná vlevo / rovně / vpravo |
 | Přechod pro chodce | `4`, klik u křižovatky přepne, jinde přidá / zruší |
 | Rozdělit úsek | `5`, klik na silnici; klik na značku rozdělení ho zruší |
 | Bourat | `6`, tah přes silnice nebo budovy |

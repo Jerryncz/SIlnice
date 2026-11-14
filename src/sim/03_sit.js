@@ -35,7 +35,7 @@ function rasterEdge(S,e,add){
 function buildQueues(e){e.q=[[],[]];for(let k=0;k<e.lf;k++)e.q[0].push([]);for(let k=0;k<e.lb;k++)e.q[1].push([])}
 function addEdge(S,a,b,kind,pts,lf,lb,opts){opts=opts||{};
   const e={id:S.edges.length,a:a.id,b:b.id,kind,lf,lb,g:geom(pts),ring:opts.ring||0,auto:!!opts.auto,gateEdge:!!opts.gate,dead:false,
-    q:null,cong:[0,0],flow:0,passes:0,cellsG:[],cellsB:[],born:S.time,owState:opts.owState||0};
+    q:null,cong:[0,0],flow:0,passes:0,cellsG:[],cellsB:[],born:S.time,owState:opts.owState||0,pa:!!opts.pa,pb:!!opts.pb};
   buildQueues(e);setWidth(e);a.dead=false;b.dead=false;
   S.edges.push(e);a.edges.push(e.id);b.edges.push(e.id);
   rasterEdge(S,e,true);topoNode(S,a);topoNode(S,b);netChanged(S);return e}
@@ -50,7 +50,7 @@ function splitEdgeR(S,e,u,keep){
   const q=pointAt(e.g,u),lv=lvlAt(S,e,u),n=addNode(S,q.x,q.y,lv);n.ring=e.ring;n.keep=!!keep;
   const [pa,pb]=splitPts(e.g,u);const a=S.nodes[e.a],b=S.nodes[e.b];
   pa[pa.length-2]=n.x;pa[pa.length-1]=n.y;pb[0]=n.x;pb[1]=n.y;
-  const e1=addEdge(S,a,n,e.kind,pa,e.lf,e.lb,edgeProps(e)),e2=addEdge(S,n,b,e.kind,pb,e.lf,e.lb,edgeProps(e));
+  const e1=addEdge(S,a,n,e.kind,pa,e.lf,e.lb,Object.assign(edgeProps(e),{pa:e.pa})),e2=addEdge(S,n,b,e.kind,pb,e.lf,e.lb,Object.assign(edgeProps(e),{pb:e.pb}));
   if(e.xw){e1.xw=e.xw.filter(x=>x.u<u-0.3);e2.xw=e.xw.filter(x=>x.u>u+0.3).map(x=>({u:x.u-u}))}
   remapEdges(S,new Map([[e.id,[{e:e1,u0:0,u1:u,off:0,rev:false},{e:e2,u0:u,u1:e.g.len,off:0,rev:false}]]]));
   removeEdge(S,e,true);return {node:n,e1,e2}}
@@ -74,7 +74,7 @@ function canMerge(S,n){if(n.dead||n.keep||n.gate>=0||n.ring||n.edges.length!==2)
 function mergeAt(S,n){const m=canMerge(S,n);if(!m)return null;const {e1,e2,a,b,r1,r2}=m;
   const p1=r1?reversePts(e1.g.pts):e1.g.pts.slice(),p2=r2?reversePts(e2.g.pts):e2.g.pts;
   const pts=cleanPts(p1.concat(p2.slice(2)));
-  const ne=addEdge(S,a,b,e1.kind,pts,m.lf,m.lb,{auto:e1.auto&&e2.auto,owState:e1.owState});
+  const ne=addEdge(S,a,b,e1.kind,pts,m.lf,m.lb,{auto:e1.auto&&e2.auto,owState:e1.owState,pa:r1?e1.pb:e1.pa,pb:r2?e2.pa:e2.pb});
   const L1=e1.g.len,L2=e2.g.len;
   const xs=[];for(const x of e1.xw||[])xs.push({u:r1?L1-x.u:x.u});for(const x of e2.xw||[])xs.push({u:L1+(r2?L2-x.u:x.u)});if(xs.length)ne.xw=xs;
   remapEdges(S,new Map([[e1.id,[{e:ne,u0:0,u1:L1,off:0,rev:r1}]],[e2.id,[{e:ne,u0:0,u1:L2,off:L1,rev:r2}]]]));
@@ -120,10 +120,11 @@ function remapEdges(S,map){
 
 // rameno uzlu: směr ven podél úseku, příjezdový a odjezdový směr (link = id úseku*2 + směr)
 function armOf(S,n,eid){const e=S.edges[eid];const atA=e.a===n.id;const g=e.g;const u=atA?Math.min(0.5,g.len*0.3):Math.max(g.len-0.5,g.len*0.7);
-  const p=pointAt(g,u);let hx=p.x-n.x,hy=p.y-n.y;const l=Math.hypot(hx,hy)||1;hx/=l;hy/=l;
+  const port=atA?e.pa:e.pb;const z=port?pointAt(g,atA?0:g.len):n;const bx=z.x,by=z.y;
+  const p=pointAt(g,u);let hx=p.x-bx,hy=p.y-by;const l=Math.hypot(hx,hy)||1;hx/=l;hy/=l;
   // vzdálenější směr ramene: strana, na kterou plynulá odbočka odchází (u tečného napojení je blízký směr skoro rovný)
-  const uf=atA?Math.min(2.5,g.len*0.45):Math.max(g.len-2.5,g.len*0.55);const pf=pointAt(g,uf);let sx=pf.x-n.x,sy=pf.y-n.y;const lf=Math.hypot(sx,sy)||1;sx/=lf;sy/=lf;
-  return {e:eid,hx,hy,sx,sy,inLink:eid*2+(atA?1:0),outLink:eid*2+(atA?0:1),axis:Math.abs(hx)>=Math.abs(hy)?0:1}}
+  const uf=atA?Math.min(2.5,g.len*0.45):Math.max(g.len-2.5,g.len*0.55);const pf=pointAt(g,uf);let sx=pf.x-bx,sy=pf.y-by;const lf=Math.hypot(sx,sy)||1;sx/=lf;sy/=lf;
+  return {e:eid,hx,hy,sx,sy,port:!!port,ox:bx-n.x,oy:by-n.y,inLink:eid*2+(atA?1:0),outLink:eid*2+(atA?0:1),axis:Math.abs(hx)>=Math.abs(hy)?0:1}}
 const linkLanes=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.lb:e.lf};
 const linkFrom=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.b:e.a};
 const linkTo=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.a:e.b};
@@ -131,7 +132,10 @@ const linkTo=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.a:e.b};
 // dvojice průběžných ramen, jinak null. Taková silnice má přednost a kreslí se vcelku.
 function sideJoinPair(S,n){if(n.edges.length<3||n.ring)return null;let best=null,bd=-0.9;
   for(let i=0;i<n.arms.length;i++)for(let j=i+1;j<n.arms.length;j++){const a=n.arms[i],b=n.arms[j];const d=a.hx*b.hx+a.hy*b.hy;const ea=S.edges[a.e],eb=S.edges[b.e];
-    if(d<bd&&(ea.kind===eb.kind||ea.kind==="hwy"&&eb.kind==="hwy")&&!RK[ea.kind].oneway){bd=d;best=[a.e,b.e]}}
+    if(!(d<bd)||ea.kind!==eb.kind&&!(RK[ea.kind].oneway&&RK[eb.kind].oneway))continue;
+    if(a.port||b.port)continue;
+    if(!(linkLanes(S,a.inLink)&&linkLanes(S,b.outLink)||linkLanes(S,b.inLink)&&linkLanes(S,a.outLink)))continue;
+    bd=d;best=[a.e,b.e]}
   if(!best)return null;for(const a of n.arms){if(best.includes(a.e))continue;const e=S.edges[a.e];if(!(RK[e.kind].oneway||e.lf===0||e.lb===0))return null}
   return best}
 // místa napojení na pruh: v uzlu, kde úsek přibírá nebo ztrácí krajní pruh (konec odbočovacího pruhu,
@@ -150,9 +154,10 @@ function topoNode(S,n){
   const isH=e=>e.kind==="hwy";
   const hw=n.arms.filter(a=>isH(S.edges[a.e])).length;
   n.pass=sideJoinPair(S,n);
+  n.port=!!(n.pass&&n.arms.every(a=>n.pass.includes(a.e)||a.port));
   n.rad=0;if(deg>=3)for(const a of n.arms){const e=S.edges[a.e];n.rad=Math.max(n.rad,e.er,e.el)}
   // plocha křižovatky na každém rameni (+ přechod)
-  for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3?n.rad+0.05+(crossOn(S,n,e)?XW:0):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
+  for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3?(n.port?0.3:n.rad+0.05+(crossOn(S,n,e)?XW:0)):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
   n.turns=new Map();
   for(const ai of n.arms){if(!linkLanes(S,ai.inLink))continue;const list=[];const hix=-ai.hx,hiy=-ai.hy;const ei=S.edges[ai.e];
     for(const ao of n.arms){if(!linkLanes(S,ao.outLink))continue;const eo=S.edges[ao.e];
@@ -160,9 +165,12 @@ function topoNode(S,n){
       const cr=hix*ao.hy-hiy*ao.hx,dt=hix*ao.hx+hiy*ao.hy;
       const turn=ao.e===ai.e?2:(cr>0.35?1:cr<-0.35?-1:0);
       if(isH(ei)&&isH(eo)&&dt<0.3)continue;
+      // napojení na pruh: sjet jen z pásu, na jehož pravém okraji sjezd začíná, najet jen do pásu, kde nájezd končí
+      if(ao.port&&(dt<0.3||hix*ao.oy-hiy*ao.ox<0.02))continue;
+      if(ai.port&&(dt<0.3||ao.hx*ai.oy-ao.hy*ai.ox<0.02))continue;
       if(hw>=2){ // napojení z boku dálnice: sjet jen vpravo, najet jen ve směru jízdy, dálnici nepřejet
-        if(isH(ei)&&!isH(eo)&&(hix*ao.sy-hiy*ao.sx)<0.02)continue;
-        if(!isH(ei)&&isH(eo)&&(ai.sx*(-ao.hy)+ai.sy*ao.hx)<0.02)continue;
+        if(isH(ei)&&!isH(eo)&&!ao.port&&(hix*ao.sy-hiy*ao.sx)<0.02)continue;
+        if(!isH(ei)&&isH(eo)&&!ai.port&&(ai.sx*(-ao.hy)+ai.sy*ao.hx)<0.02)continue;
         if(!isH(ei)&&!isH(eo))continue}
       if(n.ring&&!ei.ring&&!eo.ring)continue;
       list.push({link:ao.outLink,turn})}
@@ -177,7 +185,58 @@ function topoNode(S,n){
   else if(n.pass){n.eff="main";n.mainEdges=new Set(n.pass)}   // jednosměrka napojená z boku dává přednost
   else{const rk=n.arms.map(a=>{const e=S.edges[a.e];return RK[e.kind].rank*8+e.lf+e.lb});const mx=Math.max(...rk);const top=n.arms.filter((a,k)=>rk[k]===mx);
     if(top.length===2&&rk.some(r=>r<mx)){n.eff="main";n.mainEdges=new Set(top.map(a=>a.e))}else n.eff="right"}
-  if(n.eff==="light"){if(!n.light)n.light={axis:0,t:0,amber:false}}else n.light=null}
+  if(n.eff==="light"){if(!n.light)n.light={axis:0,t:0,amber:false}}else n.light=null;
+  laneLinks(S,n)}
+// ---- spojení pruhů v uzlu: z každého pruhu každého příjezdu seznam {link, lane, turn, free} ----
+// Rovně se pruhy párují podle polohy (pruh pokračuje tam, kde na něj navazuje jiný), vlevo se jede
+// z vnitřních pruhů, vpravo z krajních. Šipky od hráče (e.arw[směr][pruh], bity 1 vlevo, 2 rovně, 4 vpravo)
+// mají přednost. Pruh bez pokračování (konec přídavného pruhu) nemá žádné spojení: auto se musí přeřadit.
+function laneLinks(S,n){n.lc=new Map();n.lm=new Map();const deg=n.arms.length,cnt=new Map(),late=[];const TOL=LW*0.55;
+  for(const ai of n.arms){const l=ai.inLink,L=linkLanes(S,l);if(!L)continue;const ei=S.edges[ai.e],d=l&1;const exits=n.turns.get(l)||[];
+    const lc=[];for(let k=0;k<L;k++)lc.push([]);
+    const add=(k,x,m)=>{if(!lc[k].some(q=>q.link===x.link&&q.lane===m))lc[k].push({link:x.link,lane:m,turn:x.turn,free:false})};
+    const pin=[];for(let k=0;k<L;k++)pin.push(lanePose(S,l,k,ei.g.len));
+    const Sx=exits.filter(x=>x.turn===0),Lx=exits.filter(x=>x.turn===-1||x.turn===2),Rx=exits.filter(x=>x.turn===1);
+    const geo=Sx.map(x=>{const M=linkLanes(S,x.link);const po=[];for(let m=0;m<M;m++)po.push(lanePose(S,x.link,m,0));
+      return {x,M,po,byK:pin.map(a=>{let bm=0,bd=1e9;po.forEach((b,m)=>{const dd=Math.hypot(a.x-b.x,a.y-b.y);if(dd<bd){bd=dd;bm=m}});return {m:bm,d:bd}})}});
+    const through=deg<3||n.port;const user=!through&&ei.arw&&ei.arw[d]&&ei.arw[d].length===L?ei.arw[d]:null;
+    const al=[];for(let k=0;k<L;k++)al.push(geo.some(G=>G.byK[k].d<TOL));
+    const anyAl=al.some(v=>v);
+    // samočinné šipky
+    const mask=new Array(L).fill(0);
+    if(Sx.length){for(let k=0;k<L;k++)if(al[k]||!anyAl)mask[k]|=2;if(Lx.length)mask[0]|=1;if(Rx.length)mask[L-1]|=4;
+      if(!through){const f=al.indexOf(true),la=al.lastIndexOf(true);for(let k=0;k<L;k++){if(mask[k])continue;if(k>la&&Rx.length)mask[k]=4;else if(k<f&&Lx.length)mask[k]=1;else mask[k]=2}}}
+    else if(Lx.length&&Rx.length){for(let k=0;k<L;k++){if(k<=Math.floor((L-1)/2))mask[k]|=1;if(k>=Math.ceil((L-1)/2))mask[k]|=4}}
+    else{const b=Lx.length?1:4;for(let k=0;k<L;k++)mask[k]=b}
+    if(user)for(let k=0;k<L;k++)if(user[k])mask[k]=user[k];
+    // rovně: podle polohy
+    for(const G of geo){G.ks=[];for(let k=0;k<L;k++)if(mask[k]&2)G.ks.push(k);
+      for(const k of G.ks)if(user&&user[k]||G.byK[k].d<TOL||!anyAl||!through&&!al[k])add(k,G.x,G.byK[k].m)}
+    late.push({lc,geo,pin,add,L});
+    // vlevo z vnitřních pruhů, vpravo z krajních
+    for(const x of Lx){const M=linkLanes(S,x.link);let i=0;for(let k=0;k<L;k++)if(mask[k]&1){if(x.turn===2&&i>0)break;add(k,x,Math.min(i,M-1));i++}if(!i)add(0,x,0)}
+    for(const x of Rx){const M=linkLanes(S,x.link);let i=0;for(let k=L-1;k>=0;k--)if(mask[k]&4){add(k,x,M-1-Math.min(i,M-1));i++}if(!i)add(L-1,x,M-1)}
+    n.lc.set(l,lc)}
+  // pruh za uzlem, do kterého zatím nic nevede (pruh navíc), dostane spojení z nejbližšího pruhu
+  const fed=new Set();for(const lc of n.lc.values())for(const r of lc)for(const q of r)fed.add(q.link*16+q.lane);
+  for(const A of late)for(const G of A.geo){for(let m=0;m<G.M;m++){if(fed.has(G.x.link*16+m))continue;let bk=-1,bd=1e9;
+      for(const k of (G.ks.length?G.ks:A.pin.map((_,k)=>k))){const dd=Math.hypot(A.pin[k].x-G.po[m].x,A.pin[k].y-G.po[m].y);if(dd<bd){bd=dd;bk=k}}
+      if(bk>=0&&bd<LW*1.6){A.add(bk,G.x,m);fed.add(G.x.link*16+m)}}
+    if(!A.lc.some(r=>r.some(q=>q.link===G.x.link))){let bk=0;for(let k=1;k<A.L;k++)if(G.byK[k].d<G.byK[bk].d)bk=k;A.add(bk,G.x,G.byK[bk].m)}}
+  for(const [l,lc] of n.lc){n.lm.set(l,lc.map(r=>r.reduce((b,q)=>b|(q.turn===0?2:q.turn===1?4:1),0)));
+    for(const r of lc)for(const q of r){const key=q.link*16+q.lane;cnt.set(key,(cnt.get(key)||0)+1)}}
+  // spojení, které nikomu nekříží cestu (pokračování pruhu přes napojení): jede bez dávání přednosti
+  const soft=deg<3||n.pass;if(soft)for(const lc of n.lc.values())for(const r of lc)for(const q of r)if(q.turn===0&&cnt.get(q.link*16+q.lane)===1)q.free=true}
+// šipky pruhu od hráče: postupně další možnost; null = zpět na samočinné
+function arrowOptions(S,e,d){const l=e.id*2+d,n=S.nodes[linkTo(S,l)];if(!n||n.edges.length<3||n.port||n.ring)return null;const ex=n.turns.get(l)||[];
+  const has=[ex.some(x=>x.turn===-1||x.turn===2)?1:0,ex.some(x=>x.turn===0)?2:0,ex.some(x=>x.turn===1)?4:0];const bits=has.filter(b=>b);if(bits.length<2)return null;
+  const out=[0];for(let m=1;m<8;m++){if((m&~(has[0]|has[1]|has[2]))!==0)continue;if(m===5&&has[1])continue;out.push(m)}return out}
+function cycleArrow(S,e,d,k){const L=d?e.lb:e.lf;if(k<0||k>=L)return {ok:false,msg:"Tady pruh není."};const opts=arrowOptions(S,e,d);if(!opts)return {ok:false,msg:"Šipky jdou měnit jen před křižovatkou s více směry."};
+  if(L<2)return {ok:false,msg:"Jediný pruh jede všemi směry. Přidej pruh nástrojem Pruhy."};
+  if(!e.arw)e.arw=[null,null];if(!e.arw[d]||e.arw[d].length!==L)e.arw[d]=new Array(L).fill(0);
+  const cur=e.arw[d][k];e.arw[d][k]=opts[(opts.indexOf(cur)+1)%opts.length];if(e.arw[d].every(v=>!v))e.arw[d]=null;
+  const n=S.nodes[linkTo(S,e.id*2+d)];topoNode(S,n);netChanged(S);for(const c of S.cars)if(!c.dead)c.needLi=-1;
+  const v=e.arw[d]?e.arw[d][k]:0;return {ok:true,state:v?"Šipka: "+[v&1?"vlevo":"",v&2?"rovně":"",v&4?"vpravo":""].filter(x=>x).join(" + "):"Šipka: samočinně"}}
 
 // ---- plánování a stavba silnice ----
 function snapPoint(S,x,y,lvl){
@@ -205,8 +264,71 @@ function roadCover(S,g0,lvlFn,trimA,trimB){const segs=new Map();let cov=0,tot=0;
     s.u0=Math.min(s.u0,best.u);s.u1=Math.max(s.u1,best.u);s.same+=best.dot>0?1:-1}
   return {frac:tot?cov/tot:0,len:cov*st,segs:[...segs.values()]}}
 function newLanesFor(e,kind,lanes,same){const K=RK[kind];if(K.oneway)return same?[lanes,0]:[0,lanes];return [lanes,lanes]}
+// ---- napojení jednosměrky na pruh ----
+// Jednosměrka (nebo nájezd), která končí nebo začíná na boku průběžné silnice, se napojí na krajní pruh:
+// silnice dostane připojovací (za nájezdem) nebo odbočovací (před sjezdem) pruh AUX polí a jednosměrka
+// z něj plynule vychází. Kde pruh přidat nejde, napojí se na stávající krajní pruh.
+const AUX=5;
+function throughNbr(S,e,atA){const n=S.nodes[atA?e.a:e.b];let o=null;if(n.edges.length===2)o=S.edges[n.edges[0]===e.id?n.edges[1]:n.edges[0]];else if(n.pass&&n.pass.includes(e.id))o=S.edges[n.pass[0]===e.id?n.pass[1]:n.pass[0]];return o&&o!==e?{o,n}:null}
+// o kolik pruhů má úsek ve směru d víc než sousední úseky téže silnice (přídavné pruhy)
+function auxCount(S,e,d){const L=d?e.lb:e.lf;let m=L;for(const atA of [true,false]){const t=throughNbr(S,e,atA);if(!t)continue;const o=t.o;const same=atA?o.b===t.n.id:o.a===t.n.id;const ol=(same?d:1-d)?o.lb:o.lf;if(ol>0)m=Math.min(m,ol)}return L-m}
+// rozsah přídavného pruhu na úseku e od bodu u: za nájezdem po směru jízdy, před sjezdem proti směru
+function auxRange(e,u,d,entry){const up=entry?(d?[u-AUX,u]:[u,u+AUX]):(d?[u,u+AUX]:[u-AUX,u]);return [clamp(up[0],0,e.g.len),clamp(up[1],0,e.g.len)]}
+// průběžný uzel (dva úseky rovně za sebou, nebo silnice s napojením z boku): úsek po směru jízdy T (entry) nebo proti (sjezd)
+function throughArm(S,n,T,entry){let pair=null;if(n.edges.length===2&&n.arms[0].hx*n.arms[1].hx+n.arms[0].hy*n.arms[1].hy<-0.9)pair=n.arms;else if(n.pass)pair=n.arms.filter(a=>n.pass.includes(a.e));
+  if(!pair||pair.length!==2)return null;for(const a of pair){if((a.hx*T[0]+a.hy*T[1])*(entry?1:-1)<0.7)continue;const link=entry?a.outLink:a.inLink;if(!linkLanes(S,link))return null;const e=S.edges[a.e];return {e,d:link&1,u:e.a===n.id?0:e.g.len}}return null}
+// vyplatí se pruh na rozsahu r? krátký jen tehdy, když na konci navazuje už rozšířený úsek (průplet)
+function auxFits(S,e,d,r,entry){const len=r[1]-r[0];if(len>=1.2)return true;if(len<0.8)return false;const atA=entry?d===1:d===0;const t=throughNbr(S,e,atA);if(!t)return false;
+  const o=t.o,same=atA?o.b===t.n.id:o.a===t.n.id,od=same?d:1-d;return (od?o.lb:o.lf)>(d?e.lb:e.lf)}
+function joinInfo(S,sn,pts,atStart,k){
+  if(!sn||sn.type==="free")return null;const g=geom(pts);if(g.len<1.5)return null;
+  const z=pointAt(g,atStart?0:g.len),far=pointAt(g,atStart?Math.min(6,g.len*0.5):Math.max(g.len-6,g.len*0.5));
+  const vx=far.x-z.x,vy=far.y-z.y,vl=Math.hypot(vx,vy)||1;const entry=!atStart;
+  const okDir=(T)=>{const side=(vx*-T[1]+vy*T[0])/vl,al=(vx*T[0]+vy*T[1])/vl;return side>0.02&&(entry?al<0.4:al>-0.4)};
+  let e,u,d,T=null,atNode=false;
+  if(sn.type==="node"){const n=S.nodes[sn.node];if(!n||n.dead||n.ring||n.gate>=0||n.edges.length<2)return null;
+    for(const a of n.arms){const t=[a.hx,a.hy];if(!okDir(t))continue;const r=throughArm(S,n,t,entry);if(r){e=r.e;u=r.u;d=r.d;T=t;atNode=true;break}}
+    if(!T)return null}
+  else if(sn.type==="edge"){e=S.edges[sn.edge];if(!e||e.dead)return null;u=sn.u;if(u<0.8||u>e.g.len-0.8)return null}
+  else return null;
+  if(e.ring||e.gateEdge||isRampEdge(S,e))return null;
+  const p=pointAt(e.g,u);const one=e.lf===0||e.lb===0;
+  if(!T){d=one?(e.lf>0?0:1):(vx*p.nx+vy*p.ny>=0?0:1);const sg0=d?-1:1;T=[p.tx*sg0,p.ty*sg0];if(!okDir(T))return null}
+  const sg=d?-1:1,L=d?e.lb:e.lf;if(!L)return null;let La=L,add=false,cost=0,dem=[];
+  if(!auxCount(S,e,d)&&lanesAfter(e,k,one?undefined:d)){const r=auxRange(e,u,d,entry);
+    if(auxFits(S,e,d,r,entry)){const lp=planLanes(S,e,k,one?undefined:d,r);if(lp.ok){La=L+k;add=true;cost=lp.cost;dem=lp.demolish}}}
+  const fake={kind:e.kind,lf:e.lf,lb:e.lb};if(d)fake.lb=La;else fake.lf=La;
+  const kk=Math.min(k,La),off=(laneOffset(fake,d,La-kk)+laneOffset(fake,d,La-1))/2;
+  return {entry,k,d,one,add,x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,Td:T,ax:p.x,ay:p.y,lvl:sn.lvl,cost,demolish:dem}}
+// konec trasy se ohne tak, aby do místa napojení přišel ve směru pruhu
+function bendPts(pts,atStart,J){const g=geom(pts);let B=Math.min(3.2,g.len*0.45);const rx=-J.Td[1],ry=J.Td[0],lim=Math.min(g.len*0.7,9);
+  for(let u=1.2;u<=lim;u+=0.4){const q=pointAt(g,atStart?u:g.len-u);const lat=(q.x-J.x)*rx+(q.y-J.y)*ry,al=((q.x-J.x)*J.Td[0]+(q.y-J.y)*J.Td[1])*(atStart?1:-1);B=u;if(lat>=0.55+al*0.12&&u>=Math.min(2.4,g.len*0.45))break}
+  if(atStart){const q=pointAt(g,B);const k=Math.max(0.3,Math.hypot(q.x-J.x,q.y-J.y)*0.4);return cleanPts(mkCubic(J.x,J.y,J.x+J.Td[0]*k,J.y+J.Td[1]*k,q.x-q.tx*k,q.y-q.ty*k,q.x,q.y).concat(subPts(g,B,g.len).slice(2)))}
+  const q=pointAt(g,g.len-B);const k=Math.max(0.3,Math.hypot(q.x-J.x,q.y-J.y)*0.4);return cleanPts(subPts(g,0,g.len-B).concat(mkCubic(q.x,q.y,q.x+q.tx*k,q.y+q.ty*k,J.x-J.Td[0]*k,J.y-J.Td[1]*k,J.x,J.y).slice(2)))}
+// při stavbě: přidá pruh (když v místě ještě není) a vrátí uzel napojení
+function applyJoin(S,J){
+  let n=findNode(S,J.ax,J.ay,J.lvl,0.2);
+  if(J.add){let e=null,u=0,d=J.d;
+    if(n){const r=n.edges.length>=2?throughArm(S,n,J.Td,J.entry):null;if(r){e=r.e;u=r.u;d=r.d}}
+    else{let bd=0.12;for(const x of edgesNear(S,J.ax,J.ay,1)){const r=nearestOn(x.g,J.ax,J.ay);if(Math.abs(lvlAt(S,x,r.u)-J.lvl)>=0.5)continue;if(r.d<bd){bd=r.d;e=x;u=r.u}}
+      if(e&&(u<0.8||u>e.g.len-0.8))e=null}
+    if(e&&!e.ring&&!e.gateEdge&&!isRampEdge(S,e)&&!auxCount(S,e,d)){const r=auxRange(e,u,d,J.entry);
+      if(auxFits(S,e,d,r,J.entry)){const lp=planLanes(S,e,J.k,(e.lf===0||e.lb===0)?undefined:d,r);if(lp.ok){lp.cost=0;lp.demolish=lp.demolish.filter(b=>!b.dead);commitLanes(S,lp);n=findNode(S,J.ax,J.ay,J.lvl,0.2)}}}}
+  n=n||resolvePoint(S,J.ax,J.ay,J.lvl);
+  // nájezd uvnitř už existujícího přídavného pruhu: zbytek pruhu před nájezdem (za sjezdem) se zruší, pruh je průpletový
+  if(J.Td&&n.edges.length===2){const want=J.entry?-1:1;
+    for(const a of n.arms){if((a.hx*J.Td[0]+a.hy*J.Td[1])*want<0.7)continue;const e=S.edges[a.e];if(e.ring||e.gateEdge||e.g.len>AUX+0.6)continue;
+      const d=J.entry?(a.inLink&1):(a.outLink&1);const far=S.nodes[e.a===n.id?e.b:e.a];if(far.edges.length!==2||auxCount(S,e,d)<J.k)continue;
+      const o=S.edges[far.edges[0]===e.id?far.edges[1]:far.edges[0]];const od=(e.a===far.id?o.b===far.id:o.a===far.id)?d:1-d;if(((od?o.lb:o.lf)||99)>=(d?e.lb:e.lf))continue;
+      const one=e.lf===0||e.lb===0;const lp=planLanes(S,e,-J.k,one?undefined:d);if(lp.ok){lp.cost=0;commitLanes(S,lp);n=findNode(S,J.ax,J.ay,J.lvl,0.2)||resolvePoint(S,J.ax,J.ay,J.lvl)}}}
+  return n}
 function planRoad(S,spec){
-  const K=RK[spec.kind];const lanes=clamp(spec.lanes||K.lanes,K.min,K.max);
+  const K=RK[spec.kind];
+  let jS=null,jE=null;
+  const jn=spec.auto?(spec.join||""):"se";
+  if(K.oneway&&jn){const kl=clamp(spec.lanes||K.lanes,K.min,K.max);spec=Object.assign({},spec);
+    if(jn.includes("s")){jS=joinInfo(S,spec.start,spec.pts,true,kl);if(jS)spec.pts=bendPts(spec.pts,true,jS)}
+    if(jn.includes("e")){jE=joinInfo(S,spec.end,spec.pts,false,kl);if(jE)spec.pts=bendPts(spec.pts,false,jE)}}const lanes=clamp(spec.lanes||K.lanes,K.min,K.max);
   const plan={ok:false,msg:"",cost:0,demolish:[],junctions:[],spec,lanes,bad:null,start:spec.start,end:spec.end};
   let g0=geom(spec.pts);plan.g=g0;
   if(g0.len<0.8){plan.msg="Silnice je moc krátká.";return plan}
@@ -249,6 +371,8 @@ function planRoad(S,spec){
   plan.roadCost=Math.round(g0.len*roadCostPerTile(spec.kind,lanes,avgLvl)+(water*(spec.kind==="hwy"?20:8)+rough*3)/4);
   plan.demolishCost=plan.demolish.reduce((s,b)=>s+demolishCost(b),0);
   plan.cost=spec.auto?0:plan.roadCost+plan.demolishCost;
+  plan.joinS=jS;plan.joinE=jE;
+  for(const J of [jS,jE])if(J){plan.cost+=J.cost;for(const b of J.demolish)if(!plan.demolish.includes(b))plan.demolish.push(b)}
   plan.ok=true;return plan}
 function planRebuild(S,plan,cv){const sp=plan.spec,K=RK[sp.kind],lanes=plan.lanes;
   const segs=[];let cost=0;const cells=new Set();let change=false;
@@ -283,18 +407,18 @@ function commitRoad(S,plan){
       reshapeEdge(S,t,()=>{t.kind=sp.kind;t.lf=s.lf;t.lb=s.lb;t.owState=0;if(!RK[sp.kind].walk||!RK[sp.kind].side)t.xw=null});touched.push(S.nodes[t.a],S.nodes[t.b])}
     tidyNodes(S,touched);return {ok:true,edges:[],rebuilt:true}}
   const g0=plan.g,K=RK[sp.kind],lanes=plan.lanes;
-  const nodeOf=q=>q.type==="node"&&q.port&&S.nodes[q.node]&&!S.nodes[q.node].dead?S.nodes[q.node]:resolvePoint(S,q.x,q.y,q.lvl);
-  const seq=[{u:0,node:nodeOf(plan.start)}];
+  const nS=plan.joinS?applyJoin(S,plan.joinS):null,nE=plan.joinE?applyJoin(S,plan.joinE):null;
+  const seq=[{u:0,node:nS||resolvePoint(S,plan.start.x,plan.start.y,plan.start.lvl),port:!!nS}];
   for(const j of plan.junctions)seq.push({u:j.ua,node:resolvePoint(S,j.x,j.y,j.lvl)});
   // začátek a konec ramp mostu
   const rp=plan.ramps||[0,0];
   for(const u of [rp[0],g0.len-rp[1]]){if(u<=0.05||u>=g0.len-0.05||(u===rp[0]&&!rp[0])||(u===g0.len-rp[1]&&!rp[1]))continue;const q=pointAt(g0,u);seq.push({u,node:resolvePoint(S,q.x,q.y,rp[2])})}
-  seq.push({u:g0.len,node:nodeOf(plan.end)});
+  seq.push({u:g0.len,node:nE||resolvePoint(S,plan.end.x,plan.end.y,plan.end.lvl),port:!!nE});
   seq.sort((a,b)=>a.u-b.u);
   const made=[];
   for(let k=0;k<seq.length-1;k++){const A=seq[k],B=seq[k+1];if(A.node===B.node||B.u-A.u<0.05)continue;
-    const pts=subPts(g0,A.u,B.u);pts[0]=A.node.x;pts[1]=A.node.y;pts[pts.length-2]=B.node.x;pts[pts.length-1]=B.node.y;
-    made.push(addEdge(S,A.node,B.node,sp.kind,pts,lanes,K.oneway?0:lanes,{auto:sp.auto}))}
+    const pts=subPts(g0,A.u,B.u);if(!A.port){pts[0]=A.node.x;pts[1]=A.node.y}if(!B.port){pts[pts.length-2]=B.node.x;pts[pts.length-1]=B.node.y}
+    made.push(addEdge(S,A.node,B.node,sp.kind,pts,lanes,K.oneway?0:lanes,{auto:sp.auto,pa:A.port,pb:B.port}))}
   tidyNodes(S,seq.map(q=>q.node));
   return {ok:true,edges:made.filter(e=>!e.dead)}}
 function buildRoad(S,spec){const p=planRoad(S,spec);if(!p.ok)return {ok:false,msg:p.msg,plan:p};const r=commitRoad(S,p);r.plan=p;return r}
@@ -391,7 +515,7 @@ function setKind(S,e,kind){return commitKind(S,planKind(S,e,kind))}
 // otočí směr jednosměrky (druh Jednosměrka nebo Nájezd); auta na úseku se zruší
 function cycleOneway(S,e){if(e.ring)return {ok:false,msg:"Kruhový objezd je jednosměrný sám."};if(e.gateEdge)return {ok:false,msg:"Dálnici do světa měnit nejde."};
   if(e.lf>0&&e.lb>0)return {ok:false,msg:"Obousměrná silnice. Jednosměrku udělá změna druhu na Jednosměrku."};
-  reshapeEdge(S,e,()=>{if(e.lf===0){e.lf=e.lb;e.lb=0}else{const t=e.a;e.a=e.b;e.b=t;e.g=geom(reversePts(e.g.pts));
+  reshapeEdge(S,e,()=>{if(e.lf===0){e.lf=e.lb;e.lb=0}else{const t=e.a;e.a=e.b;e.b=t;const tp=e.pa;e.pa=e.pb;e.pb=tp;e.g=geom(reversePts(e.g.pts));
       for(const b of S.buildings)if(b.access&&b.access.e===e.id)b.access={e:e.id,u:e.g.len-b.access.u,side:-b.access.side,x:b.access.x,y:b.access.y}}
     for(const nid of [e.a,e.b])S.nodes[nid].armLast.clear()},true);
   tidyNodes(S,[S.nodes[e.a],S.nodes[e.b]]);

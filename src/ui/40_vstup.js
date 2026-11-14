@@ -110,6 +110,9 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
   else if(t==="cross"){if(h&&h.type==="edge"){const ed=S.edges[h.id];const u=nearestOn(ed.g,wx,wy).u;const tr=edgeTrim(ed);
       let r;if(u<tr[0]+0.6&&S.nodes[ed.a].edges.length>=3)r=toggleCross(S,S.nodes[ed.a],ed);else if(ed.g.len-u<tr[1]+0.6&&S.nodes[ed.b].edges.length>=3)r=toggleCross(S,S.nodes[ed.b],ed);else r=toggleMidCross(S,ed,u);
       toast(r.ok?(r.on?"Přechod přidán":"Přechod zrušen"):r.msg)}else toast("Klikni na silnici: u křižovatky přepneš přechod, jinde ho přidáš")}
+  else if(t==="arrow"){if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy),p=pointAt(ed.g,r.u);const d=r.u>ed.g.len/2?0:1;
+      const L=d?ed.lb:ed.lf;if(!L)toast("Tímhle směrem se tu ke křižovatce nejede.");else{const off=((wx-p.x)*p.nx+(wy-p.y)*p.ny)*(d?-1:1);let k=0;for(let i=1;i<L;i++)if(Math.abs(laneOffset(ed,d,i)-off)<Math.abs(laneOffset(ed,d,k)-off))k=i;
+        const q=cycleArrow(S,ed,d,k);toast(q.ok?q.state:q.msg)}}else toast("Klikni na pruh před křižovatkou")}
   else if(t==="junction"){if(h&&h.type==="node"){const n=S.nodes[h.id];let next=(n.ctl+1)%4;let pair=null;
       if(next===2){let best=null,bd=2;for(let i=0;i<n.arms.length;i++)for(let j=i+1;j<n.arms.length;j++){const a=n.arms[i],b=n.arms[j];const dt=a.hx*b.hx+a.hy*b.hy;if(dt<bd){bd=dt;best=[a.e,b.e]}}pair=best}
       const r=setControl(S,n,next,pair);toast(r.ok?["Automaticky","Přednost zprava","Hlavní silnice","Semafor"][next]:r.msg);UI.pinned=h}else toast("Klikni na křižovatku")}
@@ -134,7 +137,7 @@ $("helpBtn").addEventListener("click",()=>{$("help").hidden=false});$("helpClose
 $("help").addEventListener("click",e=>{if(e.target.id==="help")$("help").hidden=true});
 let prevSpeed=1;const keysDown=new Set();
 window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;
-  const m={"1":"build","2":"lane","3":"junction","4":"cross","5":"split","6":"erase","7":"zone","8":"hand"};const shp={a:"line",s:"curve",d:"round",f:"connect",g:"branch",h:"template"};
+  const m={"1":"build","2":"lane","3":"junction","4":"cross","5":"split","6":"erase","7":"zone","8":"hand","9":"arrow"};const shp={a:"line",s:"curve",d:"round",f:"connect",g:"branch",h:"template"};
   const k=e.key.toLowerCase();
   if(m[e.key])setTool(m[e.key]);
   else if(shp[k]&&!e.ctrlKey&&!e.metaKey)setShape(shp[k]);

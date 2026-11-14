@@ -80,20 +80,37 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
     zužuje, kurzor ho ukazuje modrou tečkou) napojí silnici přímo na krajní
     pruh: z konce rozšíření se sjíždí ve směru jízdy, do začátku zúžení se
     najíždí. Silnice tam vychází plynule z pruhu, ne kolmo.
+  - **Napojení na pruh** (platí pro každý tvar): Jednosměrka nebo Nájezd,
+    který začíná nebo končí na boku průběžné silnice (mimo křižovatku, na
+    pravé straně jízdního pásu), se nenapojí na osu, ale na krajní pruh:
+    - nájezd (konec jednosměrky) dostane na silnici **připojovací pruh**
+      5 polí po směru jízdy, sjezd (začátek jednosměrky) **odbočovací pruh**
+      5 polí před sebou; pruhů je tolik, kolik má jednosměrka;
+    - konec jednosměrky se sám ohne, aby do pruhu přišel v jeho směru;
+    - když do 5 polí následuje další nájezd nebo sjezd, pruhy se spojí
+      v jeden **průpletový**; kde už silnice víc pruhů mít nemůže nebo je
+      málo místa, napojí se jednosměrka na stávající krajní pruh a dává
+      přednost;
+    - délku pruhu hráč upraví nástrojem Pruhy (tah podél silnice přidá,
+      se Shiftem ubere).
+    Jednosměrka napojená z levé strany, do křižovatky nebo na dálnici do
+    světa je obyčejná křižovatka.
   - Odbočka: tah ze silnice (mimo křižovatku). Strana tahu určuje jízdní
-    pás, tah ve směru jízdy udělá **odbočku**, proti směru **nájezd**. Silnice
-    dostane na 4 pole odbočovací (před odbočkou) nebo připojovací (za
-    nájezdem) pruh s náběhem a odbočka se od ní plynule odpojí. Druh odbočky:
-    zvolená Jednosměrka nebo Nájezd, jinak u dálnice Nájezd a u silnice
-    Jednosměrka; počet pruhů podle volby (pruh na hlavní silnici navíc o stejný
-    počet, když se vejde).
+    pás, tah ve směru jízdy udělá **odbočku**, proti směru **nájezd**; napojí
+    se na pruh podle pravidla výše. Druh odbočky: zvolená Jednosměrka nebo
+    Nájezd, jinak u dálnice Nájezd a u silnice Jednosměrka.
   - Vzor: na rovné dálnici na zemi postaví celou mimoúrovňovou křižovatku
     se silnicí přes dálnici (druh a pruhy silnice podle volby, dálnice
     a nájezdy jsou dané):
     - **Kosodélník**: most přes dálnici, na jeho koncích dvě křižovatky,
-      do každé sjezd a nájezd z dálnice. Potřebuje 20 polí rovné dálnice.
+      do každé sjezd a nájezd z dálnice. Potřebuje 34 polí rovné dálnice.
+    - **Trubka**: napojení silnice, která u dálnice končí (silnice přichází
+      ze strany, kde je kurzor): most, za ním smyčka z dálnice a vnější
+      rampa na dálnici, na bližší straně dvě krátké rampy. Potřebuje
+      44 polí rovné dálnice.
     - **Čtyřlístek**: čtyři smyčky pro odbočení vlevo a čtyři vnější rampy
-      pro odbočení vpravo, silnice nad dálnicí. Potřebuje 38 polí rovné
+      pro odbočení vpravo, silnice nad dálnicí; mezi nájezdem ze smyčky
+      a sjezdem do další je průpletový pruh. Potřebuje 48 polí rovné
       dálnice a hodně místa kolem.
     Na silnici přes dálnici má přednost silnice, nájezdy dávají přednost.
   - Konec u jiné silnice ji napojí; kde se nová silnice v téže výšce protne
@@ -176,10 +193,35 @@ místo.
   vjíždějící dává přednost autu v kruhu. Silnice uvnitř kruhu se odstraní.
 - **Napojení na dálnici**: vjíždějící (nájezd i silnice z boku) dává přednost
   autům na dálnici; jen vpravo (kap. 3).
-- **Pruh**: před odbočením vlevo vnitřní, vpravo vnější. Jinak auto zůstane
-  ve svém pruhu (počítáno od středu silnice) – na navazující silnici se
-  stejnými pruhy se nestahují do jednoho. Když je jeho pruh plný a směr to
-  dovolí, vjede do sousedního. Z nájezdu na dálnici vždy do krajního pruhu.
+- **Napojení na pruh** (kap. 3): nájezd má za napojením vlastní pruh, takže
+  nedává přednost a nezastavuje; průběžná doprava také ne. Auto z nájezdu se
+  pak zařadí do průběžného pruhu, než připojovací pruh skončí.
+- **Semafor a odbočení vlevo**: na zelenou dává odbočující vlevo přednost
+  protijedoucím; na červenou se nejede ani po dlouhém čekání.
+
+### Pruhy
+
+Každý pruh má v uzlu dané, do kterých pruhů z něj jde pokračovat:
+
+- **rovně** pokračuje pruh tam, kde na něj jiný pruh navazuje polohou
+  (i přes změnu počtu pruhů: pruh navíc vznikne vedle krajního, končící
+  pruh žádné pokračování nemá);
+- **vlevo** se jede z vnitřního pruhu, **vpravo** z krajního; na křižovatce
+  tvaru T se pruhy rozdělí napůl;
+- hráč to změní nástrojem **Šipky** (klávesa 9): klik na pruh před
+  křižovatkou přepíná vlevo / rovně / vpravo a jejich kombinace; ručně
+  nastavená šipka je modrá, poslední klik vrátí samočinnou. Každý směr si
+  vždy nějaký pruh ponechá. Šipky jsou vidět na pruzích před křižovatkou
+  (kde má příjezd aspoň dva pruhy).
+
+Auto zná pruhy, ze kterých dojede dál po své trase (dívá se tři uzly
+dopředu), a **přeřazuje se už na úseku**: do sousedního pruhu přejede, když
+je vedle místo. Kdo stojí na konci končícího pruhu, toho auta vedle pustí
+před sebe (zip); dvě auta, která chtějí každé do pruhu toho druhého, si je
+vymění. V koloně auto přejede i do volnějšího pruhu, pokud z něj jeho směr
+jde. Auto, které se před křižovatkou do svého pruhu nedostane, po 1,5 s
+čekání **odbočku mine**: pojede, kam jeho pruh vede, a najde si odtud novou
+cestu. Jen když jiná cesta není, přejede křižovatkou z nesprávného pruhu.
 - **Pojistka proti zaseknutí**: po 3,5 s čekání auto pustí pravidlo
   přednosti (plochu křižovatky a přechody ale hlídá dál). Auto, které stojí
   déle než nastavený limit, to vzdá: zmizí, lidé to vzdají a dojdou pěšky,
@@ -325,15 +367,17 @@ místo.
 
 - Neukládá rozehranou hru (`napady/ukladani_hry.md`).
 - Nemá železnici, kopce ani typy obcí (`napady/`).
-- Má jen dva vzory mimoúrovňových křižovatek (kosodélník, čtyřlístek); jiné
-  se staví z mostů, odboček a nájezdů.
-- Pruhy se nepropojují jednotlivě (odbočka se napojuje na uzel, pruh volí
-  auto samo).
+- Má jen tři vzory mimoúrovňových křižovatek (kosodélník, čtyřlístek,
+  trubka); jiné se staví z mostů a nájezdů.
+- Spojení pruh → pruh nejde kreslit jednotlivě; hráč volí jen šipky pruhu.
+- Semafor má dvě fáze (dvě osy křižovatky), nemá zvláštní fázi pro odbočení
+  vlevo ani nastavení časů.
+- Konec připojovacího pruhu nejde chytit a táhnout; délka se mění nástrojem
+  Pruhy.
 - Nemá tunely (`napady/tunely.md`).
 - Budovy nejsou natočené podél šikmých silnic; u diagonál zůstávají zubaté
   mezery.
 - Pruh nejde přidat přes křižovatku jedním tahem (tah platí pro jeden úsek).
-- Auta nemění pruh uprostřed úseku; pruh volí při vjezdu na úsek.
 - Nemá cíle, úrovně ani konec hry.
 
 ## Jak se tento dokument mění

@@ -3,6 +3,24 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.9.0 – 14. 11. 2026
+
+Přestavba dopravy na pruhy (R60–R67).
+
+- V každém uzlu tabulka spojení pruh → pruh; auta jezdí jen po ní (R60).
+- Jednosměrka nebo nájezd z boku silnice se napojí na krajní pruh, silnice
+  dostane sama připojovací / odbočovací pruh 5 polí, blízké pruhy se spojí
+  v průpletový; nájezd nedává přednost a nezastavuje (R61).
+- Auta se přeřazují na úseku, na konci pruhu zip, výměna pruhů v průpletu;
+  kdo se nezařadí, odbočku mine a najde jinou cestu (R63).
+- Nástroj Šipky (9): řazení pruhů před křižovatkou; šipky se kreslí (R62).
+- Semafor: odbočení vlevo dává přednost protijedoucím, červená se
+  neprojíždí (R64).
+- Vzory znovu: Kosodélník, Čtyřlístek s průpletovými pruhy, nová Trubka (R65).
+- Přídavné pruhy mají silnou přerušovanou čáru; napojení se nekreslí jako
+  křižovatka.
+- Oprava: auta v sousedních pruzích si v křižovatce zbytečně dávala přednost.
+
 ## 0.8.0 – 13. 11. 2026
 
 - Napojení na konec přidaného pruhu: silnice vyjde plynule z krajního pruhu
