@@ -169,8 +169,8 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
   I rozšíření nabídne zbourání budov, do kterých by zasáhlo. Při změně druhu
   nebo pruhů auta na úseku zůstanou (z rušeného pruhu se přesunou vedle);
   jen otočení směru auta na úseku zruší.
-- **Kruhový objezd** se mění celý: druh i pruhy (1–3) platí pro všechny jeho
-  úseky.
+- **Kruhový objezd** se mění celý: druh, pruhy (1–6) a typ (Běžný / Turbo,
+  ve výběru úseku kruhu) platí pro všechny jeho úseky.
 - **Upravit** (nástroj, klávesa 0): postavenou silnici jde přetvarovat
   tahem za úchyty, které se ukážou na úseku pod kurzorem (klik úsek vybere):
   - **kolečko** v křižovatce nebo na konci silnice: posune uzel na jiné pole;
@@ -238,6 +238,21 @@ místo.
   14 s, se žlutou).
 - **Kruhový objezd**: jednosměrný okruh proti směru hodinových ručiček;
   vjíždějící dává přednost autu v kruhu. Silnice uvnitř kruhu se odstraní.
+  Má 1–6 pruhů (na víc pruhů musí být kruh větší, náhled řekne jak).
+  Každé napojení silnice na kruh je křižovatka se spojeními pruhů, která
+  jdou upravit nástrojem Spojení. Samočinně (pruh 0 je vnitřní):
+  - **vjezd**: pravý pruh vjezdu do vnějšího pruhu kruhu, ostatní pruhy do
+    vnitřních (jediný pruh vjezdu do všech); auto si vybere pruh podle toho,
+    kde vyjede;
+  - **výjezd**: z vnějších pruhů kruhu do pruhů výjezdu zprava (kolik pruhů
+    má výjezd, tolik vnějších pruhů může vyjet);
+  - **v kruhu** podle typu, který se volí při stavbě (Tvar Kruh → Běžný /
+    Turbo) a jde přepnout ve výběru úseku kruhu:
+    - **Běžný**: pruh v kruhu pokračuje svým pruhem a auta mezi pruhy
+      přejíždějí, aby se dostala k výjezdu (přerušované čáry);
+    - **Turbo**: v kruhu se nepřejíždí (plné čáry); u každého výjezdu se
+      pruhy posunou o jeden ven (spirála), vnější pruh vyjede. Každý pruh
+      tak vede k pevnému výjezdu a auto si ho vybere už při vjezdu.
 - **Napojení na dálnici**: vjíždějící (nájezd i silnice z boku) dává přednost
   autům na dálnici; jen vpravo (kap. 3).
 - **Napojení na pruh** (kap. 3): nájezd má za napojením vlastní pruh, takže

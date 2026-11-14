@@ -1,11 +1,14 @@
 // Úpravy sítě: kruhový objezd, pruhy, druh, přednost, rozdělení, přechody, bourání, souvislost sítě.
 
 // ---- kruhový objezd ----
-function planRoundabout(S,cx,cy,r,kind,lanes){kind=kind||"road";
-  const plan={ok:false,msg:"",cost:0,demolish:[],cx,cy,r,round:true,kind};
+// turbo = pruhy se v kruhu stáčejí jako spirála a nepřejíždí se (R99)
+const RING_MAX=6;
+function planRoundabout(S,cx,cy,r,kind,lanes,turbo){kind=kind||"road";
+  const plan={ok:false,msg:"",cost:0,demolish:[],cx,cy,r,round:true,kind,turbo:!!turbo};
   if(r<1.4){plan.msg="Kruhový objezd je moc malý.";return plan}
+  {const L=clamp(lanes||(r>=3?2:1),1,RING_MAX),rmin=Math.ceil((L*LW/2+RK[kind].side+0.7)*2)/2;if(r<rmin){plan.msg="Na "+L+" "+(L<5?"pruhy":"pruhů")+" musí mít kruh poloměr aspoň "+rmin.toFixed(1)+" pole.";return plan}}
   if(cx-r<0.5||cy-r<0.5||cx+r>MW-0.5||cy+r>MH-0.5){plan.msg="Kruhový objezd se nevejde na mapu.";return plan}
-  const pts=mkArc(cx,cy,r,0,Math.PI*2);const g=geom(pts);plan.g=g;lanes=clamp(lanes||(r>=3?2:1),1,3);plan.lanes=lanes;
+  const pts=mkArc(cx,cy,r,0,Math.PI*2);const g=geom(pts);plan.g=g;lanes=clamp(lanes||(r>=3?2:1),1,RING_MAX);plan.lanes=lanes;
   plan.cross=[];
   for(const e of S.edges){if(e.dead||!bbOverlap(e.g.bb,g.bb,0.2))continue;
     const xs=polyInter(g,e.g).filter(x=>lvlAt(S,e,x.ub)<0.5);
@@ -32,10 +35,15 @@ function commitRoundabout(S,plan){
   for(const f of full){f.n.ring=rid;f.n.keep=false;f.n.x=cx+Math.cos(f.a)*r;f.n.y=cy+Math.sin(f.a)*r}
   const lanes=plan.lanes,made=[];
   for(let k=0;k<full.length;k++){const A=full[k],B=full[(k-1+full.length)%full.length];let a1=B.a;if(a1>=A.a)a1-=Math.PI*2;
-    const pts=mkArc(cx,cy,r,A.a,a1);made.push(addEdge(S,A.n,B.n,plan.kind||"road",pts,lanes,0,{ring:rid}))}
+    const pts=mkArc(cx,cy,r,A.a,a1);made.push(addEdge(S,A.n,B.n,plan.kind||"road",pts,lanes,0,{ring:rid,turbo:plan.turbo}))}
   for(const f of full)topoNode(S,f.n);
-  S.rings.push({id:rid,cx,cy,r});
+  S.rings.push({id:rid,cx,cy,r,turbo:plan.turbo});
+  for(const f of full)topoNode(S,f.n);netChanged(S);
   return {ok:true,edges:made}}
+// přepne typ kruhového objezdu (Běžný / Turbo): změní se jen samočinná spojení a přejíždění v kruhu
+function setRingType(S,rid,turbo){const R=S.rings.find(q=>q.id===rid);if(!R)return {ok:false,msg:"Kruhový objezd nenalezen."};R.turbo=!!turbo;
+  const ns=new Set();for(const e of ringEdges(S,rid)){e.turbo=!!turbo;ns.add(e.a);ns.add(e.b)}for(const id of ns)topoNode(S,S.nodes[id]);netChanged(S);
+  return {ok:true,msg:turbo?"Turbo: pruhy se stáčejí, v kruhu se nepřejíždí":"Běžný: v kruhu se přejíždí mezi pruhy"}}
 const ringEdges=(S,rid)=>S.edges.filter(e=>!e.dead&&e.ring===rid);
 
 // ---- úpravy úseku ----
@@ -51,7 +59,7 @@ function reshapeEdge(S,e,fn,hard){
 // skupina úseků, kterých se úprava týká: kruhový objezd celý, jinak jen úsek
 const editGroup=(S,e)=>e.ring?ringEdges(S,e.ring):[e];
 function lanesAfter(e,delta,dir){const K=RK[e.kind];
-  if(e.lf===0||e.lb===0){const n=e.lf+e.lb+delta;const mn=K.oneway||e.ring?K.min:1,mx=e.ring?3:K.oneway?K.max:K.max*2;if(n<mn||n>mx)return null;return e.lf?[n,0]:[0,n]}
+  if(e.lf===0||e.lb===0){const n=e.lf+e.lb+delta;const mn=K.oneway||e.ring?K.min:1,mx=e.ring?RING_MAX:K.oneway?K.max:K.max*2;if(n<mn||n>mx)return null;return e.lf?[n,0]:[0,n]}
   const lf=e.lf+(dir===undefined||dir===0?delta:0),lb=e.lb+(dir===undefined||dir===1?delta:0);
   if(lf<K.min||lb<K.min||lf>K.max||lb>K.max)return null;return [lf,lb]}
 // pruh navíc nebo méně; dir = jen jeden směr (0 = a→b), range = jen část úseku [u0,u1]
@@ -72,7 +80,7 @@ function commitLanes(S,p){if(!p.ok)return p;if(S.money<p.cost)return {ok:false,m
     t._lsh=it.lsh||0;reshapeEdge(S,t,()=>{t.lf=it.lf;t.lb=it.lb;t.sh=it.sh||0});touched.push(S.nodes[t.a],S.nodes[t.b])}
   tidyNodes(S,touched);return {ok:true}}
 function kindLanes(e,kind,lanes){const K=RK[kind];const one=e.lf===0||e.lb===0;
-  if(e.ring)return [clamp(lanes||e.lf,1,3),0];
+  if(e.ring)return [clamp(lanes||e.lf,1,RING_MAX),0];
   if(K.oneway){const n=clamp(lanes||(one?e.lf+e.lb:e.lf+e.lb),K.min,K.max);return e.lf===0?[0,n]:[n,0]}
   if(lanes)return [clamp(lanes,K.min,K.max),clamp(lanes,K.min,K.max)];
   if(one){const n=clamp(Math.ceil((e.lf+e.lb)/2),K.min,K.max);return [n,n]}

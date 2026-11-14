@@ -3,6 +3,17 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.17.0 – 14. 11. 2026
+
+- Kruhové objezdy s 1–6 pruhy a dvěma typy (R99): **Běžný** (v kruhu se
+  přejíždí mezi pruhy) a **Turbo** (pruhy se u výjezdů stáčejí ven, každý
+  vede k pevnému výjezdu, v kruhu se nepřejíždí, plné čáry). Typ se volí při
+  stavbě (Tvar Kruh) a jde přepnout ve výběru úseku kruhu.
+- Napojení silnice na kruh je křižovatka: nástroj Spojení na něm ukáže
+  a upraví spojení pruhů. Samočinně: pravý pruh vjezdu do vnějšího pruhu,
+  ostatní do vnitřních; vyjíždí se z vnějších pruhů.
+- Na víc pruhů musí být kruh větší; náhled řekne nejmenší poloměr.
+
 ## 0.16.0 – 14. 11. 2026
 
 - Přiblížení až 256 px na pole (dřív 64), aby šly pohodlně upravovat

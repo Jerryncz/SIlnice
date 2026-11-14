@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={saveState,loadState,planBend,planMove,planReconnect,planSlide,commitEdit,editHandles,slideInfo,updateOvertakes,lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,connAdd,connRemove,connReset,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={planRoundabout,commitRoundabout,setRingType,connNodeOk,saveState,loadState,planBend,planMove,planReconnect,planSlide,commitEdit,editHandles,slideInfo,updateOvertakes,lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,connAdd,connRemove,connReset,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -257,6 +257,49 @@ for (const type of ["diamond", "clover", "trumpet"]) {
     ok(Math.abs(Math.abs(p.x - n.x) - Math.abs(p.y - n.y)) < 0.02, "roh: konec pruhu leží na úhlopříčce rohu"); }
 }
 
+// ---- kruhový objezd s víc pruhy: Běžný a Turbo, spojení jako v křižovatce ----
+for (const turbo of [false, true]) {
+  const nm = turbo ? "turbo" : "kruh";
+  const S = A.createSim(11); S.money = 1e8;
+  for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
+  const F = (x, yy) => ({ type: "free", x, y: yy, lvl: 0 });
+  const cx = 40.5, cy = 40.5;
+  ok(!A.planRoundabout(S, cx, cy, 1.5, "road", 6, turbo).ok, nm + ": 6 pruhů na malý kruh nejde");
+  const rads = [];
+  for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) { const r = A.buildRoad(S, { pts: A.mkLine(cx + dx * 14, cy + dy * 14, cx + dx * 2, cy + dy * 2), kind: "road", lanes: 2, start: F(cx + dx * 14, cy + dy * 14), end: F(cx + dx * 2, cy + dy * 2), auto: true }); rads.push(r.edges[0]); }
+  const p = A.planRoundabout(S, cx, cy, 4, "road", 3, turbo); ok(p.ok, nm + ": 3 pruhy naplánovány " + (p.msg || ""));
+  const r = A.commitRoundabout(S, p); ok(r.ok, nm + ": postaven");
+  const rid = S.rings[S.rings.length - 1].id; const ring = S.edges.filter(e => !e.dead && e.ring === rid);
+  ok(ring.length >= 4 && ring.every(e => e.lf === 3 && !!e.turbo === turbo), nm + ": úseky kruhu mají 3 pruhy a typ");
+  const entries = S.nodes.filter(n => !n.dead && n.ring === rid && n.edges.length === 3);
+  ok(entries.length === 4 && entries.every(n => A.connNodeOk(n)), nm + ": 4 vjezdy jsou křižovatky pro Spojení");
+  const n = entries[0]; const rin = n.arms.find(a => S.edges[a.e].ring && A.linkLanes(S, a.inLink)), rad = n.arms.find(a => !S.edges[a.e].ring), rout = n.arms.find(a => S.edges[a.e].ring && A.linkLanes(S, a.outLink));
+  const lcR = n.lc.get(rad.inLink), lcI = n.lc.get(rin.inLink);
+  ok(lcR[1].some(q => q.link === rout.outLink && q.lane === 2), nm + ": pravý pruh vjezdu do vnějšího pruhu kruhu");
+  ok(lcR[0].some(q => q.link === rout.outLink && q.lane < 2), nm + ": levý pruh vjezdu do vnitřního pruhu");
+  ok(lcI[2].some(q => q.link === rad.outLink) && !lcI[0].some(q => q.link === rad.outLink), nm + ": z kruhu se vyjíždí z vnějších pruhů");
+  if (turbo) ok(lcI[0].some(q => q.link === rout.outLink && q.lane === 1) && !lcI[2].some(q => q.link === rout.outLink), nm + ": pruhy se u výjezdu stáčejí ven");
+  else ok(lcI[0].some(q => q.link === rout.outLink && q.lane === 0) && lcI[2].some(q => q.link === rout.outLink && q.lane === 2), nm + ": pruhy v kruhu pokračují svým pruhem");
+  ok(A.connRemove(S, n, rad.inLink, 1, rout.outLink, 2).ok && !n.lc.get(rad.inLink)[1].some(q => q.link === rout.outLink && q.lane === 2), nm + ": spojení na vjezdu jde zrušit");
+  ok(A.connReset(S, n).ok && n.lc.get(rad.inLink)[1].some(q => q.link === rout.outLink && q.lane === 2), nm + ": a vrátit samočinné");
+  // provoz: auta ze všech stran do všech výjezdů
+  const outerOf = e => (Math.hypot(e.g.pts[0] - cx, e.g.pts[1] - cy) > 10 ? 0 : 1);
+  let made = 0, maxWait = 0, ringLaneChange = 0; const seen = new Map();
+  const spawn = (from, to) => { const fu = outerOf(from) === 0 ? 0.5 : from.g.len - 0.5, tu = outerOf(to) === 0 ? 0.5 : to.g.len - 0.5;
+    const g = { e: to.id, u: tu, dirs: [0, 1] }; const pp = A.findPath(S, { e: from.id, u: fu, dirs: [0, 1] }, g); if (!pp) return;
+    const c = A.newVehicle(S, { links: pp.links, s: pp.s0, sEnd: pp.sEnd, goalEp: g, trip: { to: { isGate: true } }, state: "exit" }); c.lane = A.chooseLane(S, c, 0); S.exiting.push(c); made++; };
+  const live = () => S.edges.filter(e => !e.dead && !e.ring && !e.gateEdge && Math.hypot(e.g.pts[0] - cx, e.g.pts[1] - cy) + Math.hypot(e.g.pts[e.g.pts.length - 2] - cx, e.g.pts[e.g.pts.length - 1] - cy) > 12);
+  for (let t = 0; t < 3600; t++) { const L = live(); if (t % 15 === 0) { const a = L[(t / 15) % L.length | 0], b = L[((t / 15) * 7 + 2) % L.length | 0]; if (a !== b) spawn(a, b); }
+    A.updateVehicles(S, 1 / 30);
+    for (const c of S.cars) { if (c.dead) continue; if (c.wait > maxWait) maxWait = c.wait; if (c.state !== "drive") continue; const e = S.edges[c.links[c.li] >> 1]; if (!e.ring) continue;
+      const k = c.id + ":" + e.id; const pl = seen.get(k); if (pl !== undefined && pl !== c.lane) ringLaneChange++; seen.set(k, c.lane); } }
+  const left = S.cars.filter(c => !c.dead).length; ok(made > 100 && made - left > made * 0.8, nm + ": auta projela kruhem (" + (made - left) + " z " + made + ")"); ok(S.stuckN === 0, nm + ": nic se nezaseklo (" + S.stuckN + ", nejdelší čekání " + maxWait.toFixed(1) + " s)");
+  if (turbo) ok(ringLaneChange === 0, nm + ": v kruhu se nepřejíždí (" + ringLaneChange + ")");
+  zkontroluj(S, nm);
+  // přepnutí typu
+  ok(A.setRingType(S, rid, !turbo).ok && S.edges.filter(e => !e.dead && e.ring === rid).every(e => !!e.turbo === !turbo), nm + ": typ kruhu jde přepnout");
+}
+
 // ---- editor silnic: ohnout úsek, posunout křižovatku, přepojit konec, posunout hranici přídavného pruhu ----
 {
   console.log("Editor silnic");
@@ -364,7 +407,7 @@ for (const seed of [1, 4242, 98765]) {
   }
   // kruhový objezd na křižovatce
   const junc = S.nodes.find(n => !n.dead && n.edges.length >= 3 && !n.ring && n.gate < 0 && n.arms.every(a => S.edges[a.e].kind !== "hwy"));
-  if (junc) { const p = A.planRoundabout(S, junc.x, junc.y, 2); if (p.ok) { const r = A.commitRoundabout(S, p); ok(r.ok, "kruhový objezd postaven"); souhrn.kruh = (souhrn.kruh || 0) + 1; } }
+  if (junc) { const p = A.planRoundabout(S, junc.x, junc.y, 2); if (p.ok) { const r = A.commitRoundabout(S, p); ok(r.ok, "kruhový objezd postaven"); souhrn.kruh = (souhrn.kruh || 0) + 1; if (seed === 98765) ok(A.setRingType(S, S.rings[S.rings.length - 1].id, true).ok, "kruh přepnut na turbo"); } }
   const pop0 = S.towns.reduce((a, t) => a + t.pop, 0);
   const T = Math.round(A.DAY / A.STEP);
   for (let s = 0; s < T; s++) { A.step(S, A.STEP); if (s % 600 === 0) zkontroluj(S, "den1 " + A.hourOf(S).toFixed(1) + "h"); }

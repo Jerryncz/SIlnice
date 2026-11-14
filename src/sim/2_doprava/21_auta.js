@@ -57,18 +57,18 @@ function lcOf(S,l){const n=S.nodes[linkTo(S,l)];return n.lc?n.lc.get(l):null}
 function goodLanes(S,links,li,depth){const l=links[li],L=linkLanes(S,l),nl=links[li+1];const all=[];for(let k=0;k<L;k++)all.push(k);if(nl===undefined)return all;
   const lc=lcOf(S,l);if(!lc||lc.length!==L)return all;
   const g=all.filter(k=>lc[k].some(x=>x.link===nl));if(!g.length)return all;
-  if(depth>0){const nx=goodLanes(S,links,li+1,depth-1);
+  if(depth>0){const nx=goodLanes(S,links,li+1,S.edges[nl>>1].turbo?depth:depth-1);   // turbo kruhem se dívá až k výjezdu (pruhy se nepřejíždí)
     // nejlepší jsou pruhy, které vedou přímo do dobrého pruhu dalšího úseku; jinak ty, které k němu vedou nejblíž
     let best=99;const ds=g.map(k=>{let m=99;for(const x of lc[k])if(x.link===nl)for(const y of nx)m=Math.min(m,Math.abs(x.lane-y));best=Math.min(best,m);return m});
     return g.filter((k,i)=>ds[i]===best)}
   return g}
 function chooseLane(S,c,li){const g=goodLanes(S,c.links,li,2);if(c.state==="drive"&&li===c.li&&g.includes(c.lane))return c.lane;return g[g.length-1]}
 // přeřazení do sousedního pruhu t, když je vedle místo
-function laneShift(S,e,d,c,t){const q2=e.q[d][t];if(!q2)return false;
+function laneShift(S,e,d,c,t){if(e.turbo)return false;const q2=e.q[d][t];if(!q2)return false;
   for(const o of q2){const dz=o.s-c.s,need=(o.len+c.len)/2+0.12;if(Math.abs(dz)<need)return false;if(dz<0){if(o.v>0.3&&-dz<need+0.25)return false;break}}
   c.lcD=Math.sign(t-c.lane);c.lane=t;insertQ(q2,c);c.lcT=1.0;c.zip=0;return true}
 // dvě auta vedle sebe, každé chce do pruhu toho druhého: vymění si pruhy (průplet)
-function laneSwap(S,e,d,c,i,t){const k=c.lane,q=e.q[d][k],q2=e.q[d][t];if(!q2||q[i]!==c)return false;
+function laneSwap(S,e,d,c,i,t){if(e.turbo)return false;const k=c.lane,q=e.q[d][k],q2=e.q[d][t];if(!q2||q[i]!==c)return false;
   for(let j=0;j<q2.length;j++){const o=q2[j];if(o.s<c.s-0.5)break;if(Math.abs(o.s-c.s)>0.5||o.conn||o.lcT>0||!o.need||o.needL!==c.needL||o.need.includes(t))continue;
     let b=o.need[0];for(const x of o.need)if(Math.abs(x-t)<Math.abs(b-t))b=x;if(Math.sign(b-t)!==Math.sign(k-t))continue;
     const fit=(qq,m,x)=>{const up=qq[m-1],dn=qq[m+1];return (!up||up.s-x.s>=(up.len+x.len)/2+0.1)&&(!dn||x.s-dn.s>=(dn.len+x.len)/2+0.1)};
