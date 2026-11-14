@@ -28,7 +28,7 @@ function startTrip(S,tr){
   else{const fb=tr.from;let i=tr.spot;if(i===undefined&&isHome(fb)&&fb.type==="flat"&&lotLayout(S,fb))i=homeCars(fb)-1;
     const lay=i!==undefined&&i>=0?lotLayout(S,fb):null;
     // vyjetí z místa na parkovišti po uličce, pak čeká u vjezdu jako dřív
-    if(lay&&i<lay.spots.length){c.path=spotPath(lay,i).reverse();c.plen=pathLen(c.path);c.ps=0;c.state="unpark";if(fb.spotUsed&&!isHome(fb)){fb.spotUsed[i]=c;c.spotB=fb;c.spot=i}S.unparking.push(c)}
+    if(lay&&i<lay.spots.length){c.path=spotPath(lay,i).reverse();c.plen=pathLen(c.path);c.ps=0;c.state="unpark";if(fb.spotUsed&&!isHome(fb)&&!fb.spotUsed[i]){fb.spotUsed[i]=c;c.spotB=fb;c.spot=i}S.unparking.push(c)}
     else S.exiting.push(c)}
   if(tr.customer&&tr.to.cap>0&&!tr.reserved){tr.to.incoming++;tr.reserved=true}
   return true}
@@ -84,7 +84,7 @@ function processReturns(S){let guard=0;
     if(!home||home.dead||(!home.isGate&&!home.access)||place.dead){gone();continue}
     const back={purpose:"return",ret:true,from:place,to:home,home,group:tr.group,mode,color:tr.color,spot:pe&&pe.spot!==undefined?pe.spot:undefined};
     if(pe&&pe.spot!==undefined)releaseSpot(place,pe.spot,pe);
-    if(startTrip(S,back)){decPresence(tr);if(k>=0)place.parked.splice(k,1)}
+    if(startTrip(S,back)){decPresence(tr);if(k>=0){place.parked.splice(k,1);if(pe&&pe.spot!==undefined)releaseSpot(place,pe.spot,pe)}}   // rozvržení se mohlo během výjezdu přepočítat
     else if(pe&&pe.spot!==undefined&&!place.spotUsed[pe.spot])place.spotUsed[pe.spot]=pe
     else{r.tries=(r.tries||0)+1;if(r.tries<5)S.returns.push(r,S.time+3);else gone()}}}
 function due(S,rem,h,dh,a,b){if(rem<=0||h<a||h>=b)return 0;const exp=rem*dh/Math.max(0.05,b-h);let n=Math.floor(exp);if(S.R()<exp-n)n++;return Math.min(n,rem)}

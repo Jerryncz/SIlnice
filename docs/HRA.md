@@ -337,11 +337,13 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 - **Hospoda** (od 24 obyvatel), **obchod** (od 40), **nákupní centrum**
   (od 90), **obchodní zóna** (od 150, nebo od 100 při napojení na svět).
   Všechny s parkovištěm.
-- **Parkoviště**: od silnice vede dovnitř ulička (u širšího parkoviště
-  obousměrná, pole široká) a po obou jejích stranách jsou kolmá místa;
-  široké parkoviště má uliček víc, spojuje je příjezd podél silnice. Auta
-  stojí vedle uličky, ne v ní. Podniky mají větší parkoviště; kapacita je
-  počet vyznačených míst.
+- **Parkoviště** se skládá z modulů podle místa mezi silnicí a budovou
+  (`docs/PARKOVISTE.md`): od budovy k silnici dvouřadé moduly (stání,
+  ulička, stání), případně jeden jednořadý, zbytek u silnice je zeleň se
+  stromy. Uličky spojuje příčná ulička na straně vjezdu, která vede
+  k silnici; větší parkoviště má i druhou naproti. Podniky se zákazníky
+  mají u budovy žlutě vyznačené **místo pro zásobování**: staví na něm jen
+  nákladní auta a osobní auta na něj nesmějí. Kapacita je počet stání.
   Auto zajede po uličce na volné místo, které si při příjezdu zamluví,
   a při odjezdu po ní vyjede k silnici. Dvě auta nikdy nestojí na jednom
   místě. Parkovací dům má víc míst (patra), než je vidět.

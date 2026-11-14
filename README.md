@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.11.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.12.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -25,6 +25,7 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | `build.js` | skládá `src/` do `index.html` |
 | `docs/HRA.md` | **základní dokument** – jak se svět hry chová a proč, lidskou řečí |
 | `docs/ROZHODNUTI.md` | záznam rozhodnutí s datem, důvodem a zvažovanými možnostmi |
+- `docs/PARKOVISTE.md` – pravidla skládání parkovišť a katalog předloh (`docs/parkoviste/katalog.html`).
 | `napady/` | nápady do budoucna (ukládání hry, křižovatky, železnice …) – nic z nich není ve hře |
 | `poznatky/` | poznatky z jednotlivých chatů, čekající na zapracování |
 | `tests/test_simulace.js` | automatický test simulace (`node tests/test_simulace.js`) |

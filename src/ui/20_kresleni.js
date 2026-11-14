@@ -229,12 +229,16 @@ function drawParked(x0,y0,x1,y1){if(cam.z<6)return;for(const b of S.buildings){c
   if(b.type==="flat"){const n=homeCars(b);const col=b.town?b.town.color:"#888";for(let k=0;k<n;k++){const s=lay.spots[k];drawCarAt(s.x,s.y,s.ang,shade(col,0.75+((k*37)%5)*0.1),false,null)}continue}
   for(const pe of b.parked){if(pe.spot===undefined)continue;const s=lay.spots[pe.spot];if(s)drawCarAt(s.x,s.y,s.ang,pe.color,false,null)}}}
 // ulička parkoviště: páteř od vjezdu a uličky mezi řadami míst
-function drawLot(b){const lay=lotLayout(S,b);if(!lay||cam.z<7)return;const W=lay.W;ctx.strokeStyle=colors.street;ctx.lineCap="butt";let a,z;
-  // příjezd podél silnice k uličkám a uličky kolmo k silnici
-  if(lay.l1-lay.l0>0.05){ctx.lineWidth=0.4;ctx.beginPath();a=W(lay.first,lay.l0-0.2);z=W(lay.first,lay.l1+0.2);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1]);ctx.stroke()}
-  for(const q of lay.aisles){ctx.lineWidth=q.w-0.06;ctx.beginPath();a=W(lay.first-0.25,q.lat);z=W(q.d1,q.lat);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1]);ctx.stroke()}
-  // čáry mezi místy
-  if(cam.z>=12){ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=0.03;ctx.beginPath();for(const s of lay.spots){for(const dl of [-0.25,0.25]){a=W(s.dep+dl,s.lat-0.23);z=W(s.dep+dl,s.lat+0.23);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}}ctx.stroke()}
+function drawLot(b){const lay=lotLayout(S,b);if(!lay||cam.z<7)return;const W=lay.W;let a,z;const line=(d0,l0,d1,l1)=>{a=W(d0,l0);z=W(d1,l1);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])};
+  const rect=(d0,l0,d1,l1)=>{const q=[W(d0,l0),W(d0,l1),W(d1,l1),W(d1,l0)];ctx.beginPath();q.forEach((v,i)=>i?ctx.lineTo(v[0],v[1]):ctx.moveTo(v[0],v[1]));ctx.closePath()};
+  // zeleň ve zbytku, uličky, místo pro zásobování, čáry mezi stáními
+  ctx.fillStyle="#b9d2a2";for(const g of lay.green){rect(g.d0,g.l0,g.d1,g.l1);ctx.fill()}
+  ctx.strokeStyle=colors.street;ctx.lineCap="square";for(const q of lay.aisles){ctx.lineWidth=q.w-0.08;ctx.beginPath();line(q.a[0],q.a[1],q.b[0],q.b[1]);ctx.stroke()}
+  ctx.lineCap="butt";
+  for(const q of lay.bays){ctx.fillStyle="rgba(224,184,58,.35)";rect(q.dep-q.hd,q.lat-q.hl,q.dep+q.hd,q.lat+q.hl);ctx.fill();if(cam.z>=12){ctx.strokeStyle="#d8a92a";ctx.lineWidth=0.035;ctx.stroke();ctx.beginPath();for(let t=-q.hl+0.12;t<q.hl;t+=0.16)line(q.dep-q.hd,q.lat+t,q.dep+q.hd,q.lat+t+0.1);ctx.stroke()}}
+  if(cam.z>=12){ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=0.025;ctx.beginPath();for(const s of lay.spots){if(s.truck)continue;
+      if(s.along==="d")for(const dl of [-s.hw,s.hw])line(s.dep-0.23,s.lat+dl,s.dep+0.23,s.lat+dl);else for(const dl of [-s.hw,s.hw])line(s.dep+dl,s.lat-0.23,s.dep+dl,s.lat+0.23)}ctx.stroke()}
+  if(cam.z>=9){ctx.fillStyle="#5c8f4a";for(const t of lay.trees){ctx.beginPath();ctx.arc(t[0],t[1],0.15,0,Math.PI*2);ctx.fill()}}
   ctx.lineCap="round"}
 function drawZones(x0,y0,x1,y1){if(!zonePattern)return;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=zonePattern;const z=cam.z;
   const c=z*CS;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(S.zone[y*W+x])ctx.fillRect(x*c-cam.x,y*c-cam.y,c,c);ctx.restore()}

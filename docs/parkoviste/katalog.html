@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Druhy parkovišť</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Barlow:wght@400;500&display=swap">
+<style>
+/* Rozvržení: katalogové listy ve dvou sloupcích, každý list = půdorys v měřítku + štítek s parametry */
+:root{
+  --bg:#eef0ec; --card:#f8f9f6; --fg:#1d2420; --muted:#5d6861; --line:#cfd5cd; --accent:#1f5fbf;
+  --grass:#cfdcc0; --asph:#8d9499; --asph2:#9aa1a6; --mark:#f4f6f7; --bld:#b9825a; --bldTop:#a06f4c; --walk:#dcd8cc;
+  --street:#6f767b; --isl:#a9c58f; --tree:#5c8f4a; --arrow:#f4f6f7; --acc:#3f78c9; --lane:#e0312c;
+  --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif; --body:"Barlow","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#15191a; --card:#1d2324; --fg:#e7ece8; --muted:#9aa6a0; --line:#323b3a; --accent:#78a9ff;
+  --grass:#2c3a2c; --asph:#4a5156; --asph2:#565d62; --mark:#d9dee0; --bld:#8a6247; --bldTop:#75523b; --walk:#5a5a52;
+  --street:#3a4145; --isl:#3f5a3a; --tree:#6a9a58; --arrow:#d9dee0; --acc:#33609f; --lane:#ff5a52; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#15191a; --card:#1d2324; --fg:#e7ece8; --muted:#9aa6a0; --line:#323b3a; --accent:#78a9ff;
+  --grass:#2c3a2c; --asph:#4a5156; --asph2:#565d62; --mark:#d9dee0; --bld:#8a6247; --bldTop:#75523b; --walk:#5a5a52;
+  --street:#3a4145; --isl:#3f5a3a; --tree:#6a9a58; --arrow:#d9dee0; --acc:#33609f; --lane:#ff5a52; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--display);font-weight:600;font-size:2rem;line-height:1.1;margin:0 0 8px;text-wrap:balance}
+.lead{color:var(--muted);max-width:68ch;margin:0 0 6px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:13px;margin:14px 0 22px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:10px;border-radius:2px;display:inline-block}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+@media (max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}}
+.lot{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.lot canvas{display:block;width:100%;height:auto;background:var(--grass)}
+.info{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px}
+.head{display:flex;align-items:baseline;gap:10px}
+.no{font-family:var(--display);font-weight:600;color:var(--accent);font-size:1.05rem;font-variant-numeric:tabular-nums}
+h2{font-family:var(--display);font-weight:600;font-size:1.25rem;line-height:1.2;margin:0;text-wrap:balance}
+.info p{margin:0;color:var(--muted)}
+dl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 12px;margin:4px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+@media (max-width:420px){dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+dt{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+dd{margin:0;font-family:var(--display);font-weight:500;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.note{margin-top:26px;color:var(--muted);max-width:72ch}
+.note b{color:var(--fg);font-weight:500}
+
+.gen{margin:34px 0 0;padding-top:26px;border-top:1px solid var(--line)}
+.gen h2{font-size:1.6rem;margin-bottom:6px}
+.gen>p{color:var(--muted);max-width:70ch;margin:0 0 16px}
+.genbox{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:760px){.genbox{grid-template-columns:minmax(0,1fr)}}
+.ctl{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.ctl label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.ctl label b{color:var(--fg);font-family:var(--display);font-weight:500;font-size:1rem;font-variant-numeric:tabular-nums}
+.ctl input[type=range]{width:100%;accent-color:var(--accent)}
+.ctl select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+.ctl .chk{flex-direction:row;align-items:center;gap:8px;color:var(--fg);font-size:14px}
+.ctl :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mods{margin:0;padding-left:18px;color:var(--muted);font-size:13.5px;display:flex;flex-direction:column;gap:4px}
+.mods b{color:var(--fg);font-weight:500}
+#genMsg{margin:0;color:var(--muted);font-size:13.5px}
+</style>
+<div class="wrap">
+  <h1>Dvacet druhů parkovišť</h1>
+  <p class="lead">Půdorysy v měřítku. Kolmé stání 2,5 × 5 m, obousměrná ulička 6 m, jednosměrná 3,5 až 4,5 m, podélné stání 6 × 2,2 m. Ulice je vždy dole, jezdí se vpravo, obsazenost zhruba 60 %. Červené čáry jsou hranice jízdních pruhů: plná na kraji, čárkovaná mezi pruhy. Dvojice šipek = obousměrná ulička, jedna šipka = jednosměrná. Bílé šrafy jsou plochy, kde se nestojí.</p>
+  <div class="legend">
+    <span><i style="background:var(--asph)"></i>ulička a stání</span>
+    <span><i style="background:var(--bld)"></i>budova</span>
+    <span><i style="background:var(--isl)"></i>ostrůvek se zelení</span>
+    <span><i style="background:var(--walk)"></i>chodník</span>
+    <span><i style="background:var(--street)"></i>ulice</span>
+    <span><i style="background:var(--acc)"></i>vyhrazené stání</span>
+    <span><i style="background:var(--lane);height:3px"></i>hranice pruhu</span>
+  </div>
+  <div class="grid" id="grid"></div>
+  <section class="gen" aria-labelledby="genH">
+    <h2 id="genH">Stavebnice: parkoviště z modulů</h2>
+    <p>Místo dvaceti pevných tvarů stačí pár dílů a pravidlo, jak je skládat. Zadejte pozemek a parkoviště se poskládá samo. Stejné pravidlo může ve hře běžet pro každou budovu podle místa, které má.</p>
+    <div class="genbox">
+      <div class="ctl">
+        <label>Šířka pozemku <b id="vW"></b><input type="range" id="gW" min="20" max="80" step="1" value="46"></label>
+        <label>Hloubka pozemku <b id="vH"></b><input type="range" id="gH" min="12" max="60" step="1" value="34"></label>
+        <label>Tvar<select id="gShape"><option value="rows">Rovné řady</option><option value="arc">Oblouk (jako u nádraží)</option></select></label>
+        <label>Úhel stání<select id="gAng"><option value="90">90° kolmé, obousměrné uličky</option><option value="60">60° šikmé, jednosměrné uličky</option><option value="45">45° šikmé, jednosměrné uličky</option></select></label>
+        <label>Budova<select id="gBld"><option value="top">Vzadu (naproti ulici)</option><option value="none">Žádná</option></select></label>
+        <label class="chk"><input type="checkbox" id="gGreen" checked> Ostrůvky se stromy na koncích řad</label>
+        <ul class="mods">
+          <li><b>Dvouřadý modul</b>: stání, ulička, stání (kolmé 16 m na hloubku)</li>
+          <li><b>Jednořadý modul</b>: stání a ulička, když zbude aspoň 11 m</li>
+          <li><b>Příčná ulička</b>: spojí uličky na konci, druhá vznikne od dvou modulů</li>
+          <li><b>Vjezd</b>: prodloužení příčné uličky k ulici</li>
+          <li><b>Obloukový modul</b>: ulička do oblouku, stání paprskovitě po obou stranách</li>
+          <li><b>Doplňky</b>: ostrůvek, chodník a vyhrazená stání u vchodu, zeleň ve zbytku</li>
+        </ul>
+      </div>
+      <article class="lot"><canvas id="genCv" aria-label="Vygenerované parkoviště"></canvas><div class="info"><p id="genMsg"></p>
+        <dl><div><dt>Míst</dt><dd id="gN"></dd></div><div><dt>Modulů</dt><dd id="gM"></dd></div><div><dt>Na 1 místo</dt><dd id="gA"></dd></div><div><dt>Pozemek</dt><dd id="gP"></dd></div></dl></div></article>
+    </div>
+  </section>
+  <p class="note"><b>Návrh do hry:</b> rovné řady z modulů jako výchozí pro všechny podniky a bytovky, oblouk pro nádraží, kostel nebo náměstí, a z katalogu ručně jen zvláštní případy (12 objezd, 13 dvůr, 17 zásobování, 20 zálivy). Napište, jestli tudy jít, a které zvláštní typy chcete.</p>
+</div>
+<script>
+const ring=(cx,cy,r,a0,a1,st)=>{const o=[];const n=Math.max(2,Math.ceil(Math.abs(a1-a0)/(st||10)));for(let i=0;i<=n;i++){const t=(a0+(a1-a0)*i/n)*Math.PI/180;o.push([cx+r*Math.cos(t),cy+r*Math.sin(t)])}return o};
+const LOTS=[
+ {name:"Kolmá řada před průčelím",use:"Malý obchod, pošta, lékárna. Jedna ulička rovnoběžně s ulicí, stání čelem k výloze.",ang:"90°",aisle:"6 m, obousměrná",W:27,H:20,top:0,throats:[[10.5,16.5]],
+  draw(g){g.bld(0,0,27,8,"Obchod");g.walk(0,8,27,1);g.asph(0,9,27,11);g.R(1,14,0,10,90,-1);g.L([[13.5,23],[13.5,17]],2,6,true);g.L([[0.5,17],[26.5,17]],2,6,true)}},
+ {name:"Oboustranná ulička",use:"Hospoda, kavárna, malá provozovna. Ulička kolmo od ulice, stání po obou stranách, na konci slepá.",ang:"90°",aisle:"6 m, obousměrná",W:35,H:30,top:0,throats:[[5.5,11.5]],
+  draw(g){g.asph(0,0,17,30);g.bld(19,3,16,20,"Hospoda");g.walk(17,3,2,20);g.R(5.5,1,90,11,90,1);g.R(11.5,1,90,11,90,-1);g.L([[8.5,33],[8.5,1]],2)}},
+ {name:"Šikmé stání, průjezdné",use:"Úzký pozemek podél ulice. Jednosměrný průjezd, horní řada přes celou šířku i naproti vjezdu a výjezdu, klíny vyšrafované.",ang:"60°",aisle:"4,5 m, jednosměrná",W:40,H:17,top:0,throats:[[0.5,5],[35,39.5]],
+  draw(g){g.asph(0.5,1.2,39,9.3);g.asph(6,10.5,28,4.6);g.asph(0.5,10.5,4.5,6.5);g.asph(35,10.5,4.5,6.5);
+   g.R(1,6,0,12,60,-1);g.R(7,10.5,0,8,60,1);g.L([[2.75,20],[2.75,8.25],[37.25,8.25],[37.25,20]],1,4.5)}},
+ {name:"Dva moduly se smyčkou",use:"Supermarket. Dvě obousměrné uličky propojené na obou koncích, řady i v rozích, ostrůvky na koncích prostřední dvojřady mimo průjezd.",ang:"90°",aisle:"6 m, obousměrné",W:36,H:34,top:-13,throats:[[0.5,6.5]],
+  draw(g){g.bld(0,-13,36,13,"Supermarket");g.asph(0,0,36,34);g.walk(0,0,36,1);
+   g.R(1.75,6,0,13,90,-1);g.R(8,12,0,8,90,1);g.R(8,22,0,8,90,-1);g.R(7,28,0,11,90,1);
+   g.isl(6.7,12.3,1.1,9.4);g.isl(28.2,12.3,1.1,9.4);g.tree(7.25,14.6);g.tree(7.25,19.4);g.tree(28.75,14.6);g.tree(28.75,19.4);
+   g.L([[3.5,37],[3.5,9],[32.5,9],[32.5,25]],2);g.L([[3.5,25],[32.5,25]],2)}},
+ {name:"Do L kolem rohu budovy",use:"Kanceláře nebo dílna na rohovém pozemku. Dvě ramena, vjezd v jednom z nich.",ang:"90°",aisle:"6 m, obousměrné",W:38,H:32,top:0,throats:[[27,33]],
+  draw(g){g.bld(0,0,21,15,"Kanceláře");g.walk(21,0,1,16);g.walk(0,15,22,1);g.asph(22,0,16,32);g.asph(0,16,22,16);
+   g.R(33,1,90,12,90,-1);g.R(27,1,90,5,90,1);g.R(1,21,0,10,90,-1);g.R(1,27,0,10,90,1);
+   g.L([[30,35],[30,1]],2);g.L([[30,24],[1,24]],2)}},
+ {name:"Do U kolem budovy",use:"Škola, úřad, zdravotní středisko. Stání po třech stranách budovy i čelem k ní, rohy využité.",ang:"90°",aisle:"6 m, obousměrné",W:44,H:38,top:0,throats:[[19,25]],
+  draw(g){g.bld(13,0,18,21,"Škola");g.walk(11,0,2,22);g.walk(31,0,2,22);g.walk(11,21,22,1);g.asph(0,0,11,27);g.asph(33,0,11,27);g.asph(0,22,44,16);
+   g.R(5,1,90,10,90,1);g.R(39,1,90,10,90,-1);g.R(12,27,0,8,90,-1);g.R(1,33,0,7,90,1);g.R(25.5,33,0,7,90,1);
+   g.isl(18.5,33.3,0.5,4.4);g.isl(25,33.3,0.5,4.4);
+   g.L([[22,41],[22,30]],2);g.L([[8,1],[8,30],[36,30],[36,1]],2)}},
+ {name:"Velké plošné s páteří",use:"Obchodní zóna, hypermarket. Obousměrná páteř a uličky u stání, obvod jednosměrně dokola v jednom pruhu širokém 4 m.",ang:"90°",aisle:"6 m, obvod 4 m jednosměrně",W:64,H:46,top:-15,throats:[[29,35]],
+  draw(g){g.bld(0,-15,64,15,"Obchodní zóna");g.asph(0,0,64,46);g.walk(0,0,64,0.8);g.isl(5,5.9,54,1.2);
+   for(const x0 of [5,36.5]){g.R(x0,12.5,0,9,90,-1);g.R(x0,18.5,0,9,90,1);g.R(x0,28.5,0,9,90,-1);g.R(x0,34.5,0,9,90,1);g.isl(x0,23.2,22.5,0.6);for(let k=0;k<4;k++)g.tree(x0+3+k*5.5,23.5)}
+   for(const x of [27.7,35.2])for(const [y,h] of [[7.5,4.8],[18.7,9.6],[34.7,4.8]]){g.isl(x,y,1.1,h)}
+   for(const y of [9.9,23.5,37.1]){g.tree(28.25,y);g.tree(35.75,y)}
+   g.L([[32,49],[32,3.5]],2);g.L([[2.5,15.5],[61.5,15.5]],2);g.L([[2.5,31.5],[61.5,31.5]],2);
+   g.L([[32,3.5],[2.5,3.5],[2.5,43],[29,43]],1,4);g.L([[32,3.5],[61.5,3.5],[61.5,43],[35,43]],1,4)}},
+ {name:"Podélné stání u domu",use:"Bytové domy a úzké proluky. Jednosměrný pruh podél domu, stání podélně po obou stranách.",ang:"0° (podélné)",aisle:"3,5 m, jednosměrná",W:46,H:9,top:-9,throats:[[0.5,4.5],[41.5,45.5]],
+  draw(g){g.bld(0,-9,46,8,"Bytový dům");g.walk(0,-1,46,1);g.asph(0,0,46,8);g.asph(0.5,8,4,1);g.asph(41.5,8,4,1);
+   g.P(5,0,6,2.2);g.P(5,5.8,6,2.2);g.L([[2.5,12],[2.5,4],[43.5,4],[43.5,12]],1,3.5)}},
+ {name:"Rybí kost",use:"Hodně míst na malé šířce. Dvě jednosměrné uličky proti sobě, prostřední řady do sebe zapadají, průjezdy na koncích volné, klíny na koncích řad jsou zeleň.",ang:"45°",aisle:"3,5 m, jednosměrné",W:42,H:24,top:0,throats:[[0.5,6.5]],
+  draw(g){g.asph(0.5,1,41.5,23);
+   g.R(1,5,0,10,45,-1,{green:true});g.R(8,8.5,0,7,45,1,{green:true});g.R(36.3,15.6,180,7,45,1,{green:true});g.R(41.5,19.1,180,8,45,-1,{green:true});
+   g.L([[3.5,27],[3.5,6.75]],2);g.L([[3.5,6.75],[39.4,6.75],[39.4,17.35],[6.5,17.35]],1,3.5)}},
+ {name:"Klín na nepravidelném pozemku",use:"Zbytkový pozemek mezi silnicemi nebo u trati. Asfalt jen pod uličkou a stáními, zbytek zeleň a chodník.",ang:"90°",aisle:"6 m, obousměrná",W:40,H:30,top:0,throats:[[17,23]],
+  draw(g){g.poly([[0,30],[40,30],[40,8],[22,0],[0,14]],"isl");g.asph(0.5,16,39,6);g.asph(12,11,25,5);g.asph(1,22,15,5.2);g.asph(24,22,15,5.2);g.asph(17,22,6,8);g.walk(16,22,1,8);g.walk(23,22,1,8);
+   g.tree(4,14.5);g.tree(8,11.5);g.tree(14,7);g.tree(19,4.2);g.tree(27,4.5);g.tree(33,7.5);g.tree(38,12);g.tree(6,28.5);g.tree(34,28.5);
+   g.R(12,16,0,10,90,-1);g.R(1,22,0,6,90,1);g.R(24,22,0,6,90,1);
+   g.L([[20,33],[20,19]],2);g.L([[1,19],[39,19]],2)}},
+ {name:"Jednostranná ulička",use:"Dílna, sklad, úzká proluka vedle budovy. Stání jen po jedné straně, druhou stranou je zeď.",ang:"90°",aisle:"6 m, obousměrná",W:30,H:28,top:0,throats:[[5,11]],
+  draw(g){g.asph(0,0,11,28);g.walk(11,2,2,21);g.bld(13,2,17,21,"Dílna");g.R(5,1,90,10,90,1);g.L([[8,31],[8,1]],2)}},
+ {name:"Objezd kolem budovy",use:"Občerstvení s výdejním okénkem, myčka. Jednosměrný okruh kolem budovy, stání po vnějším obvodu.",ang:"90°",aisle:"4,5 m, jednosměrná",W:40,H:31,top:-2,throats:[[5,9.5],[30.5,35]],
+  draw(g){g.asph(5,4,30,24);g.asph(7,-1,25,5);g.asph(0,9,5,12.5);g.asph(35,9,5,12.5);g.asph(5,28,4.5,3);g.asph(30.5,28,4.5,3);
+   g.walk(9.5,8.5,21,15);g.bld(13,10.5,14,11,"Občerstvení");
+   g.R(7,4,0,10,90,-1);g.R(5,9,90,5,90,1);g.R(35,9,90,5,90,-1);
+   g.L([[7.25,34],[7.25,6.25],[32.75,6.25],[32.75,34]],1,4.5);g.L([[32.75,25.75],[7.25,25.75]],1,4.5)}},
+ {name:"Ve dvoře s průjezdem",use:"Městský blok. Domy stojí u ulice, parkoviště je za nimi a jezdí se k němu průjezdem mezi domy.",ang:"90°",aisle:"6 m, obousměrná",W:36,H:34,top:0,throats:[[15,21]],
+  draw(g){g.asph(0.5,4,35,16);g.asph(15,20,6,14);g.isl(1,20.5,13.5,3);g.isl(21.5,20.5,13.5,3);g.tree(5,22);g.tree(10,22);g.tree(26,22);g.tree(31,22);
+   g.bld(0,24,15,10,"Dům");g.bld(21,24,15,10,"Dům");
+   g.R(1,9,0,13,90,-1);g.R(1,15,0,5,90,1);g.R(22.5,15,0,5,90,1);
+   g.L([[18,37],[18,12]],2);g.L([[1,12],[35,12]],2)}},
+ {name:"Slepá ulička s obratištěm",use:"Konec obytné ulice, koupaliště, hřbitov. Ulička končí kruhovým obratištěm se stáními do paprsku.",ang:"90° a paprskovitě",aisle:"6 m, okruh 6,5 m jednosměrně",W:30,H:40,top:-5,throats:[[12,18]],
+  draw(g){g.disc(15,11,14.5,"asph");g.asph(7,23,16,17);g.disc(15,11,3,"isl");g.tree(15,11);
+   g.radial(15,11,9.5,14.5,135,405,17);g.R(12,24,90,6,90,1);g.R(18,24,90,6,90,-1);
+   g.L([[15,43],[15,20.5]],2);g.L(ring(15,11,6.25,90,-270),1,6.5)}},
+ {name:"Záchytné u zastávky",use:"P+R u nádraží nebo konečné. Dlouhé řady, horní řada až do rohů, uprostřed chodník se stromy k zastávce, dva vjezdy.",ang:"90°",aisle:"6 m, obousměrné",W:60,H:30,top:0,throats:[[0.5,6.5],[53.5,59.5]],
+  draw(g){g.asph(0.5,0.5,59,29.5);g.isl(7.5,17,45,2);g.walk(7.5,17.3,45,1.4);for(let x=10;x<52;x+=8)g.tree(x,18);
+   g.R(1.25,6,0,23,90,-1);g.R(7.5,12,0,18,90,1);g.R(7.5,24,0,18,90,-1);
+   g.bld(24,31.4,12,1.5,"Zastávka");
+   g.L([[3.5,33],[3.5,9],[56.5,9],[56.5,33]],2);g.L([[3.5,27],[56.5,27]],2)}},
+ {name:"S vyhrazenými stáními u vchodu",use:"Úřad, ordinace. Širší vyhrazená stání přímo proti vchodu, druhá řada u ulice po stranách vjezdu.",ang:"90°",aisle:"6 m, obousměrná",W:30,H:25,top:0,throats:[[12,18]],
+  draw(g){g.bld(0,0,30,7,"Úřad");g.walk(0,7,30,1.5);g.asph(0,8.5,30,16.5);
+   g.R(1,13.5,0,4,90,-1);g.R(11.5,13.5,0,2,90,-1,{w:3.5,fill:"acc"});g.R(19,13.5,0,4,90,-1);g.R(1,19.5,0,4,90,1);g.R(19,19.5,0,4,90,1);
+   g.isl(11,19.8,1,4.9);g.isl(18,19.8,1,4.9);g.L([[15,28],[15,16.5]],2);g.L([[1,16.5],[29,16.5]],2)}},
+ {name:"Se zásobovacím dvorem",use:"Prodejna stavebnin, diskont. Zákazníci stojí vpředu. Boční příjezd 7 m vede dozadu na dvůr, kde je před rampami 8 m na couvání.",ang:"90°",aisle:"6 m, příjezd na dvůr 7 m",W:48,H:50,top:0,throats:[[0.5,8]],
+  draw(g){g.asph(0.5,0,7.5,50);g.asph(8,0,40,18);g.bld(11,18,37,14,"Prodejna");g.walk(11,32,37,1.5);g.asph(8,33.5,40,16.5);
+   g.R(18,18,0,4,90,-1,{w:4.5,d:10,empty:true});g.truck(20.25,13,90,10);g.truck(29.25,13,90,10);
+   g.R(11,38.5,0,14,90,-1);g.R(11,44.5,0,14,90,1);
+   g.L([[4.25,53],[4.25,4],[46,4]],2,7);g.L([[4.25,41.5],[47,41.5]],2)}},
+ {name:"Kolem zeleného středu",use:"Náměstí, náves. Jednosměrný okruh kolem parku, šikmá stání po vnějším obvodu, rohy zůstávají zelené.",ang:"60°",aisle:"4,5 m, jednosměrná",W:44,H:38,top:0,throats:[[30,34.5],[9.5,14]],
+  draw(g){g.asph(8.5,7.5,27,23);g.asph(9.5,3,26,4.5);g.asph(35.5,8,4.5,21);g.asph(13.5,30.5,15.5,4.5);g.asph(4,9.2,4.5,20.8);g.asph(30,30.5,4.5,7.5);g.asph(9.5,30.5,4.5,7.5);
+   g.isl(13,12,18,14);g.walk(21.3,12,1.4,14);g.walk(13,18.3,18,1.4);g.tree(16.5,15);g.tree(27.5,15);g.tree(16.5,23);g.tree(27.5,23);
+   g.R(9.5,7.5,0,8,60,-1);g.R(35.5,8.5,90,6,60,-1);g.R(28.5,30.5,180,4,60,-1);g.R(8.5,29.5,-90,6,60,-1);
+   g.L([[32.25,41],[32.25,30.5]],1,4.5);g.L([[33.25,28.25],[10.75,28.25],[10.75,9.75],[33.25,9.75],[33.25,28.25]],1,4.5);g.L([[11.75,30.5],[11.75,41]],1,4.5)}},
+ {name:"Oblouk před budovou",use:"Nádraží, kulturní dům, hotel. Jednosměrný příjezd obloukem k hlavnímu vchodu, stání paprskovitě po vnější straně.",ang:"paprskovitě",aisle:"5 m, jednosměrná",W:44,H:26,top:-10,throats:[[5,10],[34,39]],
+  draw(g){g.bld(8,-10,28,9,"Nádraží");g.walk(8,-1,28,5);g.arc(22,26,12,17,180,360,"asph");g.arc(22,26,17,22,208,332,"asph");g.arc(22,26,0,12,180,360,"isl");g.tree(22,19);g.tree(15.5,22.5);g.tree(28.5,22.5);
+   g.radial(22,26,17,22,210,330,14);g.L([[7.5,29],...ring(22,26,14.5,180,360),[36.5,29]],1,5)}},
+ {name:"Zálivy podél ulice",use:"Obchodní ulice v obci. Kolmá stání přímo z ulice v zálivech mezi stromy, bez vlastní uličky.",ang:"90°",aisle:"žádná, couvá se do ulice",W:46,H:10,top:-8,throats:[],
+  draw(g){g.bld(0,-8,46,8,"Obchody v ulici");g.walk(0,0,46,8);g.isl(0.3,8.3,2.4,4.5);g.isl(20.8,8.3,3.9,4.5);g.isl(42.8,8.3,2.9,4.5);g.tree(1.5,10.5);g.tree(22.75,10.5);g.tree(44.2,10.5);
+   g.asph(3,8,17.5,5);g.asph(25,8,17.5,5);g.R(3,13,0,7,90,-1);g.R(25,13,0,7,90,-1)}}
+];
+// ---- stavebnice: parkoviště složené z modulů podle pozemku ----
+function generate(P){const W=P.W,H=P.H,m=0.5,bld=P.bld==="top";const def={W,H,top:bld?-11:0,throats:[],mods:0,msg:""};const ops=[];def.draw=g=>{for(const f of ops)f(g)};
+  if(bld)ops.push(g=>{g.bld(Math.max(0,W*0.08),-11,W-2*Math.max(0,W*0.08),10,"Budova");g.walk(0,-1,W,2.5)});
+  if(P.shape==="arc"){const cx=W/2,lim=Math.min(W/2,H)-0.5;const rings=Math.floor(lim/15);if(rings<1){def.msg="Na oblouk je potřeba pozemek aspoň 31 m široký a 16 m hluboký.";return def}
+    ops.push(g=>{g.arc(cx,H,0,5,180,360,"isl");g.tree(cx,H-2.3)});
+    for(let j=0;j<rings;j++){const rc=7.5+15*j;def.mods++;def.throats.push([cx-rc-2.5,cx-rc+2.5],[cx+rc-2.5,cx+rc+2.5]);
+      ops.push(g=>{g.arc(cx,H,rc-2.5-(j?5:0),rc+7.5,180,360,"asph");
+        const no=Math.floor(Math.PI*172/180*(rc+2.5)/2.5);g.radial(cx,H,rc+2.5,rc+7.5,184,356,no);
+        if(j){const ni=Math.floor(Math.PI*172/180*(rc-7.5)/2.5);g.radial(cx,H,rc-7.5,rc-2.5,184,356,ni)}
+        g.L([[cx-rc,H+3],...ring(cx,H,rc,180,360,6),[cx+rc,H+3]],1,5)})}
+    def.msg=rings+(rings===1?" obloukový modul":" obloukové moduly")+", jednosměrně zleva doprava. Uprostřed zeleň.";return def}
+  const ang=+P.ang,t=ang*Math.PI/180,one=ang<90,a=ang===90?6:ang===60?4.5:3.5,S=ang===90?5:5*Math.sin(t)+0.35,sp=2.5/Math.sin(t),lean=5*Math.cos(t);
+  const y0=bld?1.6:m,A=H-m-y0,Pd=2*S+a;let k=Math.floor(A/Pd);const rem=A-k*Pd;const single=rem>=S+a;
+  if(k<1&&!single){def.msg="Pozemek je moc mělký: na jednu řadu s uličkou je potřeba aspoň "+Math.ceil(S+a+(bld?2.1:1))+" m.";return def}
+  // uličky shora dolů: {y střed, řada nad, řada pod}
+  const ais=[];let y=y0;for(let i=0;i<k;i++){ais.push({y:y+S+a/2,up:true,dn:true});y+=Pd}if(single)ais.push({y:y+S+a/2,up:true,dn:false});
+  const nA=ais.length;def.mods=nA;const right=nA>=2||one;if(W<(right?13.5:7.5)+sp*2+lean+1){def.msg="Pozemek je moc úzký.";return def}
+  const xl=m+3,xr=W-m-3,xa=m+6+0.9,xb=right?W-m-6-0.9:W-m;const n=Math.floor((xb-xa-lean)/sp);if(n<1){def.msg="Pozemek je moc úzký.";return def}
+  const used=n*sp+lean,xs=xa+((xb-xa)-used)/2;
+  def.throats.push([m,m+6]);if(one&&nA===1)def.throats.push([W-m-6,W-m]);
+  ops.push(g=>{g.asph(m,ais[0].y-a/2-S,W-2*m,(ais[nA-1].y+a/2+(ais[nA-1].dn?S:0))-(ais[0].y-a/2-S));g.asph(m,ais[0].y,6,H-ais[0].y);if(one&&nA===1)g.asph(W-m-6,ais[0].y,6,H-ais[0].y)});
+  ais.forEach((q,i)=>{const east=!one||((nA-1-i)%2===0);
+    ops.push(g=>{const row=(up)=>{const by=q.y+(up?-a/2:a/2);
+        if(east){if(!one&&up&&i===0&&bld&&n>=6){const n1=Math.floor((n-3)/2),w3=3.5,x1=xs+n1*2.5,n2=Math.floor((xs+n*2.5-(x1+2*w3))/2.5);g.R(xs,by,0,n1,90,-1);g.R(x1,by,0,2,90,-1,{w:w3,fill:"acc"});g.R(xs+n*2.5-n2*2.5,by,0,n2,90,-1)}
+          else g.R(xs,by,0,n,ang,up?-1:1)}
+        else g.R(xs+used,by,180,n,ang,up?1:-1)};
+      if(q.up)row(true);if(q.dn)row(false);
+      const x0=xl,x1=right?xr:xb;if(one)g.L(east?[[x0,q.y],[x1,q.y]]:[[x1,q.y],[x0,q.y]],1,a);else g.L([[x0,q.y],[x1,q.y]],2,6);
+      if(P.green&&i<nA-1&&q.dn){const yb=q.y+a/2+0.3,h=2*S-0.6;g.isl(xa-0.85,yb,0.8,h);g.tree(xa-0.45,yb+h/2);if(right){g.isl(xb+0.05,yb,0.8,h);g.tree(xb+0.45,yb+h/2)}}})});
+  ops.push(g=>{if(one&&nA===1){g.L([[xl,H+3],[xl,ais[0].y]],1,4.5);g.L([[xr,ais[0].y],[xr,H+3]],1,4.5)}else{g.L([[xl,H+3],[xl,ais[0].y]],2,6);if(right)g.L([[xr,ais[nA-1].y],[xr,ais[0].y]],2,6)}
+    const yEnd=ais[nA-1].y+a/2+(ais[nA-1].dn?S:0);if(P.green&&H-m-yEnd>1.2){g.isl(m+6.8,yEnd+0.3,W-2*m-7.6,H-m-yEnd-0.4);for(let x=m+10;x<W-4;x+=7)g.tree(x,(yEnd+H-m)/2)}});
+  def.msg=(k?k+(k===1?" dvouřadý modul":k<5?" dvouřadé moduly":" dvouřadých modulů"):"")+(k&&single?" a ":"")+(single?"1 jednořadý modul":"")+", "+(right?"dvě příčné uličky":"jedna příčná ulička")+(one?", uličky jednosměrně střídavě":"")+".";return def}
+const CARS=["#b23b3b","#2f5f9e","#d9d9d4","#2b2f33","#8b8f94","#c9a227","#3d7a5a","#e8e6df","#5b4a8a","#a8adb3"];
+function rng(seed){let s=seed*9301+49297;return()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff}}
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function render(def,cv,idx){
+  const X0=-3,X1=def.W+3,Y0=def.top-3,Y1=def.H+12;const wpx=cv.clientWidth||520;const sc=wpx/(X1-X0);const hpx=Math.round((Y1-Y0)*sc);const dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=Math.round(wpx*dpr);cv.height=Math.round(hpx*dpr);cv.style.aspectRatio=wpx+" / "+hpx;const c=cv.getContext("2d");c.setTransform(dpr*sc,0,0,dpr*sc,-X0*dpr*sc,-Y0*dpr*sc);
+  const C={};for(const k of ["grass","asph","mark","bld","bldTop","walk","street","isl","tree","arrow","acc","lane"])C[k]=css("--"+k);
+  c.fillStyle=C.grass;c.fillRect(X0,Y0,X1-X0,Y1-Y0);
+  const sy=def.H+3;c.fillStyle=C.walk;c.fillRect(X0,def.H+1.2,X1-X0,1.8);c.fillStyle=C.street;c.fillRect(X0,sy,X1-X0,7);
+  c.strokeStyle=C.mark;c.lineWidth=0.15;c.setLineDash([2,2]);c.beginPath();c.moveTo(X0,sy+3.5);c.lineTo(X1,sy+3.5);c.stroke();c.setLineDash([]);
+  c.fillStyle=C.asph;for(const t of def.throats)c.fillRect(t[0],def.H-0.05,t[1]-t[0],3.1);
+  const rnd=rng(idx+3);let count=0;const cars=[],lines=[],hatches=[],fills=[],arrows=[],lanes=[],greens=[];
+  const car=(x,y,a)=>cars.push([x,y,a,CARS[(rnd()*CARS.length)|0]]);
+  const g={
+    asph(x,y,w,h){c.fillStyle=C.asph;c.fillRect(x,y,w,h)},
+    poly(p,k){c.fillStyle=C[k];c.beginPath();p.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.closePath();c.fill()},
+    disc(x,y,r,k){c.fillStyle=C[k];c.beginPath();c.arc(x,y,r,0,7);c.fill()},
+    arc(x,y,r0,r1,a0,a1,k){const A=a0*Math.PI/180,B=a1*Math.PI/180;c.fillStyle=C[k];c.beginPath();c.arc(x,y,r1,A,B);c.arc(x,y,Math.max(0,r0),B,A,true);c.closePath();c.fill()},
+    walk(x,y,w,h){c.fillStyle=C.walk;c.fillRect(x,y,w,h)},
+    isl(x,y,w,h){if(w<=0||h<=0)return;c.fillStyle=C.isl;c.beginPath();c.roundRect(x,y,w,h,Math.min(w,h)/2);c.fill()},
+    tree(x,y){c.fillStyle=C.tree;c.beginPath();c.arc(x,y,1.25,0,7);c.fill();c.fillStyle="rgba(255,255,255,.14)";c.beginPath();c.arc(x-0.3,y-0.3,0.6,0,7);c.fill()},
+    bld(x,y,w,h,label){c.fillStyle="rgba(0,0,0,.18)";c.fillRect(x+0.6,y+0.8,w,h);c.fillStyle=C.bld;c.fillRect(x,y,w,h);const m=Math.min(1,h*0.2);c.fillStyle=C.bldTop;c.fillRect(x+m,y+m,w-2*m,h-2*m);
+      c.fillStyle="rgba(255,255,255,.92)";c.font="600 "+Math.min(2.6,w/label.length*1.5,h*0.7)+"px Barlow Semi Condensed, Arial Narrow, sans-serif";c.textAlign="center";c.textBaseline="middle";c.fillText(label,x+w/2,y+h/2)},
+    R(x,y,deg,n,ang,side,o){if(n<1)return;o=o||{};const a=deg*Math.PI/180,ux=Math.cos(a),uy=Math.sin(a),nx=-uy*side,ny=ux*side;const t=ang*Math.PI/180,w=o.w||2.5,D=o.d||5,sp=w/Math.sin(t);
+      const dx=(nx*Math.sin(t)+ux*Math.cos(t))*D,dy=(ny*Math.sin(t)+uy*Math.cos(t))*D,lean=Math.cos(t)*D,dep=Math.sin(t)*D;
+      if(o.fill)for(let i=0;i<n;i++){const px=x+ux*sp*i,py=y+uy*sp*i;fills.push([[px,py],[px+ux*sp,py+uy*sp],[px+ux*sp+dx,py+uy*sp+dy],[px+dx,py+dy],o.fill])}
+      for(let i=0;i<=n;i++){const px=x+ux*sp*i,py=y+uy*sp*i;lines.push([px,py,px+dx,py+dy])}
+      if(ang<89){const ex=x+ux*sp*n,ey=y+uy*sp*n,T=o.green?greens:hatches;T.push([[x,y],[x+dx,y+dy],[x+nx*dep,y+ny*dep]]);T.push([[ex,ey],[ex+dx,ey+dy],[ex+ux*lean,ey+uy*lean]])}
+      for(let i=0;i<n;i++){if(!o.empty)count++;if(!o.empty&&rnd()<0.6)car(x+ux*sp*(i+0.5)+dx*0.5,y+uy*sp*(i+0.5)+dy*0.5,Math.atan2(dy,dx))}},
+    P(x,y,n,h){for(let i=0;i<=n;i++)lines.push([x+i*6,y,x+i*6,y+h]);for(let i=0;i<n;i++){count++;if(rnd()<0.6)car(x+i*6+3,y+h/2,0)}},
+    radial(cx,cy,r0,r1,a0,a1,n){if(n<1)return;const A=a0*Math.PI/180,st=(a1-a0)*Math.PI/180/n;for(let i=0;i<=n;i++){const t=A+st*i;lines.push([cx+Math.cos(t)*r0,cy+Math.sin(t)*r0,cx+Math.cos(t)*r1,cy+Math.sin(t)*r1])}
+      for(let i=0;i<n;i++){count++;if(rnd()<0.6){const t=A+st*(i+0.5),r=(r0+r1)/2;car(cx+Math.cos(t)*r,cy+Math.sin(t)*r,t)}}},
+    truck(x,y,deg,len){const L=len||8;c.save();c.translate(x,y);c.rotate(deg*Math.PI/180);c.fillStyle="rgba(0,0,0,.22)";c.fillRect(-L/2+0.1,-1.15,L,2.5);c.fillStyle="#e6e4dc";c.fillRect(-L/2,-1.25,L-2.1,2.5);c.fillStyle="#3b4a5a";c.fillRect(L/2-1.9,-1.2,1.9,2.4);c.restore()},
+    // jízdní cesta: lomená čára středem, n pruhů (2 = obousměrná, jezdí se vpravo; 1 = jednosměrná ve směru bodů), šířka
+    L(pts,n,w,noArrow){w=w||(n===2?6:4.5);lanes.push({pts,n,w});if(noArrow)return;let len=0;const seg=[];for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(d);len+=d}
+      const cnt=Math.max(1,Math.round(len/15));for(let k=0;k<cnt;k++){let s=(k+0.5)/cnt*len,i=0;while(i<seg.length-1&&s>seg[i]){s-=seg[i];i++}const f=seg[i]?s/seg[i]:0,x=pts[i][0]+(pts[i+1][0]-pts[i][0])*f,y=pts[i][1]+(pts[i+1][1]-pts[i][1])*f,a=Math.atan2(pts[i+1][1]-pts[i][1],pts[i+1][0]-pts[i][0]);
+        if(n===2){const rx=-Math.sin(a)*w/4,ry=Math.cos(a)*w/4;arrows.push([x+rx,y+ry,a]);arrows.push([x-rx,y-ry,a+Math.PI])}else arrows.push([x,y,a])}}
+  };
+  def.draw(g);
+  for(const f of fills){c.fillStyle=C[f[4]];c.beginPath();for(let i=0;i<4;i++)i?c.lineTo(f[i][0],f[i][1]):c.moveTo(f[i][0],f[i][1]);c.closePath();c.fill()}
+  for(const h of greens){c.fillStyle=C.isl;c.beginPath();h.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.closePath();c.fill()}
+  for(const h of hatches){c.save();c.beginPath();h.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.closePath();c.clip();c.strokeStyle=C.mark;c.lineWidth=0.22;c.beginPath();
+    const xs=h.map(q=>q[0]),ys=h.map(q=>q[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);for(let k=x0-(y1-y0);k<x1;k+=0.8){c.moveTo(k,y1);c.lineTo(k+(y1-y0),y0)}c.stroke();c.restore();
+    c.strokeStyle=C.mark;c.lineWidth=0.14;c.beginPath();h.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.closePath();c.stroke()}
+  c.strokeStyle=C.mark;c.lineWidth=0.14;c.lineCap="butt";c.beginPath();for(const s of lines){c.moveTo(s[0],s[1]);c.lineTo(s[2],s[3])}c.stroke();
+  // hranice pruhů: okraje plně, mezi pruhy čárkovaně (odsazení lomené čáry s pokosem v rozích)
+  const off=(pts,d)=>pts.map((p,i)=>{const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];let n1=null,n2=null;if(i>0){const l=Math.hypot(p[0]-a[0],p[1]-a[1])||1;n1=[-(p[1]-a[1])/l,(p[0]-a[0])/l]}if(i<pts.length-1){const l=Math.hypot(b[0]-p[0],b[1]-p[1])||1;n2=[-(b[1]-p[1])/l,(b[0]-p[0])/l]}
+    n1=n1||n2;n2=n2||n1;let mx=n1[0]+n2[0],my=n1[1]+n2[1];const ml=Math.hypot(mx,my)||1;mx/=ml;my/=ml;const k=d/Math.max(0.5,mx*n1[0]+my*n1[1]);return [p[0]+mx*k,p[1]+my*k]});
+  c.strokeStyle=C.lane;c.lineJoin="miter";for(const L of lanes){for(const d of (L.n===2?[-L.w/2,0,L.w/2]:[-L.w/2,L.w/2])){c.lineWidth=d===0?0.16:0.2;c.setLineDash(d===0?[1.1,0.9]:[]);c.globalAlpha=d===0?0.9:0.85;c.beginPath();off(L.pts,d).forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.stroke()}}
+  c.setLineDash([]);c.globalAlpha=1;
+  for(const q of arrows){c.save();c.translate(q[0],q[1]);c.rotate(q[2]);c.strokeStyle=C.arrow;c.fillStyle=C.arrow;c.globalAlpha=0.9;c.lineWidth=0.26;c.beginPath();c.moveTo(-1.4,0);c.lineTo(0.6,0);c.stroke();c.beginPath();c.moveTo(1.5,0);c.lineTo(0.4,-0.6);c.lineTo(0.4,0.6);c.closePath();c.fill();c.restore()}
+  for(const q of cars){c.save();c.translate(q[0],q[1]);c.rotate(q[2]);c.fillStyle="rgba(0,0,0,.22)";c.fillRect(-2.0,-0.78,4.2,1.85);c.fillStyle=q[3];c.beginPath();c.roundRect(-2.1,-0.88,4.2,1.76,0.45);c.fill();c.fillStyle="rgba(20,28,36,.55)";c.fillRect(-1.15,-0.7,0.9,1.4);c.fillRect(0.55,-0.7,0.7,1.4);c.restore()}
+  c.fillStyle=css("--fg");c.globalAlpha=0.75;c.fillRect(X0+1.5,Y0+1.6,10,0.25);c.fillRect(X0+1.5,Y0+1.2,0.25,1);c.fillRect(X0+11.25,Y0+1.2,0.25,1);c.font="500 1.5px Barlow, sans-serif";c.textAlign="left";c.textBaseline="top";c.fillText("10 m",X0+12.3,Y0+0.9);c.globalAlpha=1;
+  return count}
+const grid=document.getElementById("grid");const cvs=[];
+LOTS.forEach((d,i)=>{const el=document.createElement("article");el.className="lot";
+  el.innerHTML=`<canvas aria-label="Půdorys: ${d.name}"></canvas><div class="info"><div class="head"><span class="no">${String(i+1).padStart(2,"0")}</span><h2>${d.name}</h2></div><p>${d.use}</p>
+  <dl><div><dt>Míst</dt><dd data-n></dd></div><div><dt>Pozemek</dt><dd>${d.W} × ${d.H} m</dd></div><div><dt>Úhel stání</dt><dd>${d.ang}</dd></div><div><dt>Ulička</dt><dd>${d.aisle}</dd></div></dl></div>`;
+  grid.appendChild(el);cvs.push([d,el.querySelector("canvas"),el.querySelector("[data-n]"),i])});
+const $=id=>document.getElementById(id);
+function drawGen(){const P={W:+$("gW").value,H:+$("gH").value,shape:$("gShape").value,ang:$("gAng").value,bld:$("gBld").value,green:$("gGreen").checked};
+  $("vW").textContent=P.W+" m";$("vH").textContent=P.H+" m";$("gAng").disabled=P.shape==="arc";const def=generate(P);const n=render(def,$("genCv"),7);
+  $("genMsg").textContent=def.msg;$("gN").textContent=n;$("gM").textContent=def.mods;$("gA").textContent=n?Math.round(P.W*P.H/n)+" m²":"–";$("gP").textContent=P.W+" × "+P.H+" m"}
+for(const id of ["gW","gH","gShape","gAng","gBld","gGreen"])$(id).addEventListener("input",drawGen);
+function drawAll(){for(const [d,cv,n,i] of cvs){n.textContent=render(d,cv,i)}drawGen()}
+drawAll();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(drawAll);
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawAll,120)});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",drawAll);
+new MutationObserver(drawAll).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+</script>
+</body>
+</html>
