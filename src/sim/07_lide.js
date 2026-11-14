@@ -25,10 +25,12 @@ function startTrip(S,tr){
   clampTrip(S,c);c.lane=chooseLane(S,c,0);
   if(tr.from.isGate){const l=c.links[0];const q=S.edges[l>>1].q[l&1][c.lane];const rear=q[q.length-1];
     if(rear&&rear.s<c.len+0.3){c.dead=true;c.state="gone";return false}c.s=0;q.push(c);c.state="drive";c.sid=S.sid}
-  else{const fb=tr.from;let i=tr.spot;if(i===undefined&&isHome(fb)&&fb.type==="flat"&&lotLayout(S,fb))i=homeCars(fb)-1;
-    const lay=i!==undefined&&i>=0?lotLayout(S,fb):null;
+  else{const fb=tr.from;let i=tr.spot;const lay=lotLayout(S,fb);if(i===undefined&&isHome(fb)&&fb.type==="flat"&&lay)i=homeCars(fb)-1;
+    if(!(lay&&i!==undefined&&i>=0&&i<lay.spots.length))i=-1;
     // vyjetí z místa na parkovišti po uličce, pak čeká u vjezdu jako dřív
-    if(lay&&i<lay.spots.length){c.path=spotPath(lay,i).reverse();c.plen=pathLen(c.path);c.ps=0;c.state="unpark";if(fb.spotUsed&&!isHome(fb)&&!fb.spotUsed[i]){fb.spotUsed[i]=c;c.spotB=fb;c.spot=i}S.unparking.push(c)}
+    // z místa (nebo od budovy) po příjezdu na okraj silnice, tam čeká na mezeru v pruhu
+    c.path=leavePath(S,fb,i);
+    if(c.path){c.plen=pathLen(c.path);c.ps=0;c.state="unpark";if(i>=0&&fb.spotUsed&&!isHome(fb)&&!fb.spotUsed[i]){fb.spotUsed[i]=c;c.spotB=fb;c.spot=i}S.unparking.push(c)}
     else S.exiting.push(c)}
   if(tr.customer&&tr.to.cap>0&&!tr.reserved){tr.to.incoming++;tr.reserved=true}
   return true}

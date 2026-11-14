@@ -20,6 +20,20 @@ Parkoviště je obdélník mezi silnicí a budovou. Plní se od budovy k silnici
 Stání má 0,27 × 0,5 pole (auto 0,2 × 0,4), ulička 0,5 pole. Kód:
 `src/sim/06_parkoviste.js` (`lotLayout`), kreslení `drawLot`.
 
+## Příjezd a jízda (od 0.13)
+
+- Vjezd se hledá z parkoviště, ne z budovy: pro každou stranu obdélníku
+  a pro hrdlo u kraje (případně uprostřed, kde silnice vede jen tam) se
+  hledá silnice před pozemkem; vyhraje nejbližší, kraj má přednost.
+  `b.access` je bod na silnici naproti hrdlu, `b.drive` = {E okraj silnice,
+  T hrdlo, door dveře}.
+- Cesta auta: pruh → E → T → příčná ulička → ulička → stání (`lotPath`,
+  `enterPath`, `leavePath`); vnitřní body posunuté o 0,12 pole vpravo.
+- Na cestě se drží odstup 0,42 pole za autem v témže směru; po 3 s čekání
+  se odstup nehlídá (pojistka proti zablokování).
+- Budova bez parkoviště: příjezd od okraje silnice ke dveřím na hraně
+  budovy.
+
 ## Z katalogu zatím ve hře není
 
 - Šikmé stání a jednosměrné uličky (3, 9, 18).
