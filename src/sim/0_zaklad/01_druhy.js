@@ -13,9 +13,9 @@ const RK={
 const ROAD_KINDS=["alley","street","road","oneway","blvd","hwy","ramp"];
 const LEVEL_NAMES=["Zem","Most","Vysoký most"];
 
-const R_HOUSE=1,R_FLAT=2,R_BLD=3,R_LOT=4,R_FORE=5,R_GAR=6,R_YARD=7;
-const ROLE_OF={h:R_HOUSE,b:R_BLD,p:R_LOT,f:R_FORE,g:R_GAR,y:R_YARD};
-const isLotRole=r=>r===R_LOT||r===R_FORE||r===R_YARD;
+const R_HOUSE=1,R_FLAT=2,R_BLD=3,R_LOT=4,R_FORE=5,R_GAR=6,R_YARD=7,R_GARDEN=8,R_DRIVE=9;
+const ROLE_OF={h:R_HOUSE,b:R_BLD,p:R_LOT,f:R_FORE,g:R_GAR,y:R_YARD,z:R_GARDEN,d:R_DRIVE};
+const isLotRole=r=>r===R_LOT||r===R_FORE||r===R_YARD||r===R_GARDEN||r===R_DRIVE;
 
 const GOODS={
   wood:{name:"dřevo",pay:4,color:"#8a6a3a"},stone:{name:"kámen",pay:4,color:"#9a9a92"},ore:{name:"železná ruda",pay:5,color:"#9a4f3a"},
@@ -46,20 +46,28 @@ const KIND={
 const units=b=>b.tiles.length/4;          // velikost budovy v polích (pole = 2 × 2 buňky)
 const jobsOf=b=>{const K=KIND[b.type];if(!K)return 0;return K.jobsPerTile?Math.round(K.jobsPerTile*units(b)):(K.jobs||0)};
 
+// ---- pozemky domů (jemná síť po půl poli; řádek 0 je u silnice) ----
+// z zahrada, d příjezd a stání, h dům, f bytový dům, p parkoviště, g vjezd do garáže; units = sloupce jednotlivých domů
+// (dvojdomek a řadovky jsou víc domů vedle sebe, každý se svým příjezdem). Statky jsou v polích (fineShape).
+const plot=(name,w,rows,o)=>{const cells=[];rows.forEach((r,v)=>{for(let u=0;u<r.length;u++){if(r[u]===".")continue;const un=o&&o.units?o.units.findIndex(q=>u>=q[0]&&u<=q[1]):0;cells.push([u,v,r[u],Math.max(0,un)])}});
+  return Object.assign({name,w,cells,fine:true,pop:4},o||{})};
 const HOUSE_SHAPES=[
-  {name:"Domek",w:6,cells:[[0,0]]},
-  {name:"Dvojdomek",w:3,cells:[[0,0],[1,0]]},
-  {name:"Dům se zahradou",w:2,cells:[[0,0],[0,1]]},
+  plot("Rodinný dům",5,["zzzd","hhzd","hhzd","zzzz"],{pop:4}),
+  plot("Vila se zahradou",1.5,["zzzzzd","zhhhzd","zhhhzd","zzzzzz","zzzzzz"],{pop:5,min:20}),
+  plot("Dvojdomek",3,["dzzzzd","dhhhhd","dhhhhd","zzzzzz"],{units:[[0,2],[3,5]],pop:4,min:12}),
+  plot("Řadové domy",2,["dzdzdz","hhhhhh","hhhhhh","zzzzzz"],{units:[[0,1],[2,3],[4,5]],pop:3,min:30}),
+  plot("Řadové domy",1,["dzdzdzdz","hhhhhhhh","hhhhhhhh","zzzzzzzz"],{units:[[0,1],[2,3],[4,5],[6,7]],pop:3,min:60}),
   {name:"Statek do L",w:2,min:16,cells:[[0,0],[1,0],[0,1]]},
   {name:"Dlouhý statek do L",w:0.8,min:30,cells:[[0,0],[1,0],[2,0],[0,1]]},
   {name:"Statek do Z",w:1.2,min:24,cells:[[0,0],[1,0],[1,1],[2,1]]},
   {name:"Statek do U",w:1,min:40,cells:[[0,0],[0,1],[1,1],[2,1],[2,0]]}
 ];
-// bytovky mají před domem venkovní stání (p)
+// bytové domy: viladům a bytový dům mají společné parkoviště před domem, blokový dům (jako v Dejvicích)
+// obklopuje dvůr a auta vjíždějí průjezdem do podzemních garáží
 const FLAT_SHAPES=[
-  {name:"Bytový dům",w:3,cells:[[0,0,"p"],[1,0,"p"],[0,1],[1,1]]},
-  {name:"Panelový dům",w:2,cells:[[0,0,"p"],[1,0,"p"],[2,0,"p"],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]]},
-  {name:"Bytový blok",w:1.5,cells:[[0,0,"p"],[1,0,"p"],[0,1],[0,2],[1,1],[1,2]]}
+  plot("Viladům",3,["pppppp","pppppp","zffffz","zffffz","zzzzzz"],{pop:12}),
+  plot("Bytový dům",2,["pppppppp","pppppppp","pppppppp","ffffffff","ffffffff","ffffffff","zzzzzzzz"],{pop:30,min:100}),
+  plot("Blokový dům",1,["ffffdfffff","ffffgfffff","ffzzzzzzff","ffzzzzzzff","ffzzzzzzff","ffffffffff"],{pop:50,min:150})
 ];
 const row=(v,n,r)=>Array.from({length:n},(_,u)=>[u,v,r]);
 const SVC_SHAPES={
@@ -84,8 +92,18 @@ const SVC_SHAPES={
 };
 // tvary jsou v polích; na jemné síti je každé pole 2 × 2 buňky (v = 0 je řada u silnice)
 const fineShape=cells=>{const o=[];for(const c of cells)for(let b=0;b<2;b++)for(let a=0;a<2;a++)o.push([c[0]*2+a,c[1]*2+b,c[2]]);return o};
-for(const s of HOUSE_SHAPES)s.cells=fineShape(s.cells);
-for(const s of FLAT_SHAPES)s.cells=fineShape(s.cells);
+for(const s of HOUSE_SHAPES)if(!s.fine)s.cells=fineShape(s.cells);
+for(const s of FLAT_SHAPES)if(!s.fine)s.cells=fineShape(s.cells);
 for(const k in SVC_SHAPES)SVC_SHAPES[k]=SVC_SHAPES[k].map(fineShape);
+// ---- podniky: nejdřív parkoviště podle potřebného počtu míst, za ním budova (jemná síť) ----
+// odhad míst stejným pravidlem jako stavebnice (dvouřadý modul 3 řádky, jednořadý 2, stání 0,27 pole)
+function lotSpotsEst(W,D,pull){const Wd=W/2,dep=D/2,k=Math.floor(dep/1.5+1e-6),single=dep-k*1.5>=1-1e-6,rows=2*k+(single?1:0);
+  const two=k+(single?1:0)>=2&&Wd>=2.4;const per=Math.floor((Wd-0.53-(two?0.53:0))/0.27);return Math.max(0,rows*per-(pull&&per>=6?3:0))}
+const LOT_FIRST={pub:{spots:12,bd:3},shop:{spots:16,bd:4},cafe:{spots:6,bd:2},mall:{spots:40,bd:6},hyper:{spots:70,bd:8},office:{spots:16,bd:4}};
+function lotFirstShapes(type){const L=LOT_FIRST[type],pull=!!KIND[type].pull;const c=[];
+  for(const D of [2,3,5,6])for(let W=4;W<=16;W++){const n=lotSpotsEst(W,D,pull);if(n>=Math.ceil(L.spots*0.5))c.push({W,D,n,a:W*(D+L.bd)})}
+  const good=c.filter(q=>q.n>=L.spots).sort((p,q)=>p.a-q.a).slice(0,3),small=c.filter(q=>q.n<L.spots).sort((p,q)=>q.n-p.n).slice(0,2);
+  return [...good,...small].map(q=>{const cells=[];for(let v=0;v<q.D;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"p"]);for(let v=q.D;v<q.D+L.bd;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"b"]);return cells})}
+for(const k in LOT_FIRST)SVC_SHAPES[k]=lotFirstShapes(k);
 const housePop=n=>[0,4,6,8,9,10,11][Math.round(n)]||11;   // n = počet polí
 const isHome=b=>b&&(b.type==="house"||b.type==="flat");

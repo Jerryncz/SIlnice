@@ -99,7 +99,7 @@ function road(S, x0, y0, x1, y1, kind, lvl0, lvl1, lanes) {
     if (free) { X = x; Y = y; }
   }
   ok(X >= 0, "na mapě je volné místo pro test sítě");
-  const alongY = (y) => S.edges.filter(e => !e.dead && Math.abs(e.g.pts[1] - y) < 0.05 && Math.abs(e.g.pts[e.g.pts.length - 1] - y) < 0.05);
+  const alongY = (y) => S.edges.filter(e => !e.dead && Math.abs(e.g.pts[1] - y) < 0.05 && Math.abs(e.g.pts[e.g.pts.length - 1] - y) < 0.05 && Math.min(e.g.pts[0], e.g.pts[e.g.pts.length - 2]) > X - 1 && Math.max(e.g.pts[0], e.g.pts[e.g.pts.length - 2]) < X + 25);
   const y = Y + 2.5;
   ok(road(S, X + 0.5, y, X + 10.5, y, "road").ok, "silnice A postavena");
   ok(road(S, X + 5.5, y - 2, X + 5.5, y + 4, "road").ok, "silnice B přes A postavena");

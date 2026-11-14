@@ -14,15 +14,15 @@ function newTown(S,x,y,roadBorn){const t={id:S.nextId++,isTown:true,name:nextNam
   material:0,matInc:0,noSpace:0,exitFail:0,exitTile:-1,streets:0,world:false,jobless:0,noSchool:0,why:[],kids:0,workers:0,employed:0};S.towns.push(t);return t}
 function fillHousehold(S,b){const p=b.pop,flat=b.type==="flat";let kids=0,sen=0;for(let k=0;k<p;k++){const r=S.R();if(r<(flat?0.17:0.24))kids++;else if(r<(flat?0.33:0.40))sen++}
   b.kids=kids;b.seniors=sen;b.adults=p-kids-sen;b.workers=Math.round(b.adults*0.9);b.ho=0;for(let k=0;k<b.workers;k++)if(S.R()<0.15)b.ho++}
-function createBuilding(S,type,town,tiles,front,name){
+function createBuilding(S,type,town,tiles,front,name,pop){
   const b={id:S.nextId++,type,town,name,tiles:tiles.map(q=>q[0]),front,access:null,pop:0,cap:0,parked:[],incoming:0,visits:0,overflow:0,overflowSeen:0,ofRecent:0,
     born:S.time,dead:false,staff:0,staffInc:0,guests:0,kidsIn:0,away:0};
   let lots=0;
   for(const [j,r] of tiles){if(S.terrain[j]!==GRASS){S.terrain[j]=GRASS;S.dirty.push(j)}S.bld[j]=b;
-    S.role[j]=type==="house"?R_HOUSE:type==="flat"?(r==="p"?R_LOT:R_FLAT):ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
+    S.role[j]=(type==="house"?{h:R_HOUSE}:type==="flat"?{h:R_FLAT,f:R_FLAT}:{})[r]||ROLE_OF[r]||R_BLD;if(r==="p"||r==="y"||r==="f"&&type==="gas")lots++}
   const K=KIND[type];
-  if(type==="house"){b.pop=housePop(units(b));fillHousehold(S,b)}
-  else if(type==="flat"){b.pop=Math.round(10*b.tiles.filter(j=>S.role[j]===R_FLAT).length/4);fillHousehold(S,b)}
+  if(type==="house"){b.pop=pop||housePop(units(b));fillHousehold(S,b)}
+  else if(type==="flat"){b.pop=pop||Math.round(10*b.tiles.filter(j=>S.role[j]===R_FLAT).length/4);fillHousehold(S,b)}
   else if(type==="park")b.cap=K.cap;
   else b.cap=Math.max(Math.round(lots/4*(K.slots||0)),type==="office"?Math.round(units(b)*3):0);
   b.jobs=jobsOf(b);if(type==="house"&&units(b)>=3)b.jobs=Math.round(units(b)); // statky dávají práci na poli
@@ -38,7 +38,7 @@ function fitShape(S,f,r,cells,town){
     for(const a of anchors){const out=[];let ok=true;
       for(const c of cells){const u=c[0]-a[0],v=c[1];const x=tx(f)+u*sux+v*dvx,y=ty(f)+u*suy+v*dvy;
         if(x<0||y<0||x>=W||y>=H){ok=false;break}const j=y*W+x;if(!freeForBuild(S,j)){ok=false;break}
-        if(town&&nearestTown(S,(x+0.5)*CS,(y+0.5)*CS)[0]!==town){ok=false;break}out.push([j,c[2]||"h"])}
+        if(town&&nearestTown(S,(x+0.5)*CS,(y+0.5)*CS)[0]!==town){ok=false;break}out.push([j,c[2]||"h",c[3]||0])}
       if(ok){const fi=out.findIndex(q=>q[0]===f);if(fi>0){const q=out.splice(fi,1)[0];out.unshift(q)}return out}}}
   return null}
 // nová osada: domek u silnice; front = volná buňka u silnice. Vrací obec, nebo null, když se domek nevejde
@@ -88,7 +88,10 @@ function growTown(S,t,force){
     const flat=FLAT_SHAPES.includes(shape);let tiles=fitShape(S,c.f,c.r,shape.cells,t);
     if(!tiles&&shape.cells.length>1){shape=HOUSE_SHAPES[0];tiles=fitShape(S,c.f,c.r,shape.cells,t)}
     if(!tiles)continue;const isFlat=flat&&shape!==HOUSE_SHAPES[0];
-    const b=createBuilding(S,isFlat?"flat":"house",t,tiles,c.f,shape.name);if(!b.access){demolishBuilding(S,b,true);continue}
+    // pozemek s víc domy (dvojdomek, řadovky): každý dům zvlášť se svým příjezdem
+    const groups=new Map();for(const q of tiles){let g=groups.get(q[2]);if(!g)groups.set(q[2],g=[]);g.push(q)}
+    const made=[];for(const g of groups.values()){const b=createBuilding(S,isFlat?"flat":"house",t,g,g[0][0],shape.name,shape.pop);made.push(b)}
+    if(made.some(b=>!b.access)){for(const b of made)demolishBuilding(S,b,true);continue}const b=made[0];
     t.noSpace=0;t.material=Math.max(0,t.material-0.3);
     if(isFlat){t.flats++;if(t.flats===1)addLog(S,t.name+": první bytový dům s podzemní garáží",c.f)}
     const m=[50,100,200,400].find(v=>t.pop>=v&&t.milestone<v);if(m){t.milestone=m;if(S.time>25)addLog(S,t.name+" má už "+m+" obyvatel",c.f)}

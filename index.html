@@ -286,9 +286,9 @@ const RK={
 const ROAD_KINDS=["alley","street","road","oneway","blvd","hwy","ramp"];
 const LEVEL_NAMES=["Zem","Most","Vysoký most"];
 
-const R_HOUSE=1,R_FLAT=2,R_BLD=3,R_LOT=4,R_FORE=5,R_GAR=6,R_YARD=7;
-const ROLE_OF={h:R_HOUSE,b:R_BLD,p:R_LOT,f:R_FORE,g:R_GAR,y:R_YARD};
-const isLotRole=r=>r===R_LOT||r===R_FORE||r===R_YARD;
+const R_HOUSE=1,R_FLAT=2,R_BLD=3,R_LOT=4,R_FORE=5,R_GAR=6,R_YARD=7,R_GARDEN=8,R_DRIVE=9;
+const ROLE_OF={h:R_HOUSE,b:R_BLD,p:R_LOT,f:R_FORE,g:R_GAR,y:R_YARD,z:R_GARDEN,d:R_DRIVE};
+const isLotRole=r=>r===R_LOT||r===R_FORE||r===R_YARD||r===R_GARDEN||r===R_DRIVE;
 
 const GOODS={
   wood:{name:"dřevo",pay:4,color:"#8a6a3a"},stone:{name:"kámen",pay:4,color:"#9a9a92"},ore:{name:"železná ruda",pay:5,color:"#9a4f3a"},
@@ -319,20 +319,28 @@ const KIND={
 const units=b=>b.tiles.length/4;          // velikost budovy v polích (pole = 2 × 2 buňky)
 const jobsOf=b=>{const K=KIND[b.type];if(!K)return 0;return K.jobsPerTile?Math.round(K.jobsPerTile*units(b)):(K.jobs||0)};
 
+// ---- pozemky domů (jemná síť po půl poli; řádek 0 je u silnice) ----
+// z zahrada, d příjezd a stání, h dům, f bytový dům, p parkoviště, g vjezd do garáže; units = sloupce jednotlivých domů
+// (dvojdomek a řadovky jsou víc domů vedle sebe, každý se svým příjezdem). Statky jsou v polích (fineShape).
+const plot=(name,w,rows,o)=>{const cells=[];rows.forEach((r,v)=>{for(let u=0;u<r.length;u++){if(r[u]===".")continue;const un=o&&o.units?o.units.findIndex(q=>u>=q[0]&&u<=q[1]):0;cells.push([u,v,r[u],Math.max(0,un)])}});
+  return Object.assign({name,w,cells,fine:true,pop:4},o||{})};
 const HOUSE_SHAPES=[
-  {name:"Domek",w:6,cells:[[0,0]]},
-  {name:"Dvojdomek",w:3,cells:[[0,0],[1,0]]},
-  {name:"Dům se zahradou",w:2,cells:[[0,0],[0,1]]},
+  plot("Rodinný dům",5,["zzzd","hhzd","hhzd","zzzz"],{pop:4}),
+  plot("Vila se zahradou",1.5,["zzzzzd","zhhhzd","zhhhzd","zzzzzz","zzzzzz"],{pop:5,min:20}),
+  plot("Dvojdomek",3,["dzzzzd","dhhhhd","dhhhhd","zzzzzz"],{units:[[0,2],[3,5]],pop:4,min:12}),
+  plot("Řadové domy",2,["dzdzdz","hhhhhh","hhhhhh","zzzzzz"],{units:[[0,1],[2,3],[4,5]],pop:3,min:30}),
+  plot("Řadové domy",1,["dzdzdzdz","hhhhhhhh","hhhhhhhh","zzzzzzzz"],{units:[[0,1],[2,3],[4,5],[6,7]],pop:3,min:60}),
   {name:"Statek do L",w:2,min:16,cells:[[0,0],[1,0],[0,1]]},
   {name:"Dlouhý statek do L",w:0.8,min:30,cells:[[0,0],[1,0],[2,0],[0,1]]},
   {name:"Statek do Z",w:1.2,min:24,cells:[[0,0],[1,0],[1,1],[2,1]]},
   {name:"Statek do U",w:1,min:40,cells:[[0,0],[0,1],[1,1],[2,1],[2,0]]}
 ];
-// bytovky mají před domem venkovní stání (p)
+// bytové domy: viladům a bytový dům mají společné parkoviště před domem, blokový dům (jako v Dejvicích)
+// obklopuje dvůr a auta vjíždějí průjezdem do podzemních garáží
 const FLAT_SHAPES=[
-  {name:"Bytový dům",w:3,cells:[[0,0,"p"],[1,0,"p"],[0,1],[1,1]]},
-  {name:"Panelový dům",w:2,cells:[[0,0,"p"],[1,0,"p"],[2,0,"p"],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]]},
-  {name:"Bytový blok",w:1.5,cells:[[0,0,"p"],[1,0,"p"],[0,1],[0,2],[1,1],[1,2]]}
+  plot("Viladům",3,["pppppp","pppppp","zffffz","zffffz","zzzzzz"],{pop:12}),
+  plot("Bytový dům",2,["pppppppp","pppppppp","pppppppp","ffffffff","ffffffff","ffffffff","zzzzzzzz"],{pop:30,min:100}),
+  plot("Blokový dům",1,["ffffdfffff","ffffgfffff","ffzzzzzzff","ffzzzzzzff","ffzzzzzzff","ffffffffff"],{pop:50,min:150})
 ];
 const row=(v,n,r)=>Array.from({length:n},(_,u)=>[u,v,r]);
 const SVC_SHAPES={
@@ -357,9 +365,19 @@ const SVC_SHAPES={
 };
 // tvary jsou v polích; na jemné síti je každé pole 2 × 2 buňky (v = 0 je řada u silnice)
 const fineShape=cells=>{const o=[];for(const c of cells)for(let b=0;b<2;b++)for(let a=0;a<2;a++)o.push([c[0]*2+a,c[1]*2+b,c[2]]);return o};
-for(const s of HOUSE_SHAPES)s.cells=fineShape(s.cells);
-for(const s of FLAT_SHAPES)s.cells=fineShape(s.cells);
+for(const s of HOUSE_SHAPES)if(!s.fine)s.cells=fineShape(s.cells);
+for(const s of FLAT_SHAPES)if(!s.fine)s.cells=fineShape(s.cells);
 for(const k in SVC_SHAPES)SVC_SHAPES[k]=SVC_SHAPES[k].map(fineShape);
+// ---- podniky: nejdřív parkoviště podle potřebného počtu míst, za ním budova (jemná síť) ----
+// odhad míst stejným pravidlem jako stavebnice (dvouřadý modul 3 řádky, jednořadý 2, stání 0,27 pole)
+function lotSpotsEst(W,D,pull){const Wd=W/2,dep=D/2,k=Math.floor(dep/1.5+1e-6),single=dep-k*1.5>=1-1e-6,rows=2*k+(single?1:0);
+  const two=k+(single?1:0)>=2&&Wd>=2.4;const per=Math.floor((Wd-0.53-(two?0.53:0))/0.27);return Math.max(0,rows*per-(pull&&per>=6?3:0))}
+const LOT_FIRST={pub:{spots:12,bd:3},shop:{spots:16,bd:4},cafe:{spots:6,bd:2},mall:{spots:40,bd:6},hyper:{spots:70,bd:8},office:{spots:16,bd:4}};
+function lotFirstShapes(type){const L=LOT_FIRST[type],pull=!!KIND[type].pull;const c=[];
+  for(const D of [2,3,5,6])for(let W=4;W<=16;W++){const n=lotSpotsEst(W,D,pull);if(n>=Math.ceil(L.spots*0.5))c.push({W,D,n,a:W*(D+L.bd)})}
+  const good=c.filter(q=>q.n>=L.spots).sort((p,q)=>p.a-q.a).slice(0,3),small=c.filter(q=>q.n<L.spots).sort((p,q)=>q.n-p.n).slice(0,2);
+  return [...good,...small].map(q=>{const cells=[];for(let v=0;v<q.D;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"p"]);for(let v=q.D;v<q.D+L.bd;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"b"]);return cells})}
+for(const k in LOT_FIRST)SVC_SHAPES[k]=lotFirstShapes(k);
 const housePop=n=>[0,4,6,8,9,10,11][Math.round(n)]||11;   // n = počet polí
 const isHome=b=>b&&(b.type==="house"||b.type==="flat");
 
@@ -1588,8 +1606,8 @@ function buildLot(S,b,F,xc){const A=LOT_A,SW=LOT_SW,W2=frameW(F),D=F.D,Wd=F.Wd;
         for(const iv of ivs){const n=Math.floor((iv[1]-iv[0])/SW);if(n<1)continue;const pt=(iv[1]-iv[0])/n;
           for(let jx=0;jx<n;jx++){const lat=iv[0]+(jx+0.5)*pt;if(bay&&i===0&&up&&lat>bay.l0&&lat<bay.l1)continue;
             add({dep:rd,lat,ad:q.y,al:lat,ang:Math.atan2(F.d[1]*sg,F.d[0]*sg),hw:pt/2,along:"d"})}}}
-      aisles.push({a:[q.y,Math.min(lo,...spines)-0.02],b:[q.y,Math.max(hi,...spines)+0.02],w:A})});
-    aisles.push({a:[0,xc],b:[ais[0].y,xc],w:A});if(two)aisles.push({a:[ais[ais.length-1].y,xr],b:[ais[0].y,xr],w:A});
+      aisles.push({a:[q.y,Math.max(0,Math.min(lo,...spines.map(v=>v-A/2)))],b:[q.y,Math.min(Wd,Math.max(hi,...spines.map(v=>v+A/2)))],w:A})});
+    aisles.push({a:[0,xc],b:[Math.min(D,ais[0].y+A/2),xc],w:A});if(two)aisles.push({a:[ais[ais.length-1].y-A/2,xr],b:[Math.min(D,ais[0].y+A/2),xr],w:A});
     if(bay){const bl=(bay.l0+bay.l1)/2,bd=ais[0].y+0.5;bays.push({dep:bd,lat:bl,hd:0.25,hl:(bay.l1-bay.l0)/2});
       const sg=bl>xc?1:-1;add({dep:bd,lat:bl,ad:ais[0].y,al:bl-sg*0.3,ang:Math.atan2(F.p[1]*sg,F.p[0]*sg),hw:(bay.l1-bay.l0)/2,along:"p",truck:true})}
     // zbytek hloubky u silnice: zeleň (mimo hrdlovou uličku)
@@ -1615,6 +1633,18 @@ function refreshAccess(S,b){
       if(b.lay){b.access={e:ra.e.id,u:ra.u,side:ra.side,x:ra.x,y:ra.y};b.front=cellAt(T[0]+F.d[0]*0.25,T[1]+F.d[1]*0.25);
         const W2=b.lay.W;b.drive={E:ra.E,T,door:W2(b.lay.D,xc)};return}}}
   if(b.lay)setLay(S,b,null);
+  // dům s příjezdem (buňky d): od silnice po příjezdu na stání (nebo do garáže g)
+  const drv=b.tiles.filter(j=>S.role[j]===R_DRIVE);
+  for(const j of drv)for(let dd=0;dd<4;dd++){const n=NB[j*4+dd];if(n<0)continue;const e=frontEdgeAt(S,n);if(!e)continue;
+    const cx=wxOf(j),cy=wyOf(j);const r=nearestOn(e.g,cx,cy);if(r.d>Math.max(e.er,e.el)+0.8)continue;const tr=edgeTrim(e);if(r.u<tr[0]+0.2||r.u>e.g.len-tr[1]-0.2)continue;
+    const p=pointAt(e.g,r.u);const side=((cx-p.x)*p.nx+(cy-p.y)*p.ny)>=0?1:-1;const off=side>0?e.er:-e.el;const E=[p.x+p.nx*off,p.y+p.ny*off];
+    // řetěz buněk příjezdu směrem od silnice
+    const ox=cx-wxOf(n),oy=cy-wyOf(n);const chain=[[cx,cy]];let c=j,end=null;
+    for(let k=0;k<12;k++){const nx=cellAt(wxOf(c)+ox,wyOf(c)+oy);if(nx<0||S.bld[nx]!==b)break;const r2=S.role[nx];if(r2===R_DRIVE){chain.push([wxOf(nx),wyOf(nx)]);c=nx;continue}if(r2===R_GAR){end=[wxOf(nx),wyOf(nx)];chain.push(end)}break}
+    const T=[cx-ox*0.5,cy-oy*0.5];
+    // dveře: buňka domu nejblíž stání, na její hraně
+    let door=null,bd=1e9;const st=chain[chain.length-1];for(const q of b.tiles){const r3=S.role[q];if(r3!==R_HOUSE&&r3!==R_FLAT)continue;const d=Math.hypot(wxOf(q)-st[0],wyOf(q)-st[1]);if(d<bd){bd=d;door=[wxOf(q)+(st[0]-wxOf(q))*0.45,wyOf(q)+(st[1]-wyOf(q))*0.45]}}
+    b.front=j;b.access={e:e.id,u:r.u,side,x:p.x,y:p.y};b.drive={E,T,door:door||st,chain,stall:end?null:st,garage:!!end,ang:Math.atan2(oy,ox)};return}
   // budova bez parkoviště: buňka budovy u silnice, příjezd kolmo ke dveřím
   const order=[...b.tiles].sort((p,q)=>(q===b.front?1:0)-(p===b.front?1:0));
   for(const j of order)for(let dd=0;dd<4;dd++){const n=NB[j*4+dd];if(n<0)continue;const e=frontEdgeAt(S,n);if(!e)continue;
@@ -1635,7 +1665,7 @@ function lotLayout(S,b){return b&&!b.dead&&b.access?b.lay||null:null}
 // ---- cesty po příjezdu a parkovišti ----
 // cesta od okraje silnice na místo i (nebo k budově, když i<0)
 function lotPath(S,b,i){const dr=b.drive;if(!dr)return null;const lay=b.lay;
-  if(!lay)return [dr.E,dr.door];const W2=lay.W,xc=lay.xc;
+  if(!lay)return dr.chain?[dr.E,dr.T,...dr.chain]:[dr.E,dr.door];const W2=lay.W,xc=lay.xc;
   if(i<0||i>=lay.spots.length)return [dr.E,dr.T,W2(lay.D-0.25,xc)];
   const s=lay.spots[i];return [dr.E,dr.T,W2(s.ad,xc),W2(s.ad,s.al),[s.x,s.y]]}
 // jízda vpravo: vnitřní body cesty posunuté doprava od směru jízdy (první a poslední bod zůstanou)
@@ -1683,15 +1713,15 @@ function newTown(S,x,y,roadBorn){const t={id:S.nextId++,isTown:true,name:nextNam
   material:0,matInc:0,noSpace:0,exitFail:0,exitTile:-1,streets:0,world:false,jobless:0,noSchool:0,why:[],kids:0,workers:0,employed:0};S.towns.push(t);return t}
 function fillHousehold(S,b){const p=b.pop,flat=b.type==="flat";let kids=0,sen=0;for(let k=0;k<p;k++){const r=S.R();if(r<(flat?0.17:0.24))kids++;else if(r<(flat?0.33:0.40))sen++}
   b.kids=kids;b.seniors=sen;b.adults=p-kids-sen;b.workers=Math.round(b.adults*0.9);b.ho=0;for(let k=0;k<b.workers;k++)if(S.R()<0.15)b.ho++}
-function createBuilding(S,type,town,tiles,front,name){
+function createBuilding(S,type,town,tiles,front,name,pop){
   const b={id:S.nextId++,type,town,name,tiles:tiles.map(q=>q[0]),front,access:null,pop:0,cap:0,parked:[],incoming:0,visits:0,overflow:0,overflowSeen:0,ofRecent:0,
     born:S.time,dead:false,staff:0,staffInc:0,guests:0,kidsIn:0,away:0};
   let lots=0;
   for(const [j,r] of tiles){if(S.terrain[j]!==GRASS){S.terrain[j]=GRASS;S.dirty.push(j)}S.bld[j]=b;
-    S.role[j]=type==="house"?R_HOUSE:type==="flat"?(r==="p"?R_LOT:R_FLAT):ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
+    S.role[j]=(type==="house"?{h:R_HOUSE}:type==="flat"?{h:R_FLAT,f:R_FLAT}:{})[r]||ROLE_OF[r]||R_BLD;if(r==="p"||r==="y"||r==="f"&&type==="gas")lots++}
   const K=KIND[type];
-  if(type==="house"){b.pop=housePop(units(b));fillHousehold(S,b)}
-  else if(type==="flat"){b.pop=Math.round(10*b.tiles.filter(j=>S.role[j]===R_FLAT).length/4);fillHousehold(S,b)}
+  if(type==="house"){b.pop=pop||housePop(units(b));fillHousehold(S,b)}
+  else if(type==="flat"){b.pop=pop||Math.round(10*b.tiles.filter(j=>S.role[j]===R_FLAT).length/4);fillHousehold(S,b)}
   else if(type==="park")b.cap=K.cap;
   else b.cap=Math.max(Math.round(lots/4*(K.slots||0)),type==="office"?Math.round(units(b)*3):0);
   b.jobs=jobsOf(b);if(type==="house"&&units(b)>=3)b.jobs=Math.round(units(b)); // statky dávají práci na poli
@@ -1707,7 +1737,7 @@ function fitShape(S,f,r,cells,town){
     for(const a of anchors){const out=[];let ok=true;
       for(const c of cells){const u=c[0]-a[0],v=c[1];const x=tx(f)+u*sux+v*dvx,y=ty(f)+u*suy+v*dvy;
         if(x<0||y<0||x>=W||y>=H){ok=false;break}const j=y*W+x;if(!freeForBuild(S,j)){ok=false;break}
-        if(town&&nearestTown(S,(x+0.5)*CS,(y+0.5)*CS)[0]!==town){ok=false;break}out.push([j,c[2]||"h"])}
+        if(town&&nearestTown(S,(x+0.5)*CS,(y+0.5)*CS)[0]!==town){ok=false;break}out.push([j,c[2]||"h",c[3]||0])}
       if(ok){const fi=out.findIndex(q=>q[0]===f);if(fi>0){const q=out.splice(fi,1)[0];out.unshift(q)}return out}}}
   return null}
 // nová osada: domek u silnice; front = volná buňka u silnice. Vrací obec, nebo null, když se domek nevejde
@@ -1757,7 +1787,10 @@ function growTown(S,t,force){
     const flat=FLAT_SHAPES.includes(shape);let tiles=fitShape(S,c.f,c.r,shape.cells,t);
     if(!tiles&&shape.cells.length>1){shape=HOUSE_SHAPES[0];tiles=fitShape(S,c.f,c.r,shape.cells,t)}
     if(!tiles)continue;const isFlat=flat&&shape!==HOUSE_SHAPES[0];
-    const b=createBuilding(S,isFlat?"flat":"house",t,tiles,c.f,shape.name);if(!b.access){demolishBuilding(S,b,true);continue}
+    // pozemek s víc domy (dvojdomek, řadovky): každý dům zvlášť se svým příjezdem
+    const groups=new Map();for(const q of tiles){let g=groups.get(q[2]);if(!g)groups.set(q[2],g=[]);g.push(q)}
+    const made=[];for(const g of groups.values()){const b=createBuilding(S,isFlat?"flat":"house",t,g,g[0][0],shape.name,shape.pop);made.push(b)}
+    if(made.some(b=>!b.access)){for(const b of made)demolishBuilding(S,b,true);continue}const b=made[0];
     t.noSpace=0;t.material=Math.max(0,t.material-0.3);
     if(isFlat){t.flats++;if(t.flats===1)addLog(S,t.name+": první bytový dům s podzemní garáží",c.f)}
     const m=[50,100,200,400].find(v=>t.pop>=v&&t.milestone<v);if(m){t.milestone=m;if(S.time>25)addLog(S,t.name+" má už "+m+" obyvatel",c.f)}
@@ -2401,6 +2434,9 @@ function drawBuildings(vis){const ins=0.07,z=cam.z;
         if(b.type==="office"&&z>=10){ctx.fillStyle="rgba(210,230,255,.55)";const x=tx(j)*CS,y=ty(j)*CS;ctx.fillRect(x+0.1,y+0.08,0.1,0.34);ctx.fillRect(x+0.3,y+0.08,0.1,0.34)}}
       else if(r===R_GAR){const q=mergedRect(j,b,ins*0.6);ctx.fillStyle=colors["road-edge"];ctx.fillRect(...q);ctx.fillStyle=colors.lot;ctx.fillRect(q[0]+0.05,q[1]+0.05,q[2]-0.1,q[3]-0.1)}
       else if(r===R_LOT){if(!b.lay){ctx.fillStyle="#bcd3a6";ctx.fillRect(...mergedRect(j,b,0.04))}}
+      else if(r===R_GARDEN){const x=tx(j)*CS,y=ty(j)*CS;ctx.fillStyle="#c9dcb2";ctx.fillRect(x+0.02,y+0.02,CS-0.04,CS-0.04);
+        if(z>=8&&((tx(j)*7+ty(j)*13)%5===0)){ctx.fillStyle="#86ad6e";ctx.beginPath();ctx.arc(x+0.25,y+0.25,0.14,0,Math.PI*2);ctx.fill()}}
+      else if(r===R_DRIVE){const x=tx(j)*CS,y=ty(j)*CS;ctx.fillStyle=colors.lot;ctx.fillRect(x+0.1,y,CS-0.2,CS)}
       else{const q=mergedRect(j,b,0.04);ctx.fillStyle=r===R_YARD?(b.type==="school"?"rgba(201,149,42,.28)":shade(K.color,1.9).replace(/rgb\((\d+),(\d+),(\d+)\)/,(m,a,b2,c)=>`rgba(${a},${b2},${c},.55)`)):colors.lot;ctx.fillRect(...q);
         const x=tx(j)*CS,y=ty(j)*CS;
         if(r===R_YARD&&AMEN_YARD[b.type]){AMEN_YARD[b.type](j,b,q,x,y,z)}
@@ -2425,6 +2461,8 @@ function drawAlleys(list){if(cam.z<6)return;ctx.fillStyle=colors.tree;
   for(const e of list){if(!e.alej||isRampEdge(S,e))continue;for(let u=0.6;u<e.g.len-0.5;u+=1.1){const p=pointAt(e.g,u);for(const sg of [1,-1]){const o=sg>0?e.er+0.13:-(e.el+0.13);ctx.beginPath();ctx.arc(p.x+p.nx*o,p.y+p.ny*o,0.11,0,Math.PI*2);ctx.fill()}}}}
 // zaparkovaná auta na svých místech; u bytovek auta obyvatel, kteří jsou doma
 function drawParked(x0,y0,x1,y1){if(cam.z<6)return;for(const b of S.buildings){const x=tx(b.front),y=ty(b.front);if(x<x0-6||x>x1+6||y<y0-6||y>y1+6)continue;
+  // auto obyvatel na stání u domu, když je někdo doma
+  if(b.drive&&b.drive.stall&&isHome(b)&&b.pop-b.away>0.5){const st=b.drive.stall;drawCarAt(st[0],st[1],b.drive.ang,shade(b.town?b.town.color:"#888888",0.7),false,null)}
   const lay=lotLayout(S,b);if(!lay)continue;
   if(b.type==="flat"){const n=homeCars(b);const col=b.town?b.town.color:"#888";for(let k=0;k<n;k++){const s=lay.spots[k];drawCarAt(s.x,s.y,s.ang,shade(col,0.75+((k*37)%5)*0.1),false,null)}continue}
   for(const pe of b.parked){if(pe.spot===undefined)continue;const s=lay.spots[pe.spot];if(s)drawCarAt(s.x,s.y,s.ang,pe.color,false,null)}}}
@@ -2434,7 +2472,7 @@ function drawLot(b){const lay=b.lay;if(!lay||!b.access)return;const W=lay.W;let 
   const rect=(d0,l0,d1,l1)=>{const q=[W(d0,l0),W(d0,l1),W(d1,l1),W(d1,l0)];ctx.beginPath();q.forEach((v,i)=>i?ctx.lineTo(v[0],v[1]):ctx.moveTo(v[0],v[1]));ctx.closePath()};
   ctx.fillStyle="#bcd3a6";rect(0,0,lay.D,lay.Wd);ctx.fill();
   ctx.fillStyle=colors.lot;for(const s of lay.spots){if(s.along==="d")rect(s.dep-LOT_RD/2,s.lat-s.hw,s.dep+LOT_RD/2,s.lat+s.hw);else rect(s.dep-s.hw,s.lat-LOT_RD/2,s.dep+s.hw,s.lat+LOT_RD/2);ctx.fill()}
-  ctx.strokeStyle=colors.lot;ctx.lineCap="square";for(const q of lay.aisles){ctx.lineWidth=q.w;ctx.beginPath();line(q.a[0],q.a[1],q.b[0],q.b[1]);ctx.stroke()}
+  ctx.strokeStyle=colors.lot;ctx.lineCap="butt";for(const q of lay.aisles){ctx.lineWidth=q.w;ctx.beginPath();line(q.a[0],q.a[1],q.b[0],q.b[1]);ctx.stroke()}
   ctx.lineCap="butt";
   for(const q of lay.bays){ctx.fillStyle="rgba(224,184,58,.45)";rect(q.dep-q.hd,q.lat-q.hl,q.dep+q.hd,q.lat+q.hl);ctx.fill();if(cam.z>=12){ctx.strokeStyle="#d8a92a";ctx.lineWidth=0.035;ctx.stroke();ctx.beginPath();for(let t=-q.hl+0.12;t<q.hl;t+=0.16)line(q.dep-q.hd,q.lat+t,q.dep+q.hd,q.lat+t+0.1);ctx.stroke()}}
   if(cam.z>=10){ctx.strokeStyle=colors["lot-line"];ctx.lineWidth=0.025;ctx.beginPath();for(const s of lay.spots){if(s.truck)continue;

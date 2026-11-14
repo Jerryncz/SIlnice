@@ -63,8 +63,8 @@ function buildLot(S,b,F,xc){const A=LOT_A,SW=LOT_SW,W2=frameW(F),D=F.D,Wd=F.Wd;
         for(const iv of ivs){const n=Math.floor((iv[1]-iv[0])/SW);if(n<1)continue;const pt=(iv[1]-iv[0])/n;
           for(let jx=0;jx<n;jx++){const lat=iv[0]+(jx+0.5)*pt;if(bay&&i===0&&up&&lat>bay.l0&&lat<bay.l1)continue;
             add({dep:rd,lat,ad:q.y,al:lat,ang:Math.atan2(F.d[1]*sg,F.d[0]*sg),hw:pt/2,along:"d"})}}}
-      aisles.push({a:[q.y,Math.min(lo,...spines)-0.02],b:[q.y,Math.max(hi,...spines)+0.02],w:A})});
-    aisles.push({a:[0,xc],b:[ais[0].y,xc],w:A});if(two)aisles.push({a:[ais[ais.length-1].y,xr],b:[ais[0].y,xr],w:A});
+      aisles.push({a:[q.y,Math.max(0,Math.min(lo,...spines.map(v=>v-A/2)))],b:[q.y,Math.min(Wd,Math.max(hi,...spines.map(v=>v+A/2)))],w:A})});
+    aisles.push({a:[0,xc],b:[Math.min(D,ais[0].y+A/2),xc],w:A});if(two)aisles.push({a:[ais[ais.length-1].y-A/2,xr],b:[Math.min(D,ais[0].y+A/2),xr],w:A});
     if(bay){const bl=(bay.l0+bay.l1)/2,bd=ais[0].y+0.5;bays.push({dep:bd,lat:bl,hd:0.25,hl:(bay.l1-bay.l0)/2});
       const sg=bl>xc?1:-1;add({dep:bd,lat:bl,ad:ais[0].y,al:bl-sg*0.3,ang:Math.atan2(F.p[1]*sg,F.p[0]*sg),hw:(bay.l1-bay.l0)/2,along:"p",truck:true})}
     // zbytek hloubky u silnice: zeleň (mimo hrdlovou uličku)
@@ -90,6 +90,18 @@ function refreshAccess(S,b){
       if(b.lay){b.access={e:ra.e.id,u:ra.u,side:ra.side,x:ra.x,y:ra.y};b.front=cellAt(T[0]+F.d[0]*0.25,T[1]+F.d[1]*0.25);
         const W2=b.lay.W;b.drive={E:ra.E,T,door:W2(b.lay.D,xc)};return}}}
   if(b.lay)setLay(S,b,null);
+  // dům s příjezdem (buňky d): od silnice po příjezdu na stání (nebo do garáže g)
+  const drv=b.tiles.filter(j=>S.role[j]===R_DRIVE);
+  for(const j of drv)for(let dd=0;dd<4;dd++){const n=NB[j*4+dd];if(n<0)continue;const e=frontEdgeAt(S,n);if(!e)continue;
+    const cx=wxOf(j),cy=wyOf(j);const r=nearestOn(e.g,cx,cy);if(r.d>Math.max(e.er,e.el)+0.8)continue;const tr=edgeTrim(e);if(r.u<tr[0]+0.2||r.u>e.g.len-tr[1]-0.2)continue;
+    const p=pointAt(e.g,r.u);const side=((cx-p.x)*p.nx+(cy-p.y)*p.ny)>=0?1:-1;const off=side>0?e.er:-e.el;const E=[p.x+p.nx*off,p.y+p.ny*off];
+    // řetěz buněk příjezdu směrem od silnice
+    const ox=cx-wxOf(n),oy=cy-wyOf(n);const chain=[[cx,cy]];let c=j,end=null;
+    for(let k=0;k<12;k++){const nx=cellAt(wxOf(c)+ox,wyOf(c)+oy);if(nx<0||S.bld[nx]!==b)break;const r2=S.role[nx];if(r2===R_DRIVE){chain.push([wxOf(nx),wyOf(nx)]);c=nx;continue}if(r2===R_GAR){end=[wxOf(nx),wyOf(nx)];chain.push(end)}break}
+    const T=[cx-ox*0.5,cy-oy*0.5];
+    // dveře: buňka domu nejblíž stání, na její hraně
+    let door=null,bd=1e9;const st=chain[chain.length-1];for(const q of b.tiles){const r3=S.role[q];if(r3!==R_HOUSE&&r3!==R_FLAT)continue;const d=Math.hypot(wxOf(q)-st[0],wyOf(q)-st[1]);if(d<bd){bd=d;door=[wxOf(q)+(st[0]-wxOf(q))*0.45,wyOf(q)+(st[1]-wyOf(q))*0.45]}}
+    b.front=j;b.access={e:e.id,u:r.u,side,x:p.x,y:p.y};b.drive={E,T,door:door||st,chain,stall:end?null:st,garage:!!end,ang:Math.atan2(oy,ox)};return}
   // budova bez parkoviště: buňka budovy u silnice, příjezd kolmo ke dveřím
   const order=[...b.tiles].sort((p,q)=>(q===b.front?1:0)-(p===b.front?1:0));
   for(const j of order)for(let dd=0;dd<4;dd++){const n=NB[j*4+dd];if(n<0)continue;const e=frontEdgeAt(S,n);if(!e)continue;
@@ -110,7 +122,7 @@ function lotLayout(S,b){return b&&!b.dead&&b.access?b.lay||null:null}
 // ---- cesty po příjezdu a parkovišti ----
 // cesta od okraje silnice na místo i (nebo k budově, když i<0)
 function lotPath(S,b,i){const dr=b.drive;if(!dr)return null;const lay=b.lay;
-  if(!lay)return [dr.E,dr.door];const W2=lay.W,xc=lay.xc;
+  if(!lay)return dr.chain?[dr.E,dr.T,...dr.chain]:[dr.E,dr.door];const W2=lay.W,xc=lay.xc;
   if(i<0||i>=lay.spots.length)return [dr.E,dr.T,W2(lay.D-0.25,xc)];
   const s=lay.spots[i];return [dr.E,dr.T,W2(s.ad,xc),W2(s.ad,s.al),[s.x,s.y]]}
 // jízda vpravo: vnitřní body cesty posunuté doprava od směru jízdy (první a poslední bod zůstanou)
