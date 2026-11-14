@@ -37,6 +37,7 @@ Až je rozhodnuto ji dělat: popis se přenese do `docs/HRA.md`, rozhodnutí do
 | [Druhy domů a pozemky](druhy_domu.md) | ve hře od 0.14 (zbytek nápad) |
 | [Objíždění stojících aut](objizdeni.md) | ve hře od 0.14 (zbytek nápad) |
 | [Autobusy, kola, taxi](dalsi_doprava.md) | nápad |
+| [Tankování na pumpě](pumpa_tankovani.md) | nápad |
 | [Fáze semaforů](semafory_faze.md) | nápad |
 | [Parkování v ulici](parkovani_v_ulici.md) | nápad |
 | [Natočené budovy](natocene_budovy.md) | nápad |

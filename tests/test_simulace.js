@@ -237,6 +237,26 @@ for (const type of ["diamond", "clover", "trumpet"]) {
   for (let k = 0; k < 300; k++) A.step(S, A.STEP); zkontroluj(S, "spojení");
 }
 
+// ---- roh dvou úseků bez křižovatky: pruh na konci jednoho navazuje na stejný pruh dalšího (pokos) ----
+{
+  const S = A.createSim(11); S.money = 1e8;
+  for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
+  const F = (x, yy) => ({ type: "free", x, y: yy, lvl: 0 });
+  A.buildRoad(S, { pts: A.mkLine(20.5, 40.5, 30.5, 40.5), kind: "road", lanes: 2, start: F(20.5, 40.5), end: F(30.5, 40.5), auto: true });
+  A.buildRoad(S, { pts: A.mkLine(30.5, 40.5, 30.5, 50.5), kind: "road", lanes: 2, start: A.snapPoint(S, 30.5, 40.5, 0), end: F(30.5, 50.5), auto: true });
+  const n = S.nodes.find(q => !q.dead && q.edges.length === 2 && Math.abs(q.x - 30.5) < 0.01 && Math.abs(q.y - 40.5) < 0.01); ok(!!n, "roh: uzel");
+  if (n) { const e1 = S.edges[n.edges[0]], e2 = S.edges[n.edges[1]];
+    let maxGap = 0;
+    for (const [ea, eb] of [[e1, e2], [e2, e1]]) for (let d = 0; d < 2; d++) {
+      const la = ea.id * 2 + d; const arrive = (ea.b === n.id) === (d === 0); if (!arrive) continue;
+      const lb = eb.id * 2 + ((eb.a === n.id) ? 0 : 1);
+      for (let k = 0; k < 2; k++) { const p = A.lanePose(S, la, k, ea.g.len), q = A.lanePose(S, lb, k, 0); maxGap = Math.max(maxGap, Math.hypot(p.x - q.x, p.y - q.y)); } }
+    ok(maxGap < 0.02, "roh: pruh navazuje bez skoku (" + maxGap.toFixed(3) + ")");
+    // vnější pruh vede až do pokosu, ne do středu druhé silnice
+    const l = e1.id * 2 + (e1.b === n.id ? 0 : 1); const p = A.lanePose(S, l, 1, e1.g.len);
+    ok(Math.abs(Math.abs(p.x - n.x) - Math.abs(p.y - n.y)) < 0.02, "roh: konec pruhu leží na úhlopříčce rohu"); }
+}
+
 // ---- editor silnic: ohnout úsek, posunout křižovatku, přepojit konec, posunout hranici přídavného pruhu ----
 {
   console.log("Editor silnic");

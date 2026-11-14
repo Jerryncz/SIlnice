@@ -52,6 +52,7 @@ function topoNode(S,n){
   armCuts(S,n,deg);
   // plocha křižovatky na každém rameni až do jeho skutečného začátku (+ přechod)
   for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3||n.endPort?(n.port?0.3:a.cut+0.05+(crossOn(S,n,e)?XW:0)):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
+  cornerMiters(S,n);
   n.turns=new Map();
   for(const ai of n.arms){if(!linkLanes(S,ai.inLink))continue;const list=[];const hix=-ai.hx,hiy=-ai.hy;const ei=S.edges[ai.e];
     for(const ao of n.arms){if(!linkLanes(S,ao.outLink))continue;const eo=S.edges[ao.e];

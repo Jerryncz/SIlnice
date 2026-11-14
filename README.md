@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.15.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.16.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -53,9 +53,9 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | Rozdělit úsek | `5`, klik na silnici; klik na značku rozdělení ho zruší |
 | Bourat | `6`, tah přes silnice nebo budovy |
 | Stavební uzávěra | `7` (po celých polích) |
-| Ruka (posun, výběr) | `8`; klik na auto, chodce, budovu nebo silnici ukáže trasy |
+| Ruka (posun, výběr) | `8`; klik na auto, chodce, budovu nebo silnici ukáže trasy; auto po pruzích a proč stojí |
 | Posun mapy | pravé nebo prostřední tlačítko, Ruka, šipky, dva prsty |
-| Přiblížení | kolečko, `+` / `-`, sevření prstů |
+| Přiblížení | kolečko, `+` / `-`, sevření prstů (až 256 px na pole) |
 | Zrušit kreslení / výběr | pravý klik, `Esc` |
 | Pauza, vytížení silnic | mezerník, `V` |
 | Hlášení pro Claude | `R` nebo tlačítko Hlášení: popis, klik do mapy očísluje prvky, Uložit zapíše snímek, popis a celý stav do složky `hlaseni` |

@@ -9,9 +9,28 @@
 const XW=0.32;   // šířka přechodu pro chodce
 // odsazení pruhu od osy úseku doprava ve směru jízdy; k=0 je vnitřní (levý) pruh
 function laneOffset(e,d,k){const L=d?e.lb:e.lf;if(e.lb===0||e.lf===0)return -(L*LW)/2+(k+0.5)*LW+(e.sh||0);return RK[e.kind].median/2+(k+0.5)*LW}
+// roh dvou úseků bez křižovatky (uzel se dvěma rameny pod úhlem): pruh na konci úseku vede až do
+// pokosu, kde se potká se stejným pruhem dalšího úseku, takže auto plynule přejede a nevyjede z pruhu.
+// e.mA / e.mB = posun pruhu o bočním odsazení 1 na začátku / konci (míří podél úseku), e.mDA / e.mDB = délka náběhu
+function cornerMiters(S,n){const own=[];for(const id of n.edges){const e=S.edges[id];if(e.a===n.id){e.mA=null;own.push([e,true])}if(e.b===n.id){e.mB=null;own.push([e,false])}}
+  if(n.edges.length!==2||isBox(n)||own.length!==2)return;
+  for(const [e,atA] of own){const [o,oA]=own[0][0]===e&&own[0][1]===atA?own[1]:own[0];if(o===e)return;
+    const p=pointAt(e.g,atA?0:e.g.len),q=pointAt(o.g,oA?0:o.g.len);
+    // normála druhého úseku ve směru jízdy tohoto (přes uzel navazuje začátek na konec)
+    const sg=atA===oA?-1:1,n2x=q.nx*sg,n2y=q.ny*sg,dt=p.nx*n2x+p.ny*n2y;if(dt>0.9995)continue;
+    const k=1/Math.max(0.25,1+dt);let vx=(p.nx+n2x)*k-p.nx,vy=(p.ny+n2y)*k-p.ny;
+    const half=Math.max(e.er||0,e.el||0),vl=Math.hypot(vx,vy),D=Math.min(e.g.len*0.45,Math.max(0.6,2*vl*half));
+    if(2*vl*half>D&&vl>0){const f=D/(2*vl*half);vx*=f;vy*=f}
+    if(atA){e.mA=[vx,vy];e.mDA=D}else{e.mB=[vx,vy];e.mDB=D}}}
+// posun bodu pruhu u rohu: u = poloha na ose, o = boční odsazení (+ vpravo od směru a→b); vrací _ms
+const _ms=[0,0];
+function cornerShift(e,u,o){_ms[0]=0;_ms[1]=0;
+  if(e.mB&&u>e.g.len-e.mDB){const w=(u-(e.g.len-e.mDB))/e.mDB;_ms[0]+=e.mB[0]*o*w;_ms[1]+=e.mB[1]*o*w}
+  if(e.mA&&u<e.mDA){const w=1-u/e.mDA;_ms[0]+=e.mA[0]*o*w;_ms[1]+=e.mA[1]*o*w}
+  return _ms}
 // poloha auta v pruhu: x, y, úhel
 function lanePose(S,l,lane,s,out){const e=S.edges[l>>1],d=l&1;const u=clamp(d?e.g.len-s:s,0,e.g.len);const p=pointAt(e.g,u,out||{});const off=laneOffset(e,d,lane),sg=d?-1:1;
-  return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),u,off}}
+  const m=cornerShift(e,u,off*sg);return {x:p.x+p.nx*off*sg+m[0],y:p.y+p.ny*off*sg+m[1],ang:Math.atan2(p.ty*sg,p.tx*sg),u,off}}
 // přechod na rameni křižovatky: uzel se 3+ rameny, silnice s chodníkem, hráč ho nezrušil
 // přechod na rameni křižovatky: uzel se 3+ rameny bez dálnice, silnice s chodníkem, hráč ho nezrušil,
 // rameno je dost dlouhé a nesvírá se sousedním ramenem moc ostře (přechod by ležel na jiné silnici)
@@ -186,6 +205,33 @@ function updateVehicles(S,dt){
               else if(c.wait>4){(q[i]===c&&q.splice(i,1));lotFailed(S,c);continue}}
             else if(!last&&c.s>=(box?sOut-c.len/2-0.04:len)-0.03){if(tryTransition(S,c,l)){(q[i]===c&&q.splice(i,1));continue}}}
           leader=c;i++}}}}}
+// proč auto stojí (panel výběru, hlášení): text, nebo null, když jede. Jen čte stav, nic nemění.
+function whyWait(S,c,deep){if(!c||c.dead)return null;
+  if(c.state==="exit")return c.wait>0.3?(exitGap(S,c)?"čeká, až bude v pruhu místo, aby vyjelo z budovy":"čeká na mezeru v protisměru, aby vyjelo vlevo"):null;
+  if(c.state==="enter"||c.state==="unpark")return c.v<0.05&&c.wait>0.3?"stojí na příjezdu nebo v uličce parkoviště (drží odstup od auta před sebou)":null;
+  if(c.state!=="drive"||c.v>0.08)return null;
+  const l=c.links[c.li],e=S.edges[l>>1];if(!e||e.dead)return null;const q=e.q[l&1][c.lane];
+  if(c.conn)return "projíždí křižovatkou a za ní je plno";
+  if(c.turnWait)return "čeká na mezeru v protisměru, aby odbočilo vlevo do vjezdu";
+  const i=q?q.indexOf(c):-1;
+  if(i>0){const gap=k=>q[k-1].s-q[k].s-(q[k-1].len+q[k].len)/2;
+    if(gap(i)<0.4){let k=i;while(k>0&&gap(k)<0.4)k--;const hw=deep?null:whyWait(S,q[k],true);
+      return "stojí v koloně, "+(i-k)+". za prvním autem"+(hw?" (první auto "+hw+")":"")}}
+  const last=c.li>=c.links.length-1;
+  if(last)return "je u cíle a čeká, až může zajet k budově";
+  const g=goodLanes(S,c.links,c.li,1);if(!g.includes(c.lane)&&e.g.len-c.s>1)return "potřebuje do jiného pruhu a čeká na mezeru vedle";
+  const nl=c.links[c.li+1],n=S.nodes[linkTo(S,l)],e2=S.edges[nl>>1];if(!e2||e2.dead)return "čeká";
+  const lc=lcOf(S,l),row=lc&&lc[c.lane]||null,cands=row?row.filter(x=>x.link===nl):[{lane:0,turn:0}];
+  if(!cands.length)return "je v pruhu, ze kterého jeho cesta nevede; čeká na místo vedle, pak odbočku mine";
+  const sIn=isBox(n)?linkIn(S,nl):0;let room=false;
+  for(const x of cands){const q2=e2.q[nl&1][x.lane];const rear=q2&&q2[q2.length-1];if(!rear||rear.s-rear.len/2-0.12>=sIn+c.len/2+0.02){room=true;break}}
+  if(!room)return isBox(n)?"za křižovatkou není v cílovém pruhu místo (stojí tam kolona)":"na navazujícím úseku je plno";
+  if(!isBox(n))return "čeká na navazující úsek";
+  if(n.eff==="light"){const arm=n.arms.find(a=>a.inLink===l);if(n.light&&(n.light.amber||!arm||arm.axis!==n.light.axis))return "má červenou"}
+  if(n.xBusy&&((n.xBusy.get(l>>1)||0)>0||(n.xBusy.get(nl>>1)||0)>0))return "přes přechod jdou chodci";
+  if(!permit(S,c,l,nl,cands[0].turn))return n.eff==="light"?"při odbočení vlevo dává přednost protijedoucím":"dává přednost "+({right:"autům zprava",main:"autům na hlavní silnici",ring:"autům v kruhu",merge:"autům na dálnici"}[n.eff]||"");
+  if(n.box.length)return "v křižovatce je auto, jehož dráhu by křížilo";
+  return "čeká na křižovatce"}
 // odbočení do vjezdu vlevo přes protisměr: v protisměru nesmí nic přijíždět
 function turnGap(S,c,l){const to=c.trip&&c.trip.to;if(!to||to.isGate||!to.access||to.access.e!==(l>>1))return true;const e=S.edges[l>>1],d=l&1;
   if(to.access.side===(d?-1:1)||!e.q[1-d].length)return true;const len=e.g.len,x=(1-d)?len-to.access.u:to.access.u;

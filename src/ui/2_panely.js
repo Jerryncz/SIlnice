@@ -86,7 +86,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
     sub={exit:"vyjíždí",drive:"jede",enter:"zajíždí k cíli",unpark:"vyjíždí z parkoviště"}[c.state]||"";
     rows.push(["Odkud",placeName(tr.from)],["Kam",placeName(tr.to)]);if(tr.cargo)rows.push(["Veze",GOODS[tr.cargo].name]);
     rows.push(["Zbývá úseků",String(Math.max(0,c.links.length-1-c.li))]);if(c.wait>1)rows.push(["Stojí",Math.round(c.wait)+" s"]);
-    why="Trasa je vyznačená na mapě: plně kudy pojede, slabě kudy už jelo.";ok=true}
+    const ww=whyWait(S,c);why=(ww?"Proč stojí: "+ww+". ":"")+"Trasa po pruzích je na mapě: plně kudy pojede, slabě kudy už jelo.";ok=!ww}
   else if(t.type==="walker"){const w=t.w;if(w.dead)return"";const tr=w.trip||{};title=w.kid?"Dítě pěšky":tr.purpose==="senior"?"Senior pěšky":"Chodec";
     rows.push(["Odkud",placeName(tr.from)],["Kam",placeName(tr.to)]);why="Trasa je vyznačená na mapě.";ok=true}
   else if(t.type==="edge"){const e=S.edges[t.id];if(!e||e.dead)return"";const K=RK[e.kind];const lv=Math.max(S.nodes[e.a].lvl,S.nodes[e.b].lvl);

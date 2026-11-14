@@ -103,19 +103,28 @@ function densify(S,t){const r=townRadius(t)*0.5;const c=t.homes.filter(h=>h.type
   if(t.flats===1)addLog(S,t.name+": první bytový dům s podzemní garáží",h.front);return true}
 // obec si postaví uličku kolmo od své silnice; když narazí na jinou silnici, propojí je (blok).
 // Přednost mají místa uprostřed dlouhých úseků, aby obec nerostla do „nudle“ podél jedné silnice.
+// Kolem každé silnice je pás STREET_GAP polí (od okraje vozovky), do kterého obec uličku nepostaví (R95):
+// výjimkou je jen silnice, ze které ulička vychází, a silnice, na kterou se na konci kolmo napojí.
+const STREET_GAP=4;
+// je bod (x, y) blíž než STREET_GAP k okraji jiné silnice než skip (funkce: true = nepočítat)?
+function inStreetGap(S,x,y,skip){for(const o of edgesNear(S,x,y,STREET_GAP+2)){if(skip(o))continue;if(nearestOn(o.g,x,y).d-Math.max(o.er,o.el)<STREET_GAP)return true}return false}
 function buildTownStreet(S,t){
   const r=townRadius(t)+2;const opts=[];
   for(const e of S.edges){if(e.dead||!RK[e.kind].front||e.ring||e.kind==="blvd"||!isGroundEdge(S,e))continue;
     const bb=e.g.bb;if(bb[2]<t.cx-r||bb[0]>t.cx+r||bb[3]<t.cy-r||bb[1]>t.cy+r)continue;
     for(let u=1;u<=e.g.len-1;u+=1){const p=pointAt(e.g,u);if(Math.hypot(p.x-t.cx,p.y-t.cy)>r)continue;
+      // začátek uličky daleko od křižovatek a jiných silnic
+      if(inStreetGap(S,p.x,p.y,o=>o===e))continue;
       const along=Math.min(u,e.g.len-u);
       for(const sg of [1,-1]){const nx=p.nx*sg,ny=p.ny*sg;let len=0,loop=null;
         for(let k=1;k<=7;k++){const qx=p.x+nx*k,qy=p.y+ny*k;const c=cellAt(qx,qy);if(c<0)break;
-          if(S.roadCnt[c]){if(k>=2&&frontEdgeAt(S,c))loop={x:qx,y:qy};break}
+          if(S.roadCnt[c]){if(k>=STREET_GAP&&frontEdgeAt(S,c))loop={x:qx,y:qy};break}
           let free=true;forCells(qx,qy,0.45,j=>{if(!freeForBuild(S,j)&&!S.roadCnt[j]||S.terrain[j]===WATER)free=false});if(!free)break;
           if(Math.hypot(qx-t.cx,qy-t.cy)>r+2||nearestTown(S,qx,qy)[0]!==t)break;len=k}
-        // rozestup: souběžná silnice nesmí být blíž než 4 pole (mezi nimi se musí vejít domy)
-        let near=false;for(let k=1.5;k<=len-(loop?1:0)&&!near;k+=1){const qx=p.x+nx*k,qy=p.y+ny*k;for(const o of edgesNear(S,qx,qy,4)){if(o===e||loop&&nearestOn(o.g,loop.x,loop.y).d<0.6)continue;if(nearestOn(o.g,qx,qy).d<3.6){near=true;break}}}
+        // celá ulička mimo pás kolem ostatních silnic (výchozí silnice a cíl propojky se nepočítají)
+        const skip=o=>o===e||!!loop&&nearestOn(o.g,loop.x,loop.y).d<0.6;
+        let near=false;for(let k=1;k<=len&&!near;k+=0.5){if(inStreetGap(S,p.x+nx*k,p.y+ny*k,skip))near=true}
+        if(loop&&!near&&inStreetGap(S,loop.x,loop.y,skip))near=true;   // napojení na konci daleko od křižovatek
         if(near)continue;
         if(len>=3||loop&&len>=1)opts.push({x0:p.x,y0:p.y,x1:loop?loop.x:p.x+nx*len,y1:loop?loop.y:p.y+ny*len,loop:!!loop,w:(loop?2.5:1)*len*(1+Math.min(along,10)/3)/(1+Math.hypot(p.x-t.cx,p.y-t.cy)*0.3)})}}}
   if(!opts.length)return false;

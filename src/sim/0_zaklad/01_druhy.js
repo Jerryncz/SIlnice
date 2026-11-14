@@ -99,11 +99,15 @@ for(const k in SVC_SHAPES)SVC_SHAPES[k]=SVC_SHAPES[k].map(fineShape);
 // odhad míst stejným pravidlem jako stavebnice (dvouřadý modul 3 řádky, jednořadý 2, stání 0,27 pole)
 function lotSpotsEst(W,D,pull){const Wd=W/2,dep=D/2,k=Math.floor(dep/1.5+1e-6),single=dep-k*1.5>=1-1e-6,rows=2*k+(single?1:0);
   const two=k+(single?1:0)>=2&&Wd>=2.4;const per=Math.floor((Wd-0.53-(two?0.53:0))/0.27);return Math.max(0,rows*per-(pull&&per>=6?3:0))}
-const LOT_FIRST={pub:{spots:12,bd:3},shop:{spots:16,bd:4},cafe:{spots:6,bd:2},mall:{spots:40,bd:6},hyper:{spots:70,bd:8},office:{spots:16,bd:4}};
-function lotFirstShapes(type){const L=LOT_FIRST[type],pull=!!KIND[type].pull;const c=[];
-  for(const D of [2,3,5,6])for(let W=4;W<=16;W++){const n=lotSpotsEst(W,D,pull);if(n>=Math.ceil(L.spots*0.5))c.push({W,D,n,a:W*(D+L.bd)})}
+// spots = potřebná místa, bd = hloubka budovy, yd = dvůr za budovou (půlpole); škola, průmysl a pumpa od 0.16 (R96)
+const LOT_FIRST={pub:{spots:12,bd:3},shop:{spots:16,bd:4},cafe:{spots:6,bd:2},mall:{spots:40,bd:6},hyper:{spots:70,bd:8},office:{spots:16,bd:4},
+  school:{spots:10,bd:4,yd:2},gas:{spots:6,bd:2},logging:{spots:6,bd:2,yd:2},quarry:{spots:8,bd:2,yd:2},mine:{spots:10,bd:2,yd:2},sawmill:{spots:12,bd:3,yd:2},steel:{spots:24,bd:4,yd:2}};
+// parkoviště s místem pro nákladní auta: podniky se zákazníky (zásobování) a průmysl (odvoz zboží)
+const lotBays=type=>!!(KIND[type]&&(KIND[type].pull||KIND[type].industry));
+function lotFirstShapes(type){const L=LOT_FIRST[type],pull=lotBays(type),yd=L.yd||0;const c=[];
+  for(const D of [2,3,5,6])for(let W=4;W<=16;W++){const n=lotSpotsEst(W,D,pull);if(n>=Math.ceil(L.spots*0.5))c.push({W,D,n,a:W*(D+L.bd+yd)})}
   const good=c.filter(q=>q.n>=L.spots).sort((p,q)=>p.a-q.a).slice(0,3),small=c.filter(q=>q.n<L.spots).sort((p,q)=>q.n-p.n).slice(0,2);
-  return [...good,...small].map(q=>{const cells=[];for(let v=0;v<q.D;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"p"]);for(let v=q.D;v<q.D+L.bd;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"b"]);return cells})}
+  return [...good,...small].map(q=>{const cells=[];for(let v=0;v<q.D;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"p"]);for(let v=q.D;v<q.D+L.bd;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"b"]);for(let v=q.D+L.bd;v<q.D+L.bd+yd;v++)for(let u=0;u<q.W;u++)cells.push([u,v,"y"]);return cells})}
 for(const k in LOT_FIRST)SVC_SHAPES[k]=lotFirstShapes(k);
 const housePop=n=>[0,4,6,8,9,10,11][Math.round(n)]||11;   // n = počet polí
 const isHome=b=>b&&(b.type==="house"||b.type==="flat");

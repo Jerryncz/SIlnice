@@ -33,9 +33,13 @@ function pickMover(x,y){let best=null,bd=0.32;for(const c of S.cars){if(c.dead)c
 let traceTick=0;
 function drawTrace(){const t=UI.pinned;if(!t||!(t.type==="car"||t.type==="walker"||t.type==="bld"||t.type==="edge"))return;const ts=traceSet(t);if((traceTick++%30)===0)UI.selDirty=true;if(!ts.length)return;
   const acc=[new Map(),new Map(),new Map()];   // sem / odtud / už projeto
-  for(const q of ts){const m=q.m,li=m.li||0;if(!m.links)continue;for(let k=0;k<m.links.length;k++){const id=m.links[k]>>1;const M=k<li?acc[2]:acc[q.cls];M.set(id,(M.get(id)||0)+1)}}
+  const one=t.type==="car";   // jedno auto: dopředu po pruzích (carLaneRoute), osou jen to, co už projelo
+  for(const q of ts){const m=q.m,li=m.li||0;if(!m.links)continue;for(let k=0;k<m.links.length;k++){if(one&&k>=li)continue;const id=m.links[k]>>1;const M=k<li?acc[2]:acc[q.cls];M.set(id,(M.get(id)||0)+1)}}
   ctx.lineCap="round";ctx.lineJoin="round";const cols=["#1f6fe0","#e0752d","#1f6fe0"],al=[0.75,0.75,0.25];
   for(const k of [2,1,0]){ctx.strokeStyle=cols[k];ctx.globalAlpha=al[k];for(const [id,n] of acc[k]){const e=S.edges[id];if(!e||e.dead)continue;ctx.lineWidth=Math.min(0.6,0.12+0.035*n)+(k===1?0:0.04);ctx.stroke(edgePath(e))}}
+  if(one){const r=carLaneRoute(t.c);if(r.length>=4){ctx.globalAlpha=0.85;ctx.strokeStyle=cols[0];ctx.lineWidth=Math.max(0.07,3/cam.z);ctx.beginPath();ctx.moveTo(r[0],r[1]);for(let k=2;k<r.length;k+=2)ctx.lineTo(r[k],r[k+1]);ctx.stroke();
+    // šipka na konci
+    const n=r.length;const ax=r[n-2],ay=r[n-1],a=Math.atan2(ay-r[n-3],ax-r[n-4]),h=Math.max(0.18,8/cam.z);ctx.fillStyle=cols[0];ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(ax-Math.cos(a-0.45)*h,ay-Math.sin(a-0.45)*h);ctx.lineTo(ax-Math.cos(a+0.45)*h,ay-Math.sin(a+0.45)*h);ctx.closePath();ctx.fill()}}
   // chodci: jejich cesta po chodnících a přechodech (plně před nimi, slabě za nimi)
   ctx.lineWidth=0.07;for(const q of ts){if(q.car||!q.m.path)continue;const w=q.m;ctx.strokeStyle=cols[q.cls];
     for(const [a,b,al2] of [[0,w.s,0.25],[w.s,w.plen,0.85]]){if(b-a<0.01)continue;ctx.globalAlpha=al2;ctx.beginPath();const p0=pathPose(w.path,a);ctx.moveTo(p0.x,p0.y);let c=0;for(let i=1;i<w.path.length;i++){const l=Math.hypot(w.path[i][0]-w.path[i-1][0],w.path[i][1]-w.path[i-1][1]);c+=l;if(c>a&&c<b)ctx.lineTo(w.path[i][0],w.path[i][1])}const p1=pathPose(w.path,b);ctx.lineTo(p1.x,p1.y);ctx.stroke()}}
@@ -43,6 +47,27 @@ function drawTrace(){const t=UI.pinned;if(!t||!(t.type==="car"||t.type==="walker
   const mark=(b,col)=>{if(!b||b.isGate||b.dead||b.front===undefined)return;ctx.strokeStyle=col;ctx.beginPath();ctx.arc(wxOf(b.front),wyOf(b.front),0.45,0,Math.PI*2);ctx.stroke()};
   const ends=new Set();for(const q of ts){const tr=q.m.trip;if(!tr)continue;if(t.type!=="bld"||q.cls===1){if(!ends.has(tr.to)){ends.add(tr.to);mark(tr.to,"#1f6fe0")}}if(t.type!=="bld"||q.cls===0){if(!ends.has(tr.from)){ends.add(tr.from);mark(tr.from,"#e0752d")}}
     const p=q.car?carPose(q.m):null,w=q.car?null:walkerPose(q.m);const x=p?p.x:w?w[0]:null,y=p?p.y:w?w[1]:null;if(x!==null&&(ts.length<=60)){ctx.strokeStyle="#111";ctx.beginPath();ctx.arc(x,y,q.car?0.32:0.16,0,Math.PI*2);ctx.stroke()}}}
+// plánovaná cesta jednoho auta po pruzích: v pruhu, přejetí do pruhu, ze kterého cesta pokračuje, a oblouky
+// v křižovatkách podle spojení pruhů (stejné volby jako auto: goodLanes, spojení z pruhu). Vrací [x,y,…].
+function carLaneRoute(c){const out=[];if(!c||c.dead||!c.links||(c.state!=="drive"&&c.state!=="exit"))return out;
+  const P=(l,k,s)=>lanePose(S,l,k,s);const add=p=>{const n=out.length;if(n<2||Math.hypot(out[n-2]-p.x,out[n-1]-p.y)>0.02)out.push(p.x,p.y)};
+  const li0=c.state==="drive"?c.li:0;let lane=c.lane,s=c.s;
+  if(c.state==="drive"&&c.conn&&c.s<c.conn.s1){const cn=c.conn;for(let t=clamp((c.s-cn.s0)/cn.len,0,1);t<=1.0001;t+=0.125){const q=bez(cn,Math.min(1,t));add({x:q[0],y:q[1]})}s=cn.s1}
+  else if(c.state==="exit"){const p=carPose(c);if(p)add(p)}
+  for(let k=li0;k<c.links.length;k++){const l=c.links[k],e=S.edges[l>>1];if(!e||e.dead)break;const L=linkLanes(S,l);if(!L)break;lane=Math.min(lane,L-1);
+    const last=k===c.links.length-1,box=!last&&isBox(S.nodes[linkTo(S,l)]);const end=last?Math.min(c.sEnd,e.g.len):box?linkOut(S,l):e.g.len;
+    let tl=lane;if(!last){const g=goodLanes(S,c.links,k,2);if(!g.includes(lane)){tl=g[0];for(const x of g)if(Math.abs(x-lane)<Math.abs(tl-lane))tl=x}}
+    // přejetí: v první třetině zbývající délky, plynule
+    const s0=Math.min(s,end),sc=s0+(end-s0)*0.3,sw=Math.min(1.4,Math.max(0.4,(end-sc)*0.6));
+    for(let x=s0;;x=Math.min(end,x+0.3)){const f=tl===lane?0:clamp((x-sc)/sw,0,1),ff=f*f*(3-2*f);const a=P(l,lane,x),b=tl===lane?a:P(l,tl,x);add({x:a.x+(b.x-a.x)*ff,y:a.y+(b.y-a.y)*ff});if(x>=end)break}
+    lane=tl;if(last)break;
+    const nl=c.links[k+1],e2=S.edges[nl>>1];if(!e2||e2.dead)break;const lc=lcOf(S,l),row=lc&&lc[lane]||[];let opts=row.filter(x=>x.link===nl);
+    const L2=linkLanes(S,nl);if(!L2)break;let nlane=Math.min(lane,L2-1);
+    if(opts.length){const g2=goodLanes(S,c.links,k+1,1);opts=[...opts].sort((p,q)=>(g2.includes(p.lane)?0:1)-(g2.includes(q.lane)?0:1)||Math.abs(p.lane-lane)-Math.abs(q.lane-lane));nlane=opts[0].lane}
+    if(box){const a=P(l,lane,end),b=P(nl,nlane,linkIn(S,nl)),cn=mkConn(a,b);for(let t=0.125;t<=1.0001;t+=0.125){const q=bez(cn,t);add({x:q[0],y:q[1]})}s=linkIn(S,nl)}
+    else s=0;
+    lane=nlane}
+  return out}
 // nástroj Spojení: zvýrazněné křižovatky, u vybrané křivky spojení, konce a začátky pruhů
 function drawConnTool(){if(UI.tool!=="conn")return;const z=cam.z;
   ctx.lineWidth=Math.max(0.04,1.5/z);for(const n of S.nodes){if(!connNodeOk(n)||n.id===UI.connNode||!inView(n.x,n.y,2))continue;ctx.strokeStyle=connCustom(S,n)?colors.accent:"rgba(31,95,174,.4)";ctx.beginPath();ctx.arc(n.x,n.y,Math.max(0.3,n.rad*0.7),0,Math.PI*2);ctx.stroke()}

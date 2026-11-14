@@ -3,6 +3,24 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.16.0 – 14. 11. 2026
+
+- Přiblížení až 256 px na pole (dřív 64), aby šly pohodlně upravovat
+  spojení v křižovatce.
+- Oprava: na rohu dvou úseků bez křižovatky auta vyjížděla ze svého pruhu
+  do druhé silnice; pruh teď vede až do pokosu a navazuje bez skoku.
+- Výběr auta ukáže trasu po pruzích (přejetí do pruhu, oblouky
+  v křižovatkách) a panel napíše, proč auto stojí (R98); hlášení to zapíše
+  ke každému vybranému autu.
+- Zahrady domů jsou jedna souvislá zeleň (bez čtverečků po buňkách).
+- Obce nestaví uličky do pásu 4 polí kolem ostatních silnic (R95): žádné
+  krátké propojky, ostrůvky a trojúhelníky.
+- Škola, pumpa a průmysl mají parkoviště ze stavebnice (R96): nejdřív
+  parkoviště podle počtu míst, za ním budova, u školy a průmyslu dvůr;
+  průmysl s místem pro nákladní auta, pumpa se stříškou a stojany.
+- Rozpor: pumpa podle HRA přitahovala auta, ale nikdo na ni nejezdil;
+  zapsáno do kap. 10 a `napady/pumpa_tankovani.md`.
+
 ## 0.15.0 – 14. 11. 2026
 
 - **Hlášení** (tlačítko vpravo nahoře, klávesa R, R90–R94): hra se zastaví,
