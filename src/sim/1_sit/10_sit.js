@@ -86,11 +86,11 @@ function tidyNodes(S,nodes){for(const n of nodes)if(n&&!n.dead)mergeAt(S,n)}
 
 // ---- přenos aut, chodců a vjezdů na nové úseky ----
 // map: id starého úseku → kusy [{e, u0, u1, off, rev}] seřazené podle u0; kus kryje staré u0..u1,
-// nová poloha = off + (rev ? u1-u : u-u0)
+// nová poloha = off + (rev ? u1-u : u-u0)·k (k = poměr délek, když se úsek natáhne nebo zkrátí; jinak 1)
 function remapEdges(S,map){
   const has=l=>map.has(l>>1);
   const pieceAt=(ps,u)=>{let k=0;while(k<ps.length-1&&u>ps[k].u1)k++;return ps[k]};
-  const nu=(p,u)=>clamp(p.off+(p.rev?p.u1-u:u-p.u0),0,p.e.g.len);
+  const nu=(p,u)=>clamp(p.off+(p.rev?p.u1-u:u-p.u0)*(p.k||1),0,p.e.g.len);
   const linkOf=(p,d)=>p.e.id*2+(d^(p.rev?1:0));
   const uOf=(l,s)=>{const e=S.edges[l>>1];return clamp((l&1)?e.g.len-s:s,0,e.g.len)};
   const sOn=(l,u)=>{const L=S.edges[l>>1].g.len;return (l&1)?L-u:u};

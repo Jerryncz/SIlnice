@@ -34,5 +34,5 @@ smysl.
 - [x] Dráhy pozemků: příjezd, uličky, stání; vjezd a výjezd s mezerou
 - [x] Pozemky: parkoviště z katalogu, pak budova; druhy domů
 - [x] Objíždění stojících aut
-- [ ] Editor silnic (4 funkce)
+- [x] Editor silnic (4 funkce)
 - [ ] Dokumentace, testy, poznatky

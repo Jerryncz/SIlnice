@@ -71,6 +71,7 @@ cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);const [s
     else if(sh==="branch"){const s=snapAny(wx,wy,UI.level);UI.draw={tool:"branch",start:s.type==="edge"?s:null};if(!UI.draw.start){toast("Odbočka začíná na silnici mimo křižovatku");UI.draw=null}else refreshPlan()}}
   else if(t==="lane"){const h=hitTest(wx,wy);if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy);UI.laneDrag={e:h.id,u0:r.u,u1:r.u,dir:laneSide(ed,wx,wy,r.u),rem:e.shiftKey}}else UI.laneDrag=null;UI.laneHover=null}
   else if(t==="conn")connDown(wx,wy);
+  else if(t==="edit")editDown(wx,wy);
   else if(t==="erase"||t==="zone"){const h=hitTest(wx,wy);stroke={tool:t,mode:t==="erase"?(h&&h.type==="bld"?"bld":"road"):(S.zone[cellAt(wx,wy)]?"clear":"set"),spent:0,done:new Set()};applyStroke(wx,wy)}});
 function applyStroke(wx,wy){const st=stroke;if(!st)return;
   // uzávěra po celých polích (2 × 2 buňky)
@@ -91,6 +92,7 @@ cv.addEventListener("pointermove",e=>{const [sx,sy]=local(e);const p=ptrs.get(e.
     else{UI.laneHover=null;if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy);UI.laneHover={e:h.id,u0:0,u1:0,dir:laneSide(ed,wx,wy,r.u),rem:e.shiftKey}}}}
   if(UI.tool==="split"||UI.tool==="cross"){UI.splitHover=null;if(h&&h.type==="edge"){const ed=S.edges[h.id];UI.splitHover={e:h.id,u:nearestOn(ed.g,wx,wy).u}}}
   if(UI.tool==="conn")connMove(wx,wy);
+  if(UI.tool==="edit")editMove(wx,wy,e.shiftKey);
   if(stroke)applyStroke(wx,wy)});
 function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.delete(e.pointerId);
   if(pinch){if(ptrs.size<2)pinch=null;return}
@@ -102,6 +104,7 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
   const [wx,wy]=toWorld(sx,sy);const t=UI.tool,d=UI.draw;
   if(stroke){if(stroke.spent)toast("Zbouráno za "+fmt(stroke.spent)+" Kč");stroke=null;return}
   if(t==="conn"){connUp(wx,wy);UI.selDirty=true;return}
+  if(t==="edit"){editUp(wx,wy);UI.selDirty=true;return}
   if(t==="build"&&UI.rebuild){if(moved)return;const h=hitTest(wx,wy);
     if(h&&h.type==="edge")runPlan(planKind(S,S.edges[h.id],UI.kind,UI.lanes),commitKind,"Přestavěno na "+RK[UI.kind].name.toLowerCase());else toast("Klikni na silnici, kterou chceš přestavět");UI.selDirty=true;return}
   if(t==="build"&&!UI.rebuild&&UI.shape==="template"&&!moved){const P=planTemplate(S,UI.tpl,wx,wy,UI.kind,UI.lanes);if(P.ok)finishBuild(P,"Křižovatka "+P.name.toLowerCase());else toast(P.msg);UI.selDirty=true;return}
@@ -131,11 +134,11 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
       if(next===2){let best=null,bd=2;for(let i=0;i<n.arms.length;i++)for(let j=i+1;j<n.arms.length;j++){const a=n.arms[i],b=n.arms[j];const dt=a.hx*b.hx+a.hy*b.hy;if(dt<bd){bd=dt;best=[a.e,b.e]}}pair=best}
       const r=setControl(S,n,next,pair);toast(r.ok?["Automaticky","Přednost zprava","Hlavní silnice","Semafor"][next]:r.msg);UI.pinned=h}else toast("Klikni na křižovatku")}
   UI.selDirty=true}
-cv.addEventListener("pointerup",endPtr);cv.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);pan=null;pinch=null;stroke=null;UI.laneDrag=null});
+cv.addEventListener("pointerup",endPtr);cv.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);pan=null;pinch=null;stroke=null;UI.laneDrag=null;if(UI.editDrag){UI.editDrag=null;UI.plan=null}});
 cv.addEventListener("pointerleave",()=>{UI.mouse.in=false;UI.snapHint=null;if(!stroke&&!pan){UI.hover=null;UI.hoverKey="";UI.selDirty=true}});
 cv.addEventListener("contextmenu",e=>e.preventDefault());
 cv.addEventListener("wheel",e=>{e.preventDefault();const [sx,sy]=local(e);zoomAt(sx,sy,Math.pow(1.0015,-e.deltaY));if(UI.draw)refreshPlan()},{passive:false});
-function setTool(t){UI.tool=t;UI.draw=null;UI.plan=null;UI.laneDrag=null;UI.laneHover=null;UI.splitHover=null;UI.snapHint=null;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));cv.classList.toggle("pan",t==="hand");lastOptsKey="";updateOpts()}
+function setTool(t){UI.tool=t;UI.draw=null;UI.plan=null;UI.editDrag=null;UI.editEdge=null;UI.laneDrag=null;UI.laneHover=null;UI.splitHover=null;UI.snapHint=null;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));cv.classList.toggle("pan",t==="hand");lastOptsKey="";updateOpts()}
 function setShape(sh){UI.shape=sh;if(UI.tool!=="build")setTool("build");UI.draw=null;UI.plan=null;UI.tplKey="";lastOptsKey="";updateOpts()}
 function setSpeed(s){speed=s;document.querySelectorAll("[data-speed]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.speed===s))}
 document.querySelectorAll("[data-tool]").forEach(b=>b.addEventListener("click",()=>setTool(b.dataset.tool)));
@@ -151,7 +154,7 @@ $("helpBtn").addEventListener("click",()=>{$("help").hidden=false});$("helpClose
 $("help").addEventListener("click",e=>{if(e.target.id==="help")$("help").hidden=true});
 let prevSpeed=1;const keysDown=new Set();
 window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;
-  const m={"1":"build","2":"lane","3":"junction","4":"cross","5":"split","6":"erase","7":"zone","8":"hand","9":"conn"};const shp={a:"line",s:"curve",d:"round",f:"connect",g:"branch",h:"template"};
+  const m={"1":"build","2":"lane","3":"junction","4":"cross","5":"split","6":"erase","7":"zone","8":"hand","9":"conn","0":"edit"};const shp={a:"line",s:"curve",d:"round",f:"connect",g:"branch",h:"template"};
   const k=e.key.toLowerCase();
   if(m[e.key])setTool(m[e.key]);
   else if(shp[k]&&!e.ctrlKey&&!e.metaKey)setShape(shp[k]);
@@ -159,7 +162,7 @@ window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("inp
   else if(k==="v")$("ovl").click();
   else if(k==="q"){UI.level=Math.max(0,UI.level-1);lastOptsKey="";updateOpts();refreshPlan()}
   else if(k==="e"){UI.level=Math.min(2,UI.level+1);lastOptsKey="";updateOpts();refreshPlan()}
-  else if(e.key==="Escape"){if(!$("confirm").hidden)hideConfirm();else if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;$("help").hidden=true;UI.selDirty=true}
+  else if(e.key==="Escape"){if(!$("confirm").hidden)hideConfirm();else if(UI.editDrag){UI.editDrag=null;UI.plan=null}else if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;$("help").hidden=true;UI.selDirty=true}
   else if(e.key==="Shift"){UI.mouse.shift=true;if(UI.draw)refreshPlan()}
   else if(e.key.startsWith("Arrow")){e.preventDefault();keysDown.add(e.key)}
   else if(e.key==="+"||e.key==="=")zoomAt(vw/2,vh/2,1.2);else if(e.key==="-")zoomAt(vw/2,vh/2,1/1.2)});
@@ -180,3 +183,33 @@ function connUp(wx,wy){const n=connSel(),dr=UI.connDrag;UI.connDrag=null;
   if(n){let best=null,bd=0.09;for(const q of connCurves(n)){const d=bezDist(q.c,wx,wy);if(d<bd){bd=d;best=q}}
     if(best){const r=connRemove(S,n,best.l,best.k,best.nl,best.m);toast(r.ok?"Spojení zrušeno":r.msg);lastOptsKey="";updateOpts();return}}
   const h=hitTest(wx,wy);const nn=h&&h.type==="node"?S.nodes[h.id]:null;if(connNodeOk(nn))UI.connNode=nn.id;else{UI.connNode=null;if(!n)toast("Klikni na křižovatku")}lastOptsKey="";updateOpts()}
+
+// ---- nástroj Upravit: úchyty na úseku pod kurzorem (nebo vybraném kliknutím) a na křižovatce ----
+function editHandlesNow(){const out=[],seen=new Set();
+  for(const id of [UI.editEdge,UI.hover&&UI.hover.type==="edge"?UI.hover.id:null]){const e=id!=null?S.edges[id]:null;if(!e||e.dead||seen.has(e.id))continue;seen.add(e.id);out.push(...editHandles(S,e))}
+  if(UI.hover&&UI.hover.type==="node"){const n=S.nodes[UI.hover.id];if(n&&!n.dead&&!editNodeOk(S,n)&&!out.some(h=>h.n===n.id))out.push({t:slideInfo(S,n)?"slide":"move",n:n.id,x:n.x,y:n.y})}
+  return out}
+function editPick(wx,wy){const r=Math.max(0.3,12/cam.z);let best=null,bd=r;for(const h of editHandlesNow()){const d=Math.hypot(h.x-wx,h.y-wy);if(d<bd){bd=d;best=h}}return best}
+function editDown(wx,wy){const h=editPick(wx,wy);UI.editDrag=h?{h,key:"",plan:null}:null;if(h)UI.plan=null}
+// cíl tahu → plán úpravy (přepočítá se, jen když se cíl změní)
+function editMove(wx,wy,raw){const d=UI.editDrag;if(!d||!moved)return;const h=d.h;let key="",mk=null;
+  const cell=()=>raw?[wx,wy]:[Math.floor(wx)+0.5,Math.floor(wy)+0.5];
+  const target=(lvl,own)=>{const sn=snapPoint(S,wx,wy,lvl);if(sn.type!=="free"&&!own(sn))return sn;const c=cell();return {type:"free",x:c[0],y:c[1],lvl}};
+  const skey=sn=>sn.type+":"+(sn.node!=null?sn.node:sn.edge!=null?sn.edge:"")+":"+sn.x.toFixed(2)+","+sn.y.toFixed(2);
+  if(h.t==="bend"){const x=raw?wx:Math.round(wx*4)/4,y=raw?wy:Math.round(wy*4)/4;key=x+","+y;mk=()=>planBend(S,S.edges[h.e],x,y)}
+  else if(h.t==="slide"){key=Math.round(wx*8)+","+Math.round(wy*8);mk=()=>planSlide(S,S.nodes[h.n],wx,wy)}
+  else if(h.t==="move"){const n=S.nodes[h.n];if(!n||n.dead)return;
+    if(n.edges.length===1){const e=S.edges[n.edges[0]];const sn=target(n.lvl,q=>q.type==="node"&&(q.node===n.id)||q.type==="edge"&&q.edge===e.id);key=skey(sn);
+      mk=()=>sn.type==="free"?planMove(S,n,sn.x,sn.y):planReconnect(S,e,e.a===n.id,sn)}
+    else{const c=cell();key=c.join(",");mk=()=>planMove(S,n,c[0],c[1])}}
+  else if(h.t==="end"){const e=S.edges[h.e];if(!e||e.dead)return;const n=S.nodes[h.atA?e.a:e.b];
+    const sn=target(n.lvl,q=>q.type==="edge"&&q.edge===e.id);key=skey(sn);mk=()=>planReconnect(S,e,h.atA,sn)}
+  if(mk&&key!==d.key){d.key=key;d.plan=mk();UI.plan=d.plan}}
+const EDIT_LABEL={bend:"Úsek ohnut",reconnect:"Konec přepojen",slide:"Hranice pruhu posunuta"};
+function editUp(wx,wy){const d=UI.editDrag;UI.editDrag=null;
+  if(d&&moved){const P=d.plan;UI.plan=null;if(!P)return;if(!P.ok){if(!P.same)toast(P.msg);return}
+    const what=P.edit==="move"?(P.n.edges.length===1?"Konec posunut":"Křižovatka posunuta"):EDIT_LABEL[P.edit];
+    runPlan(P,(S2,p)=>{const r=commitEdit(S2,p);if(r.ok)UI.editEdge=r.edges&&r.edges.length?r.edges[0].id:null;return r},what,"Úprava silnice");
+    if(P.demolish&&P.demolish.length)UI.plan=P;return}
+  if(moved)return;
+  const h=hitTest(wx,wy);UI.editEdge=h&&h.type==="edge"?h.id:null;if(!h||h.type!=="edge"&&h.type!=="node")toast("Najeď na silnici nebo na ni klikni: ukážou se úchyty")}

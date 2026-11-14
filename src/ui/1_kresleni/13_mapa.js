@@ -54,7 +54,24 @@ function drawConnTool(){if(UI.tool!=="conn")return;const z=cam.z;
   for(const q of mk.ins){ctx.fillStyle=pal[ai.get(q.l)%pal.length];ctx.beginPath();ctx.arc(q.x,q.y,0.075,0,Math.PI*2);ctx.fill()}
   ctx.strokeStyle="#1d2420";ctx.lineWidth=Math.max(0.025,1/z);for(const q of mk.outs){ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(q.x,q.y,0.07,0,Math.PI*2);ctx.fill();ctx.stroke()}
   const d=UI.connDrag;if(d){const a=mk.ins.find(q=>q.l===d.l&&q.k===d.k);if(a){ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.04,2/z);ctx.setLineDash([0.12,0.08]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(d.x,d.y);ctx.stroke();ctx.setLineDash([])}}}
-function drawPreview(){drawConnTool();const P=UI.plan;const z=cam.z;
+// nástroj Upravit: náhled nových tvarů v šířce silnice a úchyty
+function drawEditTool(){if(UI.tool!=="edit")return;const z=cam.z,P=UI.plan&&UI.plan.edit?UI.plan:null,d=UI.editDrag;
+  if(P&&P.items){ctx.save();ctx.lineCap="butt";ctx.lineJoin="round";ctx.globalAlpha=0.45;ctx.strokeStyle=P.ok?colors.accent:colors.bad;
+    for(const it of P.items){const q=(it.g||geom(it.pts)).pts;const p=new Path2D();p.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)p.lineTo(q[k],q[k+1]);ctx.lineWidth=it.e.w||0.6;ctx.stroke(p)}ctx.restore()}
+  const E=UI.editEdge!=null?S.edges[UI.editEdge]:null;
+  if(E&&!E.dead&&!d){ctx.save();ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.04,1.5/z);ctx.setLineDash([0.25,0.15]);const q=E.g.pts;ctx.beginPath();ctx.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)ctx.lineTo(q[k],q[k+1]);ctx.stroke();ctx.restore()}
+  const hs=d?[d.h]:editHandlesNow();if(!hs.length)return;const r=Math.max(0.13,6/z),hot=d?d.h:editPick(UI.mouse.wx,UI.mouse.wy);
+  ctx.save();ctx.lineWidth=Math.max(0.03,1.5/z);ctx.strokeStyle=colors.accent;
+  for(const h of hs){if(!inView(h.x,h.y,1))continue;let x=h.x,y=h.y;if(d&&h===d.h){x=UI.mouse.wx;y=UI.mouse.wy}
+    ctx.fillStyle=h===hot?colors.accent:colors.panel;ctx.beginPath();
+    if(h.t==="move")ctx.arc(x,y,r,0,Math.PI*2);
+    else if(h.t==="end"){const s=r*0.85;ctx.rect(x-s,y-s,2*s,2*s)}
+    else if(h.t==="bend"){const s=r*1.2;ctx.moveTo(x,y-s);ctx.lineTo(x+s,y);ctx.lineTo(x,y+s);ctx.lineTo(x-s,y);ctx.closePath()}
+    else{const n=S.nodes[h.n],a=n&&n.arms[0];const tx=a?a.hx:1,ty=a?a.hy:0,nx=-ty,ny=tx,L=r*2.2,T=r*0.55;
+      ctx.moveTo(x+nx*L+tx*T,y+ny*L+ty*T);ctx.lineTo(x-nx*L+tx*T,y-ny*L+ty*T);ctx.lineTo(x-nx*L-tx*T,y-ny*L-ty*T);ctx.lineTo(x+nx*L-tx*T,y+ny*L-ty*T);ctx.closePath()}
+    ctx.fill();ctx.stroke()}
+  ctx.restore()}
+function drawPreview(){drawConnTool();drawEditTool();const P=UI.plan;const z=cam.z;
   if(UI.tool==="lane"&&(UI.laneDrag||UI.laneHover))drawLaneHint(UI.laneDrag||UI.laneHover);
   // místa napojení na pruh (konce přidaných pruhů)
   if(UI.tool==="build"&&!UI.rebuild&&z>=8){ctx.fillStyle=colors.accent;ctx.globalAlpha=0.55;for(const n of S.nodes){if(n.dead||n.edges.length!==2||!inView(n.x,n.y,1))continue;for(const p of lanePorts(S,n)){ctx.beginPath();ctx.arc(p.x,p.y,0.09,0,Math.PI*2);ctx.fill()}}ctx.globalAlpha=1}

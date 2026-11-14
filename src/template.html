@@ -54,6 +54,8 @@ body{background:var(--outside);color:var(--ink);font-family:var(--f-body);font-s
 #map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 #map.pan{cursor:grab}
 .hud{position:absolute;z-index:2}
+/* průhledné mezery mezi kartami nezachytávají klik na mapu */
+.tl,.tr,.bottom{pointer-events:none} .tl>*,.tr>*,.bottom>*{pointer-events:auto}
 .card{background:var(--hud);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .tl{top:calc(env(safe-area-inset-top,0px) + 12px);left:max(16px, env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;max-width:calc(100% - 360px)}
 .brand{padding:6px 12px;display:flex;align-items:center}
@@ -191,6 +193,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
     <nav class="card tools" id="tools" aria-label="Nástroje">
       <button data-tool="build" aria-pressed="true">Stavět<small>1</small></button>
       <button data-tool="lane" aria-pressed="false">Pruhy<small>2</small></button>
+      <button data-tool="edit" aria-pressed="false">Upravit<small>0</small></button>
       <span class="sep"></span>
       <button data-tool="junction" aria-pressed="false">Křižovatka<small>3</small></button>
       <button data-tool="conn" aria-pressed="false">Spojení<small>9</small></button>

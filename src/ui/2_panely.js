@@ -27,6 +27,7 @@ const SHAPE_HINT={line:"Táhni po mapě. Ze silnice se úhly drží vůči ní, 
 const TOOL_HINT={lane:"Klikni na polovinu silnice: přidá pruh v tom směru. U jednosměrky přidá pruh na tom okraji, kam klikneš; ostatní pruhy zůstanou na místě. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
   split:"Klikni na silnici: rozdělí úsek, aby šel kus přestavět nebo rozšířit zvlášť. Klik na značku rozdělení úseky zase spojí.",
   cross:"Klikni u křižovatky: přechod přes rameno zruší nebo vrátí. Klik jinde na silnici přidá přechod doprostřed úseku (10 Kč), klik na něj ho zruší.",
+  edit:"Najeď na silnici nebo na ni klikni: ukážou se úchyty. Kolečko posune křižovatku nebo konec (konec puštěný na silnici se na ni napojí). Čtvereček u konce úsek od křižovatky odpojí a přepojí jinam. Kosočtverec uprostřed úsek ohne. Příčka na hranici pruhů posune, kde přídavný pruh začíná. Shift: bez přichycení k poli.",
   conn:"Klikni na křižovatku: ukáže spojení pruhů. Tah z barevného konce pruhu na bílý začátek pruhu za křižovatkou spojení přidá, klik na křivku ho zruší. Křižovatky s ručními spojeními jsou zvýrazněné.",
   junction:"Klikni na křižovatku: přepíná přednost zprava, hlavní silnici a semafor.",erase:"Táhni přes silnice nebo budovy. Tah začatý na budově bourá budovy (za peníze).",
   zone:"Táhni přes pole, kde se nesmí stavět. Tahem přes šrafy uzávěru zrušíš.",hand:"Táhni mapou, klikni pro výběr."};
@@ -60,10 +61,10 @@ $("confirmGo").addEventListener("click",()=>{const f=UI.pending;hideConfirm();if
 $("confirmNo").addEventListener("click",hideConfirm);
 function bldCountText(n){return n+(n===1?" budovu":n<5?" budovy":" budov")}
 // provede plán; když by se bouralo, nejdřív se zeptá
-function runPlan(plan,commit,what){
+function runPlan(plan,commit,what,ask){
   if(!plan.ok){toast(plan.msg);return}
   const go=()=>{const r=commit(S,plan);if(!r.ok)toast(r.msg);else{toast(what+(plan.cost?" za "+fmt(plan.cost)+" Kč":""));UI.selDirty=true}};
-  if(plan.demolish&&plan.demolish.length){askConfirm(`${what} vede přes ${bldCountText(plan.demolish.length)}. Zbourat je a postavit za ${fmt(plan.cost)} Kč?`,"Postavit a zbourat",go);UI.keepPlan=plan}
+  if(plan.demolish&&plan.demolish.length){askConfirm(`${ask||what} vede přes ${bldCountText(plan.demolish.length)}. Zbourat je a postavit za ${fmt(plan.cost)} Kč?`,"Postavit a zbourat",go);UI.keepPlan=plan}
   else go()}
 
 // ---- výběr ----
@@ -141,7 +142,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
   let groups="",cur=null;for(const a of acts){if(a.group!==cur){cur=a.group;groups+=`<span class="lbl">${esc(cur)}</span>`}groups+=`<button data-act="${a.act}" aria-pressed="${a.pressed?"true":"false"}">${esc(a.label)}</button>`}
   return`<span class="pin">${UI.pinned?"vybráno · Esc":"klikni Rukou pro výběr"}</span><h3>${esc(title)}</h3>${sub?`<div class="sub">${esc(sub)}</div>`:""}
     <div class="rows">${rows.map(r=>`<span>${esc(r[0])}</span><b>${esc(r[1])}</b>`).join("")}</div>${why?`<p class="why${ok?" ok":""}">${esc(why)}</p>`:""}${acts.length?`<div class="acts">${groups}</div>`:""}`}
-function updateSel(){const t=UI.pinned||(UI.draw||UI.connDrag||UI.tool==="conn"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
+function updateSel(){const t=UI.pinned||(UI.draw||UI.connDrag||UI.editDrag||UI.tool==="conn"||UI.tool==="edit"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
 $("sel").addEventListener("click",ev=>{const btn=ev.target.closest("[data-act]");if(!btn)return;const t=UI.pinned||UI.hover;if(!t)return;const a=btn.dataset.act;let r={ok:true};
   if(t.type==="edge"){const e=S.edges[t.id];
     if(a.startsWith("kind:")){runPlan(planKind(S,e,a.slice(5)),commitKind,"Změna druhu silnice");return}

@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={updateOvertakes,lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,connAdd,connRemove,connReset,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={planBend,planMove,planReconnect,planSlide,commitEdit,editHandles,slideInfo,updateOvertakes,lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,connAdd,connRemove,connReset,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -304,6 +304,55 @@ for (const type of ["diamond", "clover", "trumpet"]) {
   for (let k = 0; k < 300; k++) A.step(S, A.STEP); zkontroluj(S, "spojení");
 }
 
+// ---- editor silnic: ohnout úsek, posunout křižovatku, přepojit konec, posunout hranici přídavného pruhu ----
+{
+  console.log("Editor silnic");
+  const S = A.createSim(11); S.money = 1e8;
+  for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
+  const F = (x, yy) => ({ type: "free", x, y: yy, lvl: 0 });
+  const R = (x0, y0, x1, y1, l) => A.buildRoad(S, { pts: A.mkLine(x0, y0, x1, y1), kind: "road", lanes: l || 1, start: F(x0, y0), end: F(x1, y1), auto: true });
+  R(20.5, 40.5, 40.5, 40.5); R(30.5, 40.5, 30.5, 48.5); R(36.5, 44.5, 36.5, 52.5);
+  const n = S.nodes.find(q => !q.dead && q.edges.length === 3); ok(!!n, "editor: křižovatka T");
+  // posunout křižovatku
+  let p = A.planMove(S, n, 31.5, 40.5); ok(p.ok, "editor: posun křižovatky naplánován " + (p.msg || ""));
+  if (p.ok) { ok(A.commitEdit(S, p).ok, "editor: křižovatka posunuta"); ok(Math.abs(n.x - 31.5) < 1e-6 && n.edges.length === 3, "editor: uzel je na novém místě a má tři ramena");
+    ok(n.edges.every(id => { const e = S.edges[id], q = e.a === n.id ? 0 : e.g.pts.length - 2; return Math.hypot(e.g.pts[q] - n.x, e.g.pts[q + 1] - n.y) < 0.01; }), "editor: ramena končí v posunutém uzlu"); }
+  ok(!A.planMove(S, n, 36.5, 48.5).ok, "editor: křižovatku nejde posunout na jinou silnici");
+  // ohnout svislý úsek
+  const ev = S.edges.find(e => !e.dead && (e.a === n.id || e.b === n.id) && Math.abs(e.g.pts[1] - e.g.pts[e.g.pts.length - 1]) > 4);
+  const m = { x: (ev.g.pts[0] + ev.g.pts[ev.g.pts.length - 2]) / 2 - 1.5, y: (ev.g.pts[1] + ev.g.pts[ev.g.pts.length - 1]) / 2 };
+  p = A.planBend(S, ev, m.x, m.y); ok(p.ok, "editor: ohnutí naplánováno " + (p.msg || ""));
+  if (p.ok) { const r = A.commitEdit(S, p); ok(r.ok && r.edges.length === 1, "editor: úsek ohnut"); const ne = r.edges[0];
+    let bd = 9; for (let k = 0; k < ne.g.n; k++) bd = Math.min(bd, Math.hypot(ne.g.pts[2 * k] - m.x, ne.g.pts[2 * k + 1] - m.y)); ok(bd < 0.15, "editor: ohnutý úsek vede přes tažený bod (" + bd.toFixed(2) + ")"); }
+  const ev2 = S.edges.find(e => !e.dead && (e.a === n.id || e.b === n.id) && Math.abs(e.g.pts[1] - e.g.pts[e.g.pts.length - 1]) > 4);
+  p = A.planBend(S, ev2, 39.5, 44.5); ok(!p.ok && /křížil/.test(p.msg), "editor: ohnout přes jinou silnici nejde (" + p.msg + ")");
+  ok(A.editHandles(S, ev2).some(h => h.t === "bend") && A.editHandles(S, ev2).some(h => h.t === "end"), "editor: úchyty ohnout a přepojit");
+  // přepojit volný konec na jinou silnici
+  const dead = S.nodes.find(q => !q.dead && q.edges.length === 1 && Math.abs(q.y - 48.5) < 0.6 && q.x < 34);
+  ok(!!dead, "editor: slepý konec");
+  if (dead) { const e = S.edges[dead.edges[0]]; const sn = A.snapPoint(S, 36.5, 48.5, 0);
+    p = A.planReconnect(S, e, e.a === dead.id, sn); ok(p.ok, "editor: přepojení naplánováno " + (p.msg || ""));
+    if (p.ok) { ok(A.commitEdit(S, p).ok, "editor: konec přepojen"); ok(dead.dead, "editor: starý konec zanikl");
+      ok(S.nodes.some(q => !q.dead && q.edges.length === 3 && Math.abs(q.x - 36.5) < 0.01), "editor: na druhé silnici vznikla křižovatka"); } }
+  // hranice přídavného pruhu
+  R(20.5, 58.5, 44.5, 58.5);
+  const eh = S.edges.find(e => !e.dead && Math.abs(e.g.pts[1] - 58.5) < 0.01 && e.g.len > 20);
+  A.commitLanes(S, A.planLanes(S, eh, 1, 0, [8, 14]));
+  const bn = S.nodes.filter(q => !q.dead && q.edges.length === 2 && Math.abs(q.y - 58.5) < 0.01 && A.slideInfo(S, q)).sort((a, b) => a.x - b.x);
+  ok(bn.length === 2, "editor: přídavný pruh má dvě hranice (" + bn.length + ")");
+  if (bn.length) { const q = bn[0]; const x0 = q.x; p = A.planSlide(S, q, x0 - 2, 58.5); ok(p.ok, "editor: posun hranice naplánován " + (p.msg || ""));
+    if (p.ok) { ok(A.commitEdit(S, p).ok, "editor: hranice posunuta"); const w = S.edges.find(e => !e.dead && e.lf === 2 && Math.abs(e.g.pts[1] - 58.5) < 0.01);
+      ok(w && Math.abs(w.g.len - 8) < 0.3, "editor: přídavný pruh je o 2 pole delší (" + (w && w.g.len.toFixed(2)) + ")"); ok(Math.abs(q.x - (x0 - 2)) < 0.3, "editor: hranice je na novém místě"); } }
+  // čtvereček u křižovatky: konec úseku se od křižovatky odpojí a zůstane volný; zbylé dva rovné kusy se spojí
+  const jn = S.nodes.find(q => !q.dead && q.edges.length === 3 && Math.abs(q.y - 40.5) < 0.01);
+  ok(!!jn, "editor: křižovatka pro odpojení");
+  if (jn) { const e = S.edges.find(x => !x.dead && (x.a === jn.id || x.b === jn.id) && Math.abs(x.g.pts[1] - x.g.pts[x.g.pts.length - 1]) > 2);
+    ok(A.editHandles(S, e).some(h => h.t === "end" && (h.atA ? e.a : e.b) === jn.id), "editor: úchyt přepojit u křižovatky");
+    p = A.planReconnect(S, e, e.a === jn.id, { type: "free", x: jn.x - 3, y: jn.y + 3, lvl: 0 }); ok(p.ok, "editor: odpojení naplánováno " + (p.msg || ""));
+    if (p.ok) { ok(A.commitEdit(S, p).ok, "editor: konec odpojen"); ok(jn.dead, "editor: z křižovatky zbyla rovná silnice (uzel zanikl)"); } }
+  for (let k = 0; k < 600; k++) A.step(S, A.STEP); zkontroluj(S, "editor");
+}
+
 // ---- napojení na pruh: z konce přidaného pruhu vede jednosměrka, silnice má přednost ----
 {
   const S = A.createSim(11); S.money = 1e8; const y = 60.5;
@@ -375,6 +424,15 @@ for (const seed of [1, 4242, 98765]) {
     for (const n of S.nodes) if (!n.dead && n.keep) A.unsplit(S, n);
     ok(S.cars.filter(c => !c.dead).length === alive0, "spojením úseků se ztratila auta");
     zkontroluj(S, "po spojení"); }
+  // editor za jízdy: ohnout úseky s auty, posunout křižovatky (bez bourání); žádné auto nezmizí
+  { const alive0 = S.cars.filter(c => !c.dead).length; let bends = 0, moves = 0;
+    for (const e of [...S.edges]) { if (e.dead || e.ring || e.gateEdge || e.g.len < 4) continue; if (!e.q.some(l => l.some(q => q.length))) continue;
+      const m = e.g.pts.length >> 2; const q = { x: e.g.pts[2 * m], y: e.g.pts[2 * m + 1] }; const g = e.g; const mid = g.len / 2;
+      let nx = 0, ny = 0; { const k = Math.min(g.n - 2, Math.max(0, m)); const dx = g.pts[2 * k + 2] - g.pts[2 * k], dy = g.pts[2 * k + 3] - g.pts[2 * k + 1], l = Math.hypot(dx, dy) || 1; nx = -dy / l; ny = dx / l; }
+      const p = A.planBend(S, e, q.x + nx * 0.5, q.y + ny * 0.5); if (p.ok && !p.demolish.length && A.commitEdit(S, p).ok) bends++; if (bends >= 8) break; }
+    for (const n of [...S.nodes]) { if (n.dead || n.edges.length < 3) continue; const p = A.planMove(S, n, n.x + 0.5, n.y); if (p.ok && !p.demolish.length && A.commitEdit(S, p).ok) moves++; if (moves >= 5) break; }
+    ok(S.cars.filter(c => !c.dead).length === alive0, `editorem se ztratila auta (${alive0} → ${S.cars.filter(c => !c.dead).length})`);
+    zkontroluj(S, "po editoru"); souhrn.ohnuto = (souhrn.ohnuto || 0) + bends; souhrn.posunuto = (souhrn.posunuto || 0) + moves; }
   // úpravy silnic za jízdy
   let k = 0;
   for (const e of [...S.edges]) { if (e.dead || e.ring || e.gateEdge) continue; k++;
@@ -400,6 +458,6 @@ for (const seed of [1, 4242, 98765]) {
   console.log(`  ${S.towns.length} obcí, ${pop1} obyvatel, ${S.buildings.length} budov, ${S.trips} cest, ${S.transits} tranzitů, vývoz ${S.exported} Kč, aut ${S.cars.length}, chodců ${S.walkers.length}`);
   console.log("  " + JSON.stringify(typy));
 }
-console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, prechody: souhrn.prechody, chodci: souhrn.chodci, chodciVzdali: souhrn.chodciVzdali, predjeti: souhrn.predjeti, vzdali: souhrn.vzdali, minuli: souhrn.minuli, preplanovali: souhrn.preplanovali }));
+console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, ohnuto: souhrn.ohnuto, posunuto: souhrn.posunuto, prechody: souhrn.prechody, chodci: souhrn.chodci, chodciVzdali: souhrn.chodciVzdali, predjeti: souhrn.predjeti, vzdali: souhrn.vzdali, minuli: souhrn.minuli, preplanovali: souhrn.preplanovali }));
 console.log(`verze ${A.GAME_VERSION}: ${kontroly} kontrol, ${chyby} chyb`);
 process.exit(chyby ? 1 : 0);

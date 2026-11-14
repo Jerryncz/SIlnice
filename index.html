@@ -54,6 +54,8 @@ body{background:var(--outside);color:var(--ink);font-family:var(--f-body);font-s
 #map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 #map.pan{cursor:grab}
 .hud{position:absolute;z-index:2}
+/* průhledné mezery mezi kartami nezachytávají klik na mapu */
+.tl,.tr,.bottom{pointer-events:none} .tl>*,.tr>*,.bottom>*{pointer-events:auto}
 .card{background:var(--hud);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .tl{top:calc(env(safe-area-inset-top,0px) + 12px);left:max(16px, env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;max-width:calc(100% - 360px)}
 .brand{padding:6px 12px;display:flex;align-items:center}
@@ -191,6 +193,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
     <nav class="card tools" id="tools" aria-label="Nástroje">
       <button data-tool="build" aria-pressed="true">Stavět<small>1</small></button>
       <button data-tool="lane" aria-pressed="false">Pruhy<small>2</small></button>
+      <button data-tool="edit" aria-pressed="false">Upravit<small>0</small></button>
       <span class="sep"></span>
       <button data-tool="junction" aria-pressed="false">Křižovatka<small>3</small></button>
       <button data-tool="conn" aria-pressed="false">Spojení<small>9</small></button>
@@ -517,11 +520,11 @@ function tidyNodes(S,nodes){for(const n of nodes)if(n&&!n.dead)mergeAt(S,n)}
 
 // ---- přenos aut, chodců a vjezdů na nové úseky ----
 // map: id starého úseku → kusy [{e, u0, u1, off, rev}] seřazené podle u0; kus kryje staré u0..u1,
-// nová poloha = off + (rev ? u1-u : u-u0)
+// nová poloha = off + (rev ? u1-u : u-u0)·k (k = poměr délek, když se úsek natáhne nebo zkrátí; jinak 1)
 function remapEdges(S,map){
   const has=l=>map.has(l>>1);
   const pieceAt=(ps,u)=>{let k=0;while(k<ps.length-1&&u>ps[k].u1)k++;return ps[k]};
-  const nu=(p,u)=>clamp(p.off+(p.rev?p.u1-u:u-p.u0),0,p.e.g.len);
+  const nu=(p,u)=>clamp(p.off+(p.rev?p.u1-u:u-p.u0)*(p.k||1),0,p.e.g.len);
   const linkOf=(p,d)=>p.e.id*2+(d^(p.rev?1:0));
   const uOf=(l,s)=>{const e=S.edges[l>>1];return clamp((l&1)?e.g.len-s:s,0,e.g.len)};
   const sOn=(l,u)=>{const L=S.edges[l>>1].g.len;return (l&1)?L-u:u};
@@ -1132,6 +1135,202 @@ function commitTemplate(S,plan){if(!plan.ok)return {ok:false,msg:plan.msg};if(S.
     const d=nearestOn(geom(road.pts),n.x,n.y).d;if(d>0.1)continue;const arms=n.arms.filter(a=>S.edges[a.e].kind===road.kind);
     if(arms.length===2)setControl(S,n,2,arms.map(a=>a.e))}
   return bad?{ok:true,msg:"Postaveno, ale "+bad+" část(i) se nevešla."}:{ok:true}}
+
+// ---- sim/1_sit/15_editor.js ----
+// Editor silnic (nástroj Upravit): posunout křižovatku nebo konec, přepojit konec úseku jinam,
+// ohnout úsek, posunout hranici přídavného pruhu. Každá úprava se nejdřív naplánuje (náhled, cena,
+// bourání, důvod odmítnutí) a pak provede. Upravený úsek se nahradí novým se stejným druhem, pruhy,
+// přechody a ručními spojeními; auta a vjezdy se přenesou (remapEdges), chodci si najdou novou cestu.
+
+const EDIT_FIX=0.5;                               // přestavba upraveného úseku: podíl ceny nové silnice
+const EDIT_ANG=Math.cos(18*Math.PI/180);          // nejostřejší dovolený úhel dvou ramen v uzlu
+
+function editEdgeOk(S,e){if(!e||e.dead)return "Úsek už neexistuje.";if(e.ring)return "Kruhový objezd se upravuje jen celý (postav ho znovu).";
+  if(e.gateEdge)return "Dálnici do světa upravit nejde.";if(e.a===e.b)return "Smyčku upravit nejde.";return null}
+function editNodeOk(S,n){if(!n||n.dead)return "Uzel už neexistuje.";if(n.ring)return "Uzel kruhového objezdu se neposouvá.";if(n.gate>=0)return "Okraj mapy posunout nejde.";
+  for(const id of n.edges){const m=editEdgeOk(S,S.edges[id]);if(m)return m}return null}
+
+// posune konec lomené čáry o dx, dy; posun slábne k druhému konci (tvar oblouku zůstane)
+function deformPts(pts,atA,dx,dy){const g=geom(pts),out=[];
+  for(let k=0;k<g.n;k++){const f=g.cum[k]/(g.len||1),w=atA?1-f:f;out.push(pts[2*k]+dx*w,pts[2*k+1]+dy*w)}return cleanPts(out)}
+// oblouk mezi konci úseku, který prochází bodem px, py (uprostřed); blízko spojnice = rovně
+function bendThrough(pts,px,py){const ax=pts[0],ay=pts[1],bx=pts[pts.length-2],by=pts[pts.length-1];
+  const ch=Math.hypot(bx-ax,by-ay)||1,off=Math.abs((px-ax)*(by-ay)-(py-ay)*(bx-ax))/ch;
+  if(off<0.12)return mkLine(ax,ay,bx,by);
+  const cx=2*px-(ax+bx)/2,cy=2*py-(ay+by)/2;
+  return cleanPts(mkCubic(ax,ay,ax+(cx-ax)*2/3,ay+(cy-ay)*2/3,bx+(cx-bx)*2/3,by+(cy-by)*2/3,bx,by))}
+// tečna ven z uzlu na začátku (atA) nebo konci geometrie
+function tanEnd(g,atA){const p=pointAt(g,atA?0:g.len);return atA?[p.tx,p.ty]:[-p.tx,-p.ty]}
+
+// kontrola nových tvarů. items: [{e, pts, la, lb, ja, jb}], ja/jb = napojení konce {node} / {edge, u} / null (volný konec);
+// skip = id nahrazovaných úseků. Vrací null, nebo {msg, bad}.
+function editCheck(S,items,skip){
+  for(const it of items){const g=it.g=geom(it.pts);
+    if(g.len<0.8)return {msg:"Úsek by byl moc krátký.",bad:{x:g.pts[0],y:g.pts[1]}};
+    for(let k=0;k<g.n;k++){const x=g.pts[2*k],y=g.pts[2*k+1];if(x<0.2||y<0.2||x>MW-0.2||y>MH-0.2)return {msg:"Silnice nesmí vést mimo mapu.",bad:{x,y}}}}
+  const lv=(it,u)=>it.la+(it.lb-it.la)*clamp(u/(it.g.len||1),0,1);
+  // průsečík u konce s tím, na co je konec napojený, se nepočítá
+  const joined=(it,u,x)=>{for(const [d,j] of [[u,it.ja],[it.g.len-u,it.jb]]){if(!j||d>0.45)continue;
+    if(j.node!==undefined&&(x.a===j.node||x.b===j.node))return true;if(j.edge!==undefined&&x.id===j.edge)return true}return false};
+  const same=(p,q)=>p&&q&&p.node!==undefined&&p.node===q.node;
+  for(let i=0;i<items.length;i++){const it=items[i],g=it.g;
+    for(const x of S.edges){if(x.dead||skip.has(x.id)||!bbOverlap(x.g.bb,g.bb,0.1))continue;
+      for(const p of polyInter(g,x.g)){if(joined(it,p.ua,x))continue;const d=Math.abs(lv(it,p.ua)-lvlAt(S,x,p.ub));if(d>=0.9)continue;
+        return {msg:d>0.1?"Tady by byl most moc nízko.":"Úsek by křížil jinou silnici. Novou křižovatku postav nástrojem Stavět.",bad:{x:p.x,y:p.y}}}}
+    for(let j=i+1;j<items.length;j++){const o=items[j];if(!bbOverlap(o.g.bb,g.bb,0.1))continue;
+      for(const p of polyInter(g,o.g)){
+        const ea=p.ua<0.45?it.ja:g.len-p.ua<0.45?it.jb:null,eb=p.ub<0.45?o.ja:o.g.len-p.ub<0.45?o.jb:null;
+        if(same(ea,eb))continue;if(Math.abs(lv(it,p.ua)-lv(o,p.ub))>=0.9)continue;
+        return {msg:"Úseky by se křížily.",bad:{x:p.x,y:p.y}}}}
+    // vedl by po jiné silnici
+    let run=0;for(let u=0.6;u<g.len-0.6;u+=0.25){const q=pointAt(g,u);let on=false;
+      for(const x of edgesNear(S,q.x,q.y,0.6)){if(skip.has(x.id))continue;const r=nearestOn(x.g,q.x,q.y);if(r.d>0.35)continue;
+        if(Math.abs(lvlAt(S,x,r.u)-lv(it,u))>=0.5)continue;const t=pointAt(x.g,r.u);if(Math.abs(t.tx*q.tx+t.ty*q.ty)<0.9)continue;on=true;break}
+      run=on?run+0.25:0;if(run>=1)return {msg:"Úsek by vedl po jiné silnici.",bad:{x:q.x,y:q.y}}}
+    // volný konec nesmí ležet na jiné silnici
+    for(const [atA,j] of [[true,it.ja],[false,it.jb]]){if(j)continue;const q=pointAt(g,atA?0:g.len),l0=atA?it.la:it.lb;
+      for(const x of edgesNear(S,q.x,q.y,1.5)){if(skip.has(x.id))continue;const r=nearestOn(x.g,q.x,q.y);if(Math.abs(lvlAt(S,x,r.u)-l0)>=0.5)continue;
+        if(r.d<Math.max(x.er,x.el)+0.3)return {msg:"Konec by ležel na jiné silnici. Pusť ho přímo na ni, napojí se.",bad:{x:q.x,y:q.y}}}}}
+  // úhly ramen v uzlech: nové rameno nesmí být k jinému ostřeji než 18°, pokud tam tak ostré nebylo už dřív
+  // (napojení na pruh vede souběžně se silnicí, to se nepočítá)
+  const ends=[];for(const it of items)for(const atA of [true,false]){const j=atA?it.ja:it.jb;if(!j||(atA?it.pa:it.pb))continue;
+    const same0=j.node!==undefined&&j.node===(atA?it.e.a:it.e.b);ends.push({j,atA,it,t:tanEnd(it.g,atA),t0:same0?tanOut(it.e,atA):null})}
+  const dot=(p,q)=>p[0]*q[0]+p[1]*q[1];
+  for(const a of ends){const others=[];
+    for(const b of ends)if(b!==a&&(same(a.j,b.j)||a.j.edge!==undefined&&b.j.edge===a.j.edge&&Math.abs(a.j.u-b.j.u)<0.3))others.push(b);
+    if(a.j.node!==undefined){const n=S.nodes[a.j.node];for(const id of n.edges){if(skip.has(id))continue;const x=S.edges[id];if(x.a===n.id?x.pa:x.pb)continue;const t=tanOut(x,x.a===n.id);others.push({t,t0:t})}}
+    else if(a.j.edge!==undefined){const x=S.edges[a.j.edge],p=pointAt(x.g,a.j.u);others.push({t:[p.tx,p.ty],t0:null},{t:[-p.tx,-p.ty],t0:null})}
+    for(const b of others){const d=dot(a.t,b.t),d0=a.t0&&b.t0?dot(a.t0,b.t0):-2;
+      if(d>EDIT_ANG&&d>d0+0.002){const g=a.it.g,q=pointAt(g,a.atA?0:g.len);return {msg:"Ramena v uzlu by se překrývala, úhel je moc ostrý.",bad:{x:q.x,y:q.y}}}}}
+  return null}
+function editCost(S,items){let c=0;for(const it of items){const e=it.e;c+=it.g.len*roadCostPerTile(e.kind,Math.max(e.lf,e.lb),(it.la+it.lb)/2)*EDIT_FIX}return Math.round(c)}
+// dokončí plán: kontrola, buňky k zbourání, cena
+function editFinish(S,plan,items,skip){plan.items=items;const err=editCheck(S,items,skip);for(const it of items)if(!it.g)it.g=geom(it.pts);
+  if(err){plan.msg=err.msg;plan.bad=err.bad;return plan}
+  const cells=new Set();for(const it of items){for(const c of cellsAlong(S,it.g,edgeExt(it.e),u=>it.la+(it.lb-it.la)*clamp(u/(it.g.len||1),0,1)))cells.add(c)}
+  const dem=bldOn(S,cells);for(const b of dem)if(b.gateLock){plan.msg="Tady stavět nejde.";return plan}
+  plan.demolish=dem;plan.roadCost=plan.roadCost!==undefined?plan.roadCost:editCost(S,items);
+  plan.cost=plan.roadCost+dem.reduce((s,b)=>s+demolishCost(b),0);plan.ver=S.netVer;plan.ok=true;return plan}
+const editPlan=(edit,o)=>Object.assign({ok:false,msg:"",cost:0,demolish:[],edit},o);
+const endJ=(S,e,atA)=>({node:atA?e.a:e.b});
+
+// ---- ohnout úsek: střed úseku se táhne do bodu x, y ----
+function planBend(S,e,x,y){const plan=editPlan("bend",{e});const m=editEdgeOk(S,e);if(m){plan.msg=m;return plan}
+  if(e.g.len<1.6){plan.msg="Úsek je na ohnutí moc krátký.";return plan}
+  if(nearestOn(e.g,x,y).d<0.06){plan.msg="Úsek už tudy vede.";plan.same=true;return plan}
+  const pts=bendThrough(e.g.pts,x,y);
+  return editFinish(S,plan,[{e,pts,la:S.nodes[e.a].lvl,lb:S.nodes[e.b].lvl,ja:endJ(S,e,true),jb:endJ(S,e,false),pa:e.pa,pb:e.pb}],new Set([e.id]))}
+
+// ---- posunout křižovatku nebo konec: všechny úseky v uzlu se na jeho konci posunou ----
+function planMove(S,n,x,y){const plan=editPlan("move",{n,x,y});const m=editNodeOk(S,n);if(m){plan.msg=m;return plan}
+  const dx=x-n.x,dy=y-n.y;if(Math.hypot(dx,dy)<0.05){plan.msg="Uzel je na stejném místě.";plan.same=true;return plan}
+  const o=findNode(S,x,y,n.lvl,0.6);if(o&&o!==n){plan.msg="Na tom místě už uzel je.";plan.bad={x,y};return plan}
+  const items=[],skip=new Set();
+  for(const id of n.edges){const e=S.edges[id];skip.add(id);
+    items.push({e,pts:deformPts(e.g.pts,e.a===n.id,dx,dy),la:S.nodes[e.a].lvl,lb:S.nodes[e.b].lvl,ja:endJ(S,e,true),jb:endJ(S,e,false),pa:e.pa,pb:e.pb})}
+  // uzel sám nesmí ležet na jiné silnici
+  for(const xe of edgesNear(S,x,y,1.5)){if(skip.has(xe.id))continue;const r=nearestOn(xe.g,x,y);if(Math.abs(lvlAt(S,xe,r.u)-n.lvl)>=0.5)continue;
+    if(r.d<Math.max(xe.er,xe.el)+0.3){plan.msg="Uzel by ležel na jiné silnici.";plan.bad={x,y};plan.items=items;for(const it of items)it.g=geom(it.pts);return plan}}
+  return editFinish(S,plan,items,skip)}
+
+// ---- přepojit konec úseku: konec atA se odpojí od svého uzlu a napojí na cíl sn (uzel, místo na silnici, nebo volné místo) ----
+function planReconnect(S,e,atA,sn){const plan=editPlan("reconnect",{e,atA,sn});const m=editEdgeOk(S,e);if(m){plan.msg=m;return plan}
+  const n=S.nodes[atA?e.a:e.b],far=S.nodes[atA?e.b:e.a];if(n.gate>=0){plan.msg="Konec u okraje mapy přepojit nejde.";return plan}
+  if(Math.abs((sn.lvl||0)-n.lvl)>0.01){plan.msg="Konec musí zůstat ve stejné výšce.";return plan}
+  let tx=sn.x,ty=sn.y,j=null;
+  if(sn.type==="edge"){const x=S.edges[sn.edge];
+    if(!x||x.dead||x===e){plan.msg="Na vlastní úsek se napojit nejde.";return plan}
+    if(isRampEdge(S,x)){plan.msg="Na rampu mostu se napojit nejde. Napoj se na jejím konci.";return plan}
+    if(x.gateEdge){plan.msg="Na dálnici do světa se napoj až za okrajem mapy.";return plan}
+    if(sn.u<0.5)sn={type:"node",node:x.a,x:S.nodes[x.a].x,y:S.nodes[x.a].y,lvl:S.nodes[x.a].lvl};
+    else if(x.g.len-sn.u<0.5)sn={type:"node",node:x.b,x:S.nodes[x.b].x,y:S.nodes[x.b].y,lvl:S.nodes[x.b].lvl};
+    else{if(x.kind==="hwy"||e.kind==="hwy"){plan.msg="Dálnici nejde křížit ani napojit v úrovni.";return plan}j={edge:x.id,u:sn.u};const p=pointAt(x.g,sn.u);tx=p.x;ty=p.y}}
+  if(sn.type==="node"){const t=S.nodes[sn.node];
+    if(t===n){plan.msg="Konec je pořád napojený tady.";plan.same=true;return plan}if(t===far){plan.msg="Úsek by začínal i končil v jednom uzlu.";return plan}
+    if(t.gate>=0){plan.msg="K okraji mapy se napojit nejde.";return plan}
+    if(t.edges.some(id=>{const x=S.edges[id];return x.a===far.id||x.b===far.id})){plan.msg="Tyhle dva uzly už silnice spojuje.";return plan}
+    j={node:t.id};tx=t.x;ty=t.y}
+  plan.sn=sn;plan.tx=tx;plan.ty=ty;
+  const ex=e.g.pts[atA?0:e.g.pts.length-2],ey=e.g.pts[atA?1:e.g.pts.length-1];
+  const pts=deformPts(e.g.pts,atA,tx-ex,ty-ey);if(atA){pts[0]=tx;pts[1]=ty}else{pts[pts.length-2]=tx;pts[pts.length-1]=ty}
+  const fj={node:far.id};
+  return editFinish(S,plan,[{e,pts,la:atA?n.lvl:far.lvl,lb:atA?far.lvl:n.lvl,ja:atA?j:fj,jb:atA?fj:j,pa:atA?false:e.pa,pb:atA?e.pb:false}],new Set([e.id]))}
+
+// ---- posunout hranici přídavného pruhu (nebo jiný průběžný uzel mezi dvěma různými úseky) po silnici ----
+function slideInfo(S,n){if(!n||n.dead||n.ring||n.gate>=0||n.edges.length!==2)return null;
+  const e1=S.edges[n.edges[0]],e2=S.edges[n.edges[1]];if(e1===e2||editEdgeOk(S,e1)||editEdgeOk(S,e2))return null;
+  if((e1.a===n.id?e1.pa:e1.pb)||(e2.a===n.id?e2.pa:e2.pb))return null;
+  const t1=tanOut(e1,e1.a===n.id),t2=tanOut(e2,e2.a===n.id);if(t1[0]*t2[0]+t1[1]*t2[1]>-0.94)return null;
+  const f1=S.nodes[e1.a===n.id?e1.b:e1.a],f2=S.nodes[e2.a===n.id?e2.b:e2.a];if(f1===f2)return null;
+  if(Math.abs(f1.lvl-n.lvl)>0.01||Math.abs(f2.lvl-n.lvl)>0.01)return null;
+  const r1=e1.a===n.id,r2=e2.b===n.id;   // r1: e1 vede z n ven; r2: e2 vede do n
+  const p1=r1?reversePts(e1.g.pts):e1.g.pts.slice(),p2=r2?reversePts(e2.g.pts):e2.g.pts;
+  const g=geom(cleanPts(p1.concat(p2.slice(2))));
+  const cut=(f,e)=>{const a=f.arms.find(q=>q.e===e.id);return a&&a.cut||0};
+  return {n,e1,e2,f1,f2,r1,r2,g,L1:e1.g.len,lo:cut(f1,e1)+0.8,hi:g.len-cut(f2,e2)-0.8}}
+function planSlide(S,n,x,y){const plan=editPlan("slide",{n});const I=slideInfo(S,n);if(!I){plan.msg="Tenhle uzel se po silnici posunout nedá.";return plan}
+  if(I.hi<I.lo){plan.msg="Úsek je na posun moc krátký.";return plan}
+  const L=I.g.len,s=clamp(Math.round(nearestOn(I.g,x,y).u*4)/4,I.lo,I.hi);plan.I=I;plan.s=s;
+  if(Math.abs(s-I.L1)<0.1){plan.msg="Hranice pruhu je na stejném místě.";plan.same=true;return plan}
+  const pa=subPts(I.g,0,s),pb=subPts(I.g,s,L);
+  const items=[{e:I.e1,pts:I.r1?reversePts(pa):pa},{e:I.e2,pts:I.r2?reversePts(pb):pb}];for(const it of items){it.la=it.lb=n.lvl;it.g=geom(it.pts)}
+  plan.items=items;
+  // platí se jen kus, o který se širší úsek prodlouží
+  const grow=s>I.L1?I.e1:I.e2,shrink=grow===I.e1?I.e2:I.e1,d=Math.abs(s-I.L1);
+  const pt=e=>roadCostPerTile(e.kind,Math.max(e.lf,e.lb),n.lvl);plan.roadCost=Math.round(d*Math.max(0,pt(grow)-pt(shrink)));
+  const gg=geom(subPts(I.g,Math.min(s,I.L1),Math.max(s,I.L1)));const dem=bldOn(S,cellsAlong(S,gg,edgeExt(grow),()=>n.lvl));
+  for(const b of dem)if(b.gateLock){plan.msg="Tady stavět nejde.";return plan}
+  plan.demolish=dem;plan.cost=plan.roadCost+dem.reduce((q,b)=>q+demolishCost(b),0);plan.ver=S.netVer;plan.ok=true;return plan}
+
+// ---- provedení ----
+// nový úsek místo e se stejnými vlastnostmi; poloha aut se přepočítá poměrem délek
+function replaceEdge(S,e,pts,A,B,o){o=o||{};const L=e.g.len;
+  const ne=addEdge(S,A,B,e.kind,pts,e.lf,e.lb,Object.assign(edgeProps(e),{pa:o.pa!==undefined?o.pa:e.pa,pb:o.pb!==undefined?o.pb:e.pb}));
+  const k=ne.g.len/(L||1);ne.flow=e.flow;ne.passes=e.passes;ne.cong=e.cong.slice();ne.born=e.born;
+  if(e.xw)ne.xw=e.xw.map(x=>({u:x.u*k})).filter(x=>x.u>0.6&&x.u<ne.g.len-0.6);
+  if(e.uc)ne.uc=[o.dropB?null:e.uc[0],o.dropA?null:e.uc[1]];
+  remapEdges(S,new Map([[e.id,[{e:ne,u0:0,u1:L,off:0,rev:false,k}]]]));removeEdge(S,e,true);return ne}
+// kusy pro remapEdges: starý úsek leží na společné dráze σ = sA + sa·u, nový úsek q má polohu B + b·σ na σ ∈ [s0, s1]
+function railPieces(len,sA,sa,news){const out=[];const lo=Math.min(sA,sA+sa*len),hi=Math.max(sA,sA+sa*len);
+  for(const q of news){const s0=Math.max(q.s0,lo),s1=Math.min(q.s1,hi);if(s1-s0<1e-6)continue;
+    const ua=(s0-sA)*sa,ub=(s1-sA)*sa,u0=Math.min(ua,ub),u1=Math.max(ua,ub),pos=u=>q.B+q.b*(sA+sa*u),rev=sa*q.b<0;
+    out.push({e:q.e,u0,u1,off:rev?pos(u1):pos(u0),rev})}
+  return out.sort((a,b)=>a.u0-b.u0)}
+function commitEdit(S,p){if(!p.ok)return {ok:false,msg:p.msg};
+  if(p.ver!==S.netVer)return {ok:false,msg:"Silnice se mezitím změnily. Zkus to znovu."};
+  if(S.money<p.cost)return {ok:false,msg:"Málo peněz v pokladně."};
+  S.money-=p.cost;for(const b of p.demolish)if(!b.dead)demolishBuilding(S,b,true);
+  const touched=[],made=[];
+  if(p.edit==="bend"){const it=p.items[0],e=it.e;made.push(replaceEdge(S,e,it.pts,S.nodes[e.a],S.nodes[e.b]));touched.push(S.nodes[e.a],S.nodes[e.b])}
+  else if(p.edit==="move"){const n=p.n;n.x=p.x;n.y=p.y;
+    for(const it of p.items){const e=it.e;if(e.dead)continue;made.push(replaceEdge(S,e,it.pts,S.nodes[e.a],S.nodes[e.b]));touched.push(S.nodes[e.a],S.nodes[e.b])}}
+  else if(p.edit==="reconnect"){const it=p.items[0],e=it.e,atA=p.atA,sn=p.sn;const old=S.nodes[atA?e.a:e.b],far=S.nodes[atA?e.b:e.a];
+    const t=sn.type==="node"?S.nodes[sn.node]:sn.type==="edge"?splitEdge(S,S.edges[sn.edge],sn.u):addNode(S,p.tx,p.ty,old.lvl);
+    const pts=it.pts.slice();if(atA){pts[0]=t.x;pts[1]=t.y}else{pts[pts.length-2]=t.x;pts[pts.length-1]=t.y}
+    made.push(replaceEdge(S,e,pts,atA?t:far,atA?far:t,atA?{pa:false,dropA:true}:{pb:false,dropB:true}));touched.push(old,t,far)}
+  else if(p.edit==="slide"){const I=p.I,n=p.n,s=p.s,L=I.g.len;const q=pointAt(I.g,s);n.x=q.x;n.y=q.y;
+    const it1=p.items[0],it2=p.items[1],e1=I.e1,e2=I.e2;
+    const n1=addEdge(S,S.nodes[e1.a],S.nodes[e1.b],e1.kind,it1.pts,e1.lf,e1.lb,Object.assign(edgeProps(e1),{pa:e1.pa,pb:e1.pb}));
+    const n2=addEdge(S,S.nodes[e2.a],S.nodes[e2.b],e2.kind,it2.pts,e2.lf,e2.lb,Object.assign(edgeProps(e2),{pa:e2.pa,pb:e2.pb}));
+    for(const [o,ne] of [[e1,n1],[e2,n2]]){ne.flow=o.flow;ne.passes=o.passes;ne.cong=o.cong.slice();ne.born=o.born;if(o.uc)ne.uc=[o.uc[0],o.uc[1]]}
+    // nové úseky na dráze σ (0 = vzdálený konec e1, L = vzdálený konec e2)
+    const news=[{e:n1,s0:0,s1:s,B:I.r1?s:0,b:I.r1?-1:1},{e:n2,s0:s,s1:L,B:I.r2?L:-s,b:I.r2?-1:1}];
+    const sig1=I.r1?[I.L1,-1]:[0,1],sig2=I.r2?[I.L1+e2.g.len,-1]:[I.L1,1];
+    // přechody uprostřed úseku zůstanou na svém místě silnice
+    const xs=[];for(const [o,sg] of [[e1,sig1],[e2,sig2]])for(const x of o.xw||[])xs.push(sg[0]+sg[1]*x.u);
+    for(const sx of xs){if(Math.abs(sx-s)<0.6)continue;const nq=news.find(w=>sx>=w.s0&&sx<=w.s1);if(!nq)continue;const u=nq.B+nq.b*sx;(nq.e.xw||(nq.e.xw=[])).push({u})}
+    remapEdges(S,new Map([[e1.id,railPieces(e1.g.len,sig1[0],sig1[1],news)],[e2.id,railPieces(e2.g.len,sig2[0],sig2[1],news)]]));
+    removeEdge(S,e1,true);removeEdge(S,e2,true);made.push(n1,n2);touched.push(n,I.f1,I.f2)}
+  for(const n of touched)if(!n.dead)topoNode(S,n);tidyNodes(S,touched);netChanged(S);
+  return {ok:true,edges:made.filter(e=>!e.dead)}}
+
+// úchyty editoru pro úsek e: move / slide (uzel), end (přepojit konec), bend (střed)
+function editHandles(S,e){const out=[];if(editEdgeOk(S,e))return out;
+  for(const atA of [true,false]){const n=S.nodes[atA?e.a:e.b];
+    if(!editNodeOk(S,n))out.push({t:slideInfo(S,n)?"slide":"move",n:n.id,x:n.x,y:n.y});
+    if(n.edges.length>=2&&n.gate<0){const tr=edgeTrim(e);const u=atA?Math.min(e.g.len*0.3,tr[0]+0.5):Math.max(e.g.len*0.7,e.g.len-tr[1]-0.5);const p=pointAt(e.g,u);out.push({t:"end",e:e.id,atA,x:p.x,y:p.y})}}
+  if(e.g.len>=1.6){const p=pointAt(e.g,e.g.len/2);out.push({t:"bend",e:e.id,x:p.x,y:p.y})}
+  return out}
 
 // ---- sim/2_doprava/20_cesty.js ----
 // Hledání cest po síti. Stav = link (úsek*2 + směr); respektuje pruhy, jednosměrky,
@@ -2255,7 +2454,7 @@ const TS0=12,tc=document.createElement("canvas"),tctx=tc.getContext("2d");tc.wid
 let S=createSim((Math.random()*1e9)|0);
 const cam={x:0,y:0,z:10};let vw=0,vh=0,dpr=1,zmin=4;
 let colors={},speed=1,overlay=false,zonePattern=null,flash=null;
-const UI={connNode:null,connDrag:null,tool:"build",shape:"line",tpl:"diamond",tplKey:"",rebuild:false,kind:"road",lanes:1,level:0,snapHint:null,hover:null,pinned:null,draw:null,plan:null,pending:null,mouse:{x:0,y:0,wx:0,wy:0,in:false},selDirty:true};
+const UI={connNode:null,connDrag:null,editEdge:null,editDrag:null,tool:"build",shape:"line",tpl:"diamond",tplKey:"",rebuild:false,kind:"road",lanes:1,level:0,snapHint:null,hover:null,pinned:null,draw:null,plan:null,pending:null,mouse:{x:0,y:0,wx:0,wy:0,in:false},selDirty:true};
 
 function readColors(){const cs=getComputedStyle(document.documentElement);
   for(const k of["land","forest","tree","water","water-edge","rock","rock-dot","ore","ore-dot","outside","road","road-edge","sidewalk","street","hwy","hwy-edge","median","mark","lane","bridge-edge","label","halo","good","warn","bad","accent","ink","panel","lot","lot-line","canopy","zone","sign","night"])colors[k]=cs.getPropertyValue("--"+k).trim();
@@ -2604,7 +2803,24 @@ function drawConnTool(){if(UI.tool!=="conn")return;const z=cam.z;
   for(const q of mk.ins){ctx.fillStyle=pal[ai.get(q.l)%pal.length];ctx.beginPath();ctx.arc(q.x,q.y,0.075,0,Math.PI*2);ctx.fill()}
   ctx.strokeStyle="#1d2420";ctx.lineWidth=Math.max(0.025,1/z);for(const q of mk.outs){ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(q.x,q.y,0.07,0,Math.PI*2);ctx.fill();ctx.stroke()}
   const d=UI.connDrag;if(d){const a=mk.ins.find(q=>q.l===d.l&&q.k===d.k);if(a){ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.04,2/z);ctx.setLineDash([0.12,0.08]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(d.x,d.y);ctx.stroke();ctx.setLineDash([])}}}
-function drawPreview(){drawConnTool();const P=UI.plan;const z=cam.z;
+// nástroj Upravit: náhled nových tvarů v šířce silnice a úchyty
+function drawEditTool(){if(UI.tool!=="edit")return;const z=cam.z,P=UI.plan&&UI.plan.edit?UI.plan:null,d=UI.editDrag;
+  if(P&&P.items){ctx.save();ctx.lineCap="butt";ctx.lineJoin="round";ctx.globalAlpha=0.45;ctx.strokeStyle=P.ok?colors.accent:colors.bad;
+    for(const it of P.items){const q=(it.g||geom(it.pts)).pts;const p=new Path2D();p.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)p.lineTo(q[k],q[k+1]);ctx.lineWidth=it.e.w||0.6;ctx.stroke(p)}ctx.restore()}
+  const E=UI.editEdge!=null?S.edges[UI.editEdge]:null;
+  if(E&&!E.dead&&!d){ctx.save();ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.04,1.5/z);ctx.setLineDash([0.25,0.15]);const q=E.g.pts;ctx.beginPath();ctx.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)ctx.lineTo(q[k],q[k+1]);ctx.stroke();ctx.restore()}
+  const hs=d?[d.h]:editHandlesNow();if(!hs.length)return;const r=Math.max(0.13,6/z),hot=d?d.h:editPick(UI.mouse.wx,UI.mouse.wy);
+  ctx.save();ctx.lineWidth=Math.max(0.03,1.5/z);ctx.strokeStyle=colors.accent;
+  for(const h of hs){if(!inView(h.x,h.y,1))continue;let x=h.x,y=h.y;if(d&&h===d.h){x=UI.mouse.wx;y=UI.mouse.wy}
+    ctx.fillStyle=h===hot?colors.accent:colors.panel;ctx.beginPath();
+    if(h.t==="move")ctx.arc(x,y,r,0,Math.PI*2);
+    else if(h.t==="end"){const s=r*0.85;ctx.rect(x-s,y-s,2*s,2*s)}
+    else if(h.t==="bend"){const s=r*1.2;ctx.moveTo(x,y-s);ctx.lineTo(x+s,y);ctx.lineTo(x,y+s);ctx.lineTo(x-s,y);ctx.closePath()}
+    else{const n=S.nodes[h.n],a=n&&n.arms[0];const tx=a?a.hx:1,ty=a?a.hy:0,nx=-ty,ny=tx,L=r*2.2,T=r*0.55;
+      ctx.moveTo(x+nx*L+tx*T,y+ny*L+ty*T);ctx.lineTo(x-nx*L+tx*T,y-ny*L+ty*T);ctx.lineTo(x-nx*L-tx*T,y-ny*L-ty*T);ctx.lineTo(x+nx*L-tx*T,y+ny*L-ty*T);ctx.closePath()}
+    ctx.fill();ctx.stroke()}
+  ctx.restore()}
+function drawPreview(){drawConnTool();drawEditTool();const P=UI.plan;const z=cam.z;
   if(UI.tool==="lane"&&(UI.laneDrag||UI.laneHover))drawLaneHint(UI.laneDrag||UI.laneHover);
   // místa napojení na pruh (konce přidaných pruhů)
   if(UI.tool==="build"&&!UI.rebuild&&z>=8){ctx.fillStyle=colors.accent;ctx.globalAlpha=0.55;for(const n of S.nodes){if(n.dead||n.edges.length!==2||!inView(n.x,n.y,1))continue;for(const p of lanePorts(S,n)){ctx.beginPath();ctx.arc(p.x,p.y,0.09,0,Math.PI*2);ctx.fill()}}ctx.globalAlpha=1}
@@ -2682,6 +2898,7 @@ const SHAPE_HINT={line:"Táhni po mapě. Ze silnice se úhly drží vůči ní, 
 const TOOL_HINT={lane:"Klikni na polovinu silnice: přidá pruh v tom směru. U jednosměrky přidá pruh na tom okraji, kam klikneš; ostatní pruhy zůstanou na místě. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
   split:"Klikni na silnici: rozdělí úsek, aby šel kus přestavět nebo rozšířit zvlášť. Klik na značku rozdělení úseky zase spojí.",
   cross:"Klikni u křižovatky: přechod přes rameno zruší nebo vrátí. Klik jinde na silnici přidá přechod doprostřed úseku (10 Kč), klik na něj ho zruší.",
+  edit:"Najeď na silnici nebo na ni klikni: ukážou se úchyty. Kolečko posune křižovatku nebo konec (konec puštěný na silnici se na ni napojí). Čtvereček u konce úsek od křižovatky odpojí a přepojí jinam. Kosočtverec uprostřed úsek ohne. Příčka na hranici pruhů posune, kde přídavný pruh začíná. Shift: bez přichycení k poli.",
   conn:"Klikni na křižovatku: ukáže spojení pruhů. Tah z barevného konce pruhu na bílý začátek pruhu za křižovatkou spojení přidá, klik na křivku ho zruší. Křižovatky s ručními spojeními jsou zvýrazněné.",
   junction:"Klikni na křižovatku: přepíná přednost zprava, hlavní silnici a semafor.",erase:"Táhni přes silnice nebo budovy. Tah začatý na budově bourá budovy (za peníze).",
   zone:"Táhni přes pole, kde se nesmí stavět. Tahem přes šrafy uzávěru zrušíš.",hand:"Táhni mapou, klikni pro výběr."};
@@ -2715,10 +2932,10 @@ $("confirmGo").addEventListener("click",()=>{const f=UI.pending;hideConfirm();if
 $("confirmNo").addEventListener("click",hideConfirm);
 function bldCountText(n){return n+(n===1?" budovu":n<5?" budovy":" budov")}
 // provede plán; když by se bouralo, nejdřív se zeptá
-function runPlan(plan,commit,what){
+function runPlan(plan,commit,what,ask){
   if(!plan.ok){toast(plan.msg);return}
   const go=()=>{const r=commit(S,plan);if(!r.ok)toast(r.msg);else{toast(what+(plan.cost?" za "+fmt(plan.cost)+" Kč":""));UI.selDirty=true}};
-  if(plan.demolish&&plan.demolish.length){askConfirm(`${what} vede přes ${bldCountText(plan.demolish.length)}. Zbourat je a postavit za ${fmt(plan.cost)} Kč?`,"Postavit a zbourat",go);UI.keepPlan=plan}
+  if(plan.demolish&&plan.demolish.length){askConfirm(`${ask||what} vede přes ${bldCountText(plan.demolish.length)}. Zbourat je a postavit za ${fmt(plan.cost)} Kč?`,"Postavit a zbourat",go);UI.keepPlan=plan}
   else go()}
 
 // ---- výběr ----
@@ -2796,7 +3013,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
   let groups="",cur=null;for(const a of acts){if(a.group!==cur){cur=a.group;groups+=`<span class="lbl">${esc(cur)}</span>`}groups+=`<button data-act="${a.act}" aria-pressed="${a.pressed?"true":"false"}">${esc(a.label)}</button>`}
   return`<span class="pin">${UI.pinned?"vybráno · Esc":"klikni Rukou pro výběr"}</span><h3>${esc(title)}</h3>${sub?`<div class="sub">${esc(sub)}</div>`:""}
     <div class="rows">${rows.map(r=>`<span>${esc(r[0])}</span><b>${esc(r[1])}</b>`).join("")}</div>${why?`<p class="why${ok?" ok":""}">${esc(why)}</p>`:""}${acts.length?`<div class="acts">${groups}</div>`:""}`}
-function updateSel(){const t=UI.pinned||(UI.draw||UI.connDrag||UI.tool==="conn"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
+function updateSel(){const t=UI.pinned||(UI.draw||UI.connDrag||UI.editDrag||UI.tool==="conn"||UI.tool==="edit"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
 $("sel").addEventListener("click",ev=>{const btn=ev.target.closest("[data-act]");if(!btn)return;const t=UI.pinned||UI.hover;if(!t)return;const a=btn.dataset.act;let r={ok:true};
   if(t.type==="edge"){const e=S.edges[t.id];
     if(a.startsWith("kind:")){runPlan(planKind(S,e,a.slice(5)),commitKind,"Změna druhu silnice");return}
@@ -2883,6 +3100,7 @@ cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);const [s
     else if(sh==="branch"){const s=snapAny(wx,wy,UI.level);UI.draw={tool:"branch",start:s.type==="edge"?s:null};if(!UI.draw.start){toast("Odbočka začíná na silnici mimo křižovatku");UI.draw=null}else refreshPlan()}}
   else if(t==="lane"){const h=hitTest(wx,wy);if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy);UI.laneDrag={e:h.id,u0:r.u,u1:r.u,dir:laneSide(ed,wx,wy,r.u),rem:e.shiftKey}}else UI.laneDrag=null;UI.laneHover=null}
   else if(t==="conn")connDown(wx,wy);
+  else if(t==="edit")editDown(wx,wy);
   else if(t==="erase"||t==="zone"){const h=hitTest(wx,wy);stroke={tool:t,mode:t==="erase"?(h&&h.type==="bld"?"bld":"road"):(S.zone[cellAt(wx,wy)]?"clear":"set"),spent:0,done:new Set()};applyStroke(wx,wy)}});
 function applyStroke(wx,wy){const st=stroke;if(!st)return;
   // uzávěra po celých polích (2 × 2 buňky)
@@ -2903,6 +3121,7 @@ cv.addEventListener("pointermove",e=>{const [sx,sy]=local(e);const p=ptrs.get(e.
     else{UI.laneHover=null;if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy);UI.laneHover={e:h.id,u0:0,u1:0,dir:laneSide(ed,wx,wy,r.u),rem:e.shiftKey}}}}
   if(UI.tool==="split"||UI.tool==="cross"){UI.splitHover=null;if(h&&h.type==="edge"){const ed=S.edges[h.id];UI.splitHover={e:h.id,u:nearestOn(ed.g,wx,wy).u}}}
   if(UI.tool==="conn")connMove(wx,wy);
+  if(UI.tool==="edit")editMove(wx,wy,e.shiftKey);
   if(stroke)applyStroke(wx,wy)});
 function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.delete(e.pointerId);
   if(pinch){if(ptrs.size<2)pinch=null;return}
@@ -2914,6 +3133,7 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
   const [wx,wy]=toWorld(sx,sy);const t=UI.tool,d=UI.draw;
   if(stroke){if(stroke.spent)toast("Zbouráno za "+fmt(stroke.spent)+" Kč");stroke=null;return}
   if(t==="conn"){connUp(wx,wy);UI.selDirty=true;return}
+  if(t==="edit"){editUp(wx,wy);UI.selDirty=true;return}
   if(t==="build"&&UI.rebuild){if(moved)return;const h=hitTest(wx,wy);
     if(h&&h.type==="edge")runPlan(planKind(S,S.edges[h.id],UI.kind,UI.lanes),commitKind,"Přestavěno na "+RK[UI.kind].name.toLowerCase());else toast("Klikni na silnici, kterou chceš přestavět");UI.selDirty=true;return}
   if(t==="build"&&!UI.rebuild&&UI.shape==="template"&&!moved){const P=planTemplate(S,UI.tpl,wx,wy,UI.kind,UI.lanes);if(P.ok)finishBuild(P,"Křižovatka "+P.name.toLowerCase());else toast(P.msg);UI.selDirty=true;return}
@@ -2943,11 +3163,11 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
       if(next===2){let best=null,bd=2;for(let i=0;i<n.arms.length;i++)for(let j=i+1;j<n.arms.length;j++){const a=n.arms[i],b=n.arms[j];const dt=a.hx*b.hx+a.hy*b.hy;if(dt<bd){bd=dt;best=[a.e,b.e]}}pair=best}
       const r=setControl(S,n,next,pair);toast(r.ok?["Automaticky","Přednost zprava","Hlavní silnice","Semafor"][next]:r.msg);UI.pinned=h}else toast("Klikni na křižovatku")}
   UI.selDirty=true}
-cv.addEventListener("pointerup",endPtr);cv.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);pan=null;pinch=null;stroke=null;UI.laneDrag=null});
+cv.addEventListener("pointerup",endPtr);cv.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);pan=null;pinch=null;stroke=null;UI.laneDrag=null;if(UI.editDrag){UI.editDrag=null;UI.plan=null}});
 cv.addEventListener("pointerleave",()=>{UI.mouse.in=false;UI.snapHint=null;if(!stroke&&!pan){UI.hover=null;UI.hoverKey="";UI.selDirty=true}});
 cv.addEventListener("contextmenu",e=>e.preventDefault());
 cv.addEventListener("wheel",e=>{e.preventDefault();const [sx,sy]=local(e);zoomAt(sx,sy,Math.pow(1.0015,-e.deltaY));if(UI.draw)refreshPlan()},{passive:false});
-function setTool(t){UI.tool=t;UI.draw=null;UI.plan=null;UI.laneDrag=null;UI.laneHover=null;UI.splitHover=null;UI.snapHint=null;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));cv.classList.toggle("pan",t==="hand");lastOptsKey="";updateOpts()}
+function setTool(t){UI.tool=t;UI.draw=null;UI.plan=null;UI.editDrag=null;UI.editEdge=null;UI.laneDrag=null;UI.laneHover=null;UI.splitHover=null;UI.snapHint=null;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));cv.classList.toggle("pan",t==="hand");lastOptsKey="";updateOpts()}
 function setShape(sh){UI.shape=sh;if(UI.tool!=="build")setTool("build");UI.draw=null;UI.plan=null;UI.tplKey="";lastOptsKey="";updateOpts()}
 function setSpeed(s){speed=s;document.querySelectorAll("[data-speed]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.speed===s))}
 document.querySelectorAll("[data-tool]").forEach(b=>b.addEventListener("click",()=>setTool(b.dataset.tool)));
@@ -2963,7 +3183,7 @@ $("helpBtn").addEventListener("click",()=>{$("help").hidden=false});$("helpClose
 $("help").addEventListener("click",e=>{if(e.target.id==="help")$("help").hidden=true});
 let prevSpeed=1;const keysDown=new Set();
 window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;
-  const m={"1":"build","2":"lane","3":"junction","4":"cross","5":"split","6":"erase","7":"zone","8":"hand","9":"conn"};const shp={a:"line",s:"curve",d:"round",f:"connect",g:"branch",h:"template"};
+  const m={"1":"build","2":"lane","3":"junction","4":"cross","5":"split","6":"erase","7":"zone","8":"hand","9":"conn","0":"edit"};const shp={a:"line",s:"curve",d:"round",f:"connect",g:"branch",h:"template"};
   const k=e.key.toLowerCase();
   if(m[e.key])setTool(m[e.key]);
   else if(shp[k]&&!e.ctrlKey&&!e.metaKey)setShape(shp[k]);
@@ -2971,7 +3191,7 @@ window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("inp
   else if(k==="v")$("ovl").click();
   else if(k==="q"){UI.level=Math.max(0,UI.level-1);lastOptsKey="";updateOpts();refreshPlan()}
   else if(k==="e"){UI.level=Math.min(2,UI.level+1);lastOptsKey="";updateOpts();refreshPlan()}
-  else if(e.key==="Escape"){if(!$("confirm").hidden)hideConfirm();else if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;$("help").hidden=true;UI.selDirty=true}
+  else if(e.key==="Escape"){if(!$("confirm").hidden)hideConfirm();else if(UI.editDrag){UI.editDrag=null;UI.plan=null}else if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;$("help").hidden=true;UI.selDirty=true}
   else if(e.key==="Shift"){UI.mouse.shift=true;if(UI.draw)refreshPlan()}
   else if(e.key.startsWith("Arrow")){e.preventDefault();keysDown.add(e.key)}
   else if(e.key==="+"||e.key==="=")zoomAt(vw/2,vh/2,1.2);else if(e.key==="-")zoomAt(vw/2,vh/2,1/1.2)});
@@ -2992,6 +3212,36 @@ function connUp(wx,wy){const n=connSel(),dr=UI.connDrag;UI.connDrag=null;
   if(n){let best=null,bd=0.09;for(const q of connCurves(n)){const d=bezDist(q.c,wx,wy);if(d<bd){bd=d;best=q}}
     if(best){const r=connRemove(S,n,best.l,best.k,best.nl,best.m);toast(r.ok?"Spojení zrušeno":r.msg);lastOptsKey="";updateOpts();return}}
   const h=hitTest(wx,wy);const nn=h&&h.type==="node"?S.nodes[h.id]:null;if(connNodeOk(nn))UI.connNode=nn.id;else{UI.connNode=null;if(!n)toast("Klikni na křižovatku")}lastOptsKey="";updateOpts()}
+
+// ---- nástroj Upravit: úchyty na úseku pod kurzorem (nebo vybraném kliknutím) a na křižovatce ----
+function editHandlesNow(){const out=[],seen=new Set();
+  for(const id of [UI.editEdge,UI.hover&&UI.hover.type==="edge"?UI.hover.id:null]){const e=id!=null?S.edges[id]:null;if(!e||e.dead||seen.has(e.id))continue;seen.add(e.id);out.push(...editHandles(S,e))}
+  if(UI.hover&&UI.hover.type==="node"){const n=S.nodes[UI.hover.id];if(n&&!n.dead&&!editNodeOk(S,n)&&!out.some(h=>h.n===n.id))out.push({t:slideInfo(S,n)?"slide":"move",n:n.id,x:n.x,y:n.y})}
+  return out}
+function editPick(wx,wy){const r=Math.max(0.3,12/cam.z);let best=null,bd=r;for(const h of editHandlesNow()){const d=Math.hypot(h.x-wx,h.y-wy);if(d<bd){bd=d;best=h}}return best}
+function editDown(wx,wy){const h=editPick(wx,wy);UI.editDrag=h?{h,key:"",plan:null}:null;if(h)UI.plan=null}
+// cíl tahu → plán úpravy (přepočítá se, jen když se cíl změní)
+function editMove(wx,wy,raw){const d=UI.editDrag;if(!d||!moved)return;const h=d.h;let key="",mk=null;
+  const cell=()=>raw?[wx,wy]:[Math.floor(wx)+0.5,Math.floor(wy)+0.5];
+  const target=(lvl,own)=>{const sn=snapPoint(S,wx,wy,lvl);if(sn.type!=="free"&&!own(sn))return sn;const c=cell();return {type:"free",x:c[0],y:c[1],lvl}};
+  const skey=sn=>sn.type+":"+(sn.node!=null?sn.node:sn.edge!=null?sn.edge:"")+":"+sn.x.toFixed(2)+","+sn.y.toFixed(2);
+  if(h.t==="bend"){const x=raw?wx:Math.round(wx*4)/4,y=raw?wy:Math.round(wy*4)/4;key=x+","+y;mk=()=>planBend(S,S.edges[h.e],x,y)}
+  else if(h.t==="slide"){key=Math.round(wx*8)+","+Math.round(wy*8);mk=()=>planSlide(S,S.nodes[h.n],wx,wy)}
+  else if(h.t==="move"){const n=S.nodes[h.n];if(!n||n.dead)return;
+    if(n.edges.length===1){const e=S.edges[n.edges[0]];const sn=target(n.lvl,q=>q.type==="node"&&(q.node===n.id)||q.type==="edge"&&q.edge===e.id);key=skey(sn);
+      mk=()=>sn.type==="free"?planMove(S,n,sn.x,sn.y):planReconnect(S,e,e.a===n.id,sn)}
+    else{const c=cell();key=c.join(",");mk=()=>planMove(S,n,c[0],c[1])}}
+  else if(h.t==="end"){const e=S.edges[h.e];if(!e||e.dead)return;const n=S.nodes[h.atA?e.a:e.b];
+    const sn=target(n.lvl,q=>q.type==="edge"&&q.edge===e.id);key=skey(sn);mk=()=>planReconnect(S,e,h.atA,sn)}
+  if(mk&&key!==d.key){d.key=key;d.plan=mk();UI.plan=d.plan}}
+const EDIT_LABEL={bend:"Úsek ohnut",reconnect:"Konec přepojen",slide:"Hranice pruhu posunuta"};
+function editUp(wx,wy){const d=UI.editDrag;UI.editDrag=null;
+  if(d&&moved){const P=d.plan;UI.plan=null;if(!P)return;if(!P.ok){if(!P.same)toast(P.msg);return}
+    const what=P.edit==="move"?(P.n.edges.length===1?"Konec posunut":"Křižovatka posunuta"):EDIT_LABEL[P.edit];
+    runPlan(P,(S2,p)=>{const r=commitEdit(S2,p);if(r.ok)UI.editEdge=r.edges&&r.edges.length?r.edges[0].id:null;return r},what,"Úprava silnice");
+    if(P.demolish&&P.demolish.length)UI.plan=P;return}
+  if(moved)return;
+  const h=hitTest(wx,wy);UI.editEdge=h&&h.type==="edge"?h.id:null;if(!h||h.type!=="edge"&&h.type!=="node")toast("Najeď na silnici nebo na ni klikni: ukážou se úchyty")}
 
 // ---- ui/4_start.js ----
 // Spuštění a hlavní smyčka.
