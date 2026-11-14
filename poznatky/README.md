@@ -28,3 +28,4 @@ nebo testů. Nezapracovávají se průběžně – jednou za čas se projdou naj
 | `2026-11-13_prototyp.md` | vznik prototypu 0.1 a 0.2, ladění růstu, parkovací domy, OneDrive | čeká |
 | `2026-11-13_verze-0-3.md` | verze 0.3: bugy parkoviště a skrytého okna, ladění tempa růstu a dopravy, nové vzory vykreslování | čeká |
 | `2026-11-13_verze-0-4.md` | verze 0.4: hledání cest se smyčkami, bourání při změně druhu, přichytávání, mizející auta při rozdělení úseku | čeká |
+| `2026-11-14_zkouska-krizovatek.md` | zkouška 30 křižovatek: zablokování, falešně zaseknutá auta, semafor a odbočení vlevo, překrývání v ploše | čeká |
