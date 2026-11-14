@@ -208,7 +208,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
     <div class="card" role="dialog" aria-labelledby="helpTitle">
       <button class="close" id="helpClose">Zavřít</button>
       <h2 id="helpTitle">Jak krajina žije</h2>
-      <p>Stavíš a řídíš silnice. Všechno ostatní vzniká samo podle toho, kudy, kdy a kolik se jezdí. Verze 0.7.0.</p>
+      <p>Stavíš a řídíš silnice. Všechno ostatní vzniká samo podle toho, kudy, kdy a kolik se jezdí. Verze 0.8.0.</p>
       <div class="grid">
         <div><h3>Stavění</h3><p>Nástroj Stavět má tři volby: druh silnice, tvar (Rovně, Oblouk, Kruh, Napojit) a výšku. Napojit vede plynulou křivku mezi dvěma body: z boku silnice kolmo, z konce silnice v jejím směru. Tah po existující silnici ji přestaví. „Přestavět kliknutím“ mění každý úsek, na který klikneš, na zvolený druh a pruhy.</p></div>
         <div><h3>Druhy silnic a mosty</h3><p>Ulička (bez středové čáry), ulice, silnice (plná čára), jednosměrka, bulvár se zeleným středem, dálnice a nájezd. Most a vysoký most mají na koncích rampu 3 pole na výšku; na most ani na rampu se nic nepřipojí. Dálnici nejde křížit v úrovni; silnice napojená z boku dálnice funguje jen vpravo.</p></div>
@@ -231,7 +231,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
 // Osady a cesty – simulace (bez DOM). Soubory v src/sim se skládají v abecedním
 // pořadí do <script id="sim"> v index.html (build.js) a testují se v Node.js.
 
-const GAME_VERSION="0.7.0";
+const GAME_VERSION="0.8.0";
 const MW=128,MH=80;                         // mapa ve světových jednotkách (1 = pole silnice)
 const CS=0.5,W=MW*2,H=MH*2,N=W*H;           // jemná síť terénu a budov: buňka = půl pole
 const STEP=1/30,BASE_SPEED=2.0,MAX_CARS=900,MAX_WALKERS=600;
@@ -538,10 +538,29 @@ function armOf(S,n,eid){const e=S.edges[eid];const atA=e.a===n.id;const g=e.g;co
 const linkLanes=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.lb:e.lf};
 const linkFrom=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.b:e.a};
 const linkTo=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.a:e.b};
+// silnice, která uzlem plynule prochází, a z boku jsou napojené jen jednosměrky / nájezdy (odbočky):
+// dvojice průběžných ramen, jinak null. Taková silnice má přednost a kreslí se vcelku.
+function sideJoinPair(S,n){if(n.edges.length<3||n.ring)return null;let best=null,bd=-0.9;
+  for(let i=0;i<n.arms.length;i++)for(let j=i+1;j<n.arms.length;j++){const a=n.arms[i],b=n.arms[j];const d=a.hx*b.hx+a.hy*b.hy;const ea=S.edges[a.e],eb=S.edges[b.e];
+    if(d<bd&&(ea.kind===eb.kind||ea.kind==="hwy"&&eb.kind==="hwy")&&!RK[ea.kind].oneway){bd=d;best=[a.e,b.e]}}
+  if(!best)return null;for(const a of n.arms){if(best.includes(a.e))continue;const e=S.edges[a.e];if(!(RK[e.kind].oneway||e.lf===0||e.lb===0))return null}
+  return best}
+// místa napojení na pruh: v uzlu, kde úsek přibírá nebo ztrácí krajní pruh (konec odbočovacího pruhu,
+// začátek připojovacího). Silnice začatá tady vede z toho pruhu: {x, y, dir (směr jízdy), node}
+function lanePorts(S,n){const out=[];if(n.dead||n.edges.length!==2||n.ring)return out;const A=n.arms[0],B=n.arms[1];if(A.hx*B.hx+A.hy*B.hy>-0.9)return out;
+  const side=(arm)=>{const e=S.edges[arm.e],atA=e.a===n.id;return {e,out:atA?e.id*2:e.id*2+1,in:atA?e.id*2+1:e.id*2,R:atA?e.lf:e.lb,L:atA?e.lb:e.lf,len:e.g.len}};
+  for(const [P,Q,ap] of [[A,B,A],[B,A,B]]){const p=side(P),q=side(Q);
+    // provoz z Q do P na straně vpravo od směru ven do P
+    if(p.R>q.L&&p.R>0){const ps=lanePose(S,p.out,p.R-1,0);out.push({x:ps.x,y:ps.y,dir:[ap.hx,ap.hy],node:n.id,entry:true})}
+    else if(q.L>p.R&&q.L>0){const ps=lanePose(S,q.in,q.L-1,q.len);out.push({x:ps.x,y:ps.y,dir:[ap.hx,ap.hy],node:n.id,entry:false})}}
+  return out}
+function snapPort(S,x,y,lvl){let best=null,bd=0.45;for(const n of S.nodes){if(n.dead||n.edges.length!==2||Math.abs(n.lvl-lvl)>=0.5||Math.abs(n.x-x)>2||Math.abs(n.y-y)>2)continue;
+  for(const p of lanePorts(S,n)){const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;best={type:"node",node:n.id,x:p.x,y:p.y,lvl:n.lvl,port:true,dir:p.dir,entry:p.entry}}}}return best}
 function topoNode(S,n){
   n.arms=n.edges.map(id=>armOf(S,n,id));const deg=n.arms.length;
   const isH=e=>e.kind==="hwy";
   const hw=n.arms.filter(a=>isH(S.edges[a.e])).length;
+  n.pass=sideJoinPair(S,n);
   n.rad=0;if(deg>=3)for(const a of n.arms){const e=S.edges[a.e];n.rad=Math.max(n.rad,e.er,e.el)}
   // plocha křižovatky na každém rameni (+ přechod)
   for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3?n.rad+0.05+(crossOn(S,n,e)?XW:0):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
@@ -566,6 +585,7 @@ function topoNode(S,n){
   else if(n.ctl===3)n.eff="light";
   else if(n.ctl===1)n.eff="right";
   else if(n.ctl===2&&n.mainManual&&n.mainManual.every(id=>n.edges.includes(id))){n.eff="main";n.mainEdges=new Set(n.mainManual)}
+  else if(n.pass){n.eff="main";n.mainEdges=new Set(n.pass)}   // jednosměrka napojená z boku dává přednost
   else{const rk=n.arms.map(a=>{const e=S.edges[a.e];return RK[e.kind].rank*8+e.lf+e.lb});const mx=Math.max(...rk);const top=n.arms.filter((a,k)=>rk[k]===mx);
     if(top.length===2&&rk.some(r=>r<mx)){n.eff="main";n.mainEdges=new Set(top.map(a=>a.e))}else n.eff="right"}
   if(n.eff==="light"){if(!n.light)n.light={axis:0,t:0,amber:false}}else n.light=null}
@@ -674,12 +694,13 @@ function commitRoad(S,plan){
       reshapeEdge(S,t,()=>{t.kind=sp.kind;t.lf=s.lf;t.lb=s.lb;t.owState=0;if(!RK[sp.kind].walk||!RK[sp.kind].side)t.xw=null});touched.push(S.nodes[t.a],S.nodes[t.b])}
     tidyNodes(S,touched);return {ok:true,edges:[],rebuilt:true}}
   const g0=plan.g,K=RK[sp.kind],lanes=plan.lanes;
-  const seq=[{u:0,node:resolvePoint(S,plan.start.x,plan.start.y,plan.start.lvl)}];
+  const nodeOf=q=>q.type==="node"&&q.port&&S.nodes[q.node]&&!S.nodes[q.node].dead?S.nodes[q.node]:resolvePoint(S,q.x,q.y,q.lvl);
+  const seq=[{u:0,node:nodeOf(plan.start)}];
   for(const j of plan.junctions)seq.push({u:j.ua,node:resolvePoint(S,j.x,j.y,j.lvl)});
   // začátek a konec ramp mostu
   const rp=plan.ramps||[0,0];
   for(const u of [rp[0],g0.len-rp[1]]){if(u<=0.05||u>=g0.len-0.05||(u===rp[0]&&!rp[0])||(u===g0.len-rp[1]&&!rp[1]))continue;const q=pointAt(g0,u);seq.push({u,node:resolvePoint(S,q.x,q.y,rp[2])})}
-  seq.push({u:g0.len,node:resolvePoint(S,plan.end.x,plan.end.y,plan.end.lvl)});
+  seq.push({u:g0.len,node:nodeOf(plan.end)});
   seq.sort((a,b)=>a.u-b.u);
   const made=[];
   for(let k=0;k<seq.length-1;k++){const A=seq[k],B=seq[k+1];if(A.node===B.node||B.u-A.u<0.05)continue;
@@ -868,7 +889,7 @@ function templateParts(type,hw){const parts=[];const cub=(A,ta,B,tb)=>{const d=M
     parts.push({a:{x:0,y:-J,l:1},b:{x:-X,y:0,l:0},pts:cub([0,-J],Wd,[-X,0],Wd)});  // nájezd ve směru -T
     return {parts,span:X+1,size:Math.max(X,D)}}
   // čtyřlístek: smyčky R kolem rohů, vnější rampy přes body za smyčkami
-  const R=3,g=1.0,h=hw+0.8,x0=g+R-2.5,y1=h+R-2.5,Q=16,Qr=13,D=Qr+2,C=Math.ceil(y1+4.2);
+  const R=4,g=1.0,h=hw+0.8,K3=3,x0=g+R-K3,y1=h+R-K3,Q=18,Qr=15,D=Qr+2,C=Math.ceil(y1+4.2);
   // most nad dálnicí (smyčky se připojují na něm), dál po zemi (vnější rampy)
   parts.push({road:true,a:{x:0,y:-C,l:0},b:{x:0,y:C,l:0},level:1,pts:mkLine(0,-C,0,C)});
   parts.push({road:true,a:{x:0,y:C,l:0},b:{x:0,y:D,l:0},pts:mkLine(0,C,0,D)});
@@ -977,7 +998,7 @@ function lanePose(S,l,lane,s,out){const e=S.edges[l>>1],d=l&1;const u=clamp(d?e.
 // přechod na rameni křižovatky: uzel se 3+ rameny bez dálnice, silnice s chodníkem, hráč ho nezrušil,
 // rameno je dost dlouhé a nesvírá se sousedním ramenem moc ostře (přechod by ležel na jiné silnici)
 function crossOn(S,n,e){if(n.edges.length<3||!RK[e.kind].walk||!RK[e.kind].side||e.ring||n.xOff&&n.xOff.has(e.id))return false;
-  if(n.arms.some(a=>S.edges[a.e].kind==="hwy"))return false;
+  if(n.arms.some(a=>S.edges[a.e].kind==="hwy")||n.pass)return false;
   if(e.g.len<n.rad+0.05+XW+0.5)return false;
   const a=n.arms.find(q=>q.e===e.id);if(!a)return false;for(const b of n.arms){if(b===a)continue;if(a.hx*b.hx+a.hy*b.hy>0.64)return false}
   return true}
@@ -1801,6 +1822,7 @@ function nodeR(n){return n.edges.length>=3?n.rad:0.05}
 // dvojice dálničních ramen, která uzlem napojení z boku plynule prochází (svodidla a čáry pokračují)
 function passPair(n){if(n._ppv===S.netVer)return n._pp;n._ppv=S.netVer;n._pp=null;
   if(n.edges.length>=3&&n.eff==="merge"){const h=n.arms.filter(a=>S.edges[a.e].kind==="hwy");if(h.length===2&&h[0].hx*h[1].hx+h[0].hy*h[1].hy<-0.7)n._pp=new Set([h[0].e,h[1].e])}
+  else if(n.pass)n._pp=new Set(n.pass);
   return n._pp}
 // plynulé navázání konce úseku na jiný úsek (dva úseky v uzlu, nebo dálnice přes napojení): pokos
 function joinAt(e,atA){const nd=S.nodes[atA?e.a:e.b];let oid=-1;
@@ -1872,7 +1894,8 @@ function drawCrossings(list){const z=cam.z;if(z<9)return;const seen=new Set();
       const d=n.rad+0.05+XW/2;const u=atA?d:e.g.len-d;if(u<0||u>e.g.len)continue;const p=pointAt(e.g,u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,n.xBusy&&n.xBusy.get(e.id)>0)}
     if(e.xw)for(const x of e.xw){const p=pointAt(e.g,x.u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,e.mbusy&&e.mbusy.some(u=>Math.abs(u-x.u)<0.05))}}}
 function drawRoadLayer(list,layer){const z=cam.z;ctx.lineCap="round";ctx.lineJoin="round";const discs=nodeDiscs(list);
-  list=[...list].sort((a,b)=>(a.kind==="hwy")-(b.kind==="hwy"));   // dálnice navrch: napojení z boku se pod ni zasune
+  // jednosměrky a nájezdy dospod, dálnice navrch: odbočka se pod průběžnou silnici zasune a vychází z jejího okraje
+  const ord=e=>e.kind==="hwy"?2:(RK[e.kind].oneway||e.lf===0||e.lb===0)?0:1;list=[...list].sort((a,b)=>ord(a)-ord(b));
   if(layer>0){ctx.fillStyle="rgba(0,0,0,.22)";for(const e of list)ctx.fill(shadowPath(e));ctx.save();ctx.translate(0.16*layer,0.26*layer);fillDiscs(discs,0.1,()=>"rgba(0,0,0,.22)");ctx.restore()}
   const cd=layer>0?0.08:Math.max(0.04,0.8/z);const edgeCol=e=>layer>0?colors["bridge-edge"]:(e.kind==="hwy"||e.kind==="ramp")?colors["hwy-edge"]:colors["road-edge"];
   for(const e of list){ctx.fillStyle=edgeCol(e);ctx.fill(bandPath(e,cd))}fillDiscs(discs,cd,edgeCol);
@@ -2031,7 +2054,11 @@ function drawLaneHint(L){const e=S.edges[L.e];if(!e||e.dead)return;const z=cam.z
   ctx.globalAlpha=0.6;ctx.strokeStyle=L.rem?colors.bad:colors.accent;ctx.lineWidth=LW*0.9;ctx.lineCap="butt";ctx.stroke(p);ctx.globalAlpha=1;ctx.lineCap="round"}
 function drawPreview(){const P=UI.plan;const z=cam.z;
   if(UI.tool==="lane"&&(UI.laneDrag||UI.laneHover))drawLaneHint(UI.laneDrag||UI.laneHover);
-  if(UI.snapHint&&UI.snapHint.type!=="free"&&UI.mouse.in){const q=UI.snapHint;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,2/z);ctx.beginPath();ctx.arc(q.x,q.y,q.type==="node"?0.3:0.18,0,Math.PI*2);ctx.stroke()}
+  // místa napojení na pruh (konce přidaných pruhů)
+  if(UI.tool==="build"&&!UI.rebuild&&z>=8){ctx.fillStyle=colors.accent;ctx.globalAlpha=0.55;for(const n of S.nodes){if(n.dead||n.edges.length!==2||!inView(n.x,n.y,1))continue;for(const p of lanePorts(S,n)){ctx.beginPath();ctx.arc(p.x,p.y,0.09,0,Math.PI*2);ctx.fill()}}ctx.globalAlpha=1}
+  // kurzor: křížek na ose budoucí silnice (střed pole), u silnice kroužek přichycení
+  if(UI.snapHint&&UI.mouse.in){const q=UI.snapHint;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,2/z);ctx.beginPath();
+    if(q.type==="free"){const s=0.28;ctx.moveTo(q.x-s,q.y);ctx.lineTo(q.x+s,q.y);ctx.moveTo(q.x,q.y-s);ctx.lineTo(q.x,q.y+s)}else ctx.arc(q.x,q.y,q.port?0.16:q.type==="node"?0.3:0.18,0,Math.PI*2);ctx.stroke()}
   if((UI.tool==="split"||UI.tool==="cross")&&UI.splitHover){const e=S.edges[UI.splitHover.e];if(e&&!e.dead){const p=pointAt(e.g,UI.splitHover.u);ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.06,2/z);
     ctx.beginPath();ctx.moveTo(p.x+p.nx*(e.er+0.2),p.y+p.ny*(e.er+0.2));ctx.lineTo(p.x-p.nx*(e.el+0.2),p.y-p.ny*(e.el+0.2));ctx.stroke()}}
   if(UI.draw&&UI.draw.ghost){const g=UI.draw.ghost;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,1.5/z);ctx.setLineDash([0.2,0.15]);ctx.beginPath();ctx.moveTo(g[0],g[1]);for(let k=2;k<g.length;k+=2)ctx.lineTo(g[k],g[k+1]);ctx.stroke();ctx.setLineDash([])}
@@ -2065,7 +2092,7 @@ function render(){
   const na=nightAlpha();if(na>0){ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=na;ctx.fillStyle=colors.night;ctx.fillRect(0,0,vw,vh);ctx.restore();
     if(z>=7){ctx.fillStyle="rgba(255,214,120,"+(na*2.2).toFixed(2)+")";for(const b of S.buildings){if(!isHome(b)||b.away>=b.pop*0.8)continue;const x=tx(b.front),y=ty(b.front);if(x<x0-1||x>x1+1||y<y0-1||y>y1+1)continue;ctx.fillRect(wxOf(b.front)-0.11,wyOf(b.front)-0.11,0.22,0.22)}}}
   ctx.setTransform(dpr*z,0,0,dpr*z,-cam.x*dpr,-cam.y*dpr);
-  strokeTarget(UI.pinned,colors.ink);if(UI.hover&&!UI.draw)strokeTarget(UI.hover,colors.accent);
+  strokeTarget(UI.pinned,colors.ink);if(UI.hover&&!UI.draw&&!(UI.tool==="build"&&!UI.rebuild))strokeTarget(UI.hover,colors.accent);
   drawPreview();
   if(flash){const age=(performance.now()-flash.t)/1000;if(age>2.4)flash=null;else{ctx.strokeStyle=colors.accent;ctx.globalAlpha=Math.max(0,1-age/2.4);ctx.lineWidth=3/z;ctx.beginPath();ctx.arc(flash.x,flash.y,0.8+age*1.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}}
   drawLabels();drawCursorLabel()}
@@ -2209,6 +2236,7 @@ $("sel").addEventListener("click",ev=>{const btn=ev.target.closest("[data-act]")
 function local(e){const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]}
 // přichycení: uzel, bod na silnici (ve zvolené výšce, pak v ostatních); volný bod na střed pole
 function snapAny(x,y,pref,raw){const order=[pref,0,1,2].filter((v,k,a)=>a.indexOf(v)===k);
+  if(UI.tool==="build"){for(const l of order){const p=snapPort(S,x,y,l);if(p)return p}}   // konec / začátek pruhu má přednost
   for(const l of order){const s=snapPoint(S,x,y,l);if(s.type!=="free")return s}return {type:"free",x:raw?x:Math.floor(x)+0.5,y:raw?y:Math.floor(y)+0.5,lvl:pref}}
 // směr silnice v bodě přichycení (úhly se pak drží vůči ní, ne vůči mřížce)
 function baseAngle(sn){if(sn.type==="edge"){const e=S.edges[sn.edge];const p=pointAt(e.g,sn.u);return Math.atan2(p.ty,p.tx)}
@@ -2227,6 +2255,7 @@ function planLine(st,en){return planRoad(S,spec(mkLine(st.x,st.y,en.x,en.y),st,e
 function planCurve(st,cx,cy,en){return planRoad(S,spec(mkBezier(st.x,st.y,cx,cy,en.x,en.y),st,en))}
 // směr, kterým z bodu napojení vyrazit: z boku silnice kolmo, z konce silnice jejím směrem
 function tanFor(sn,ox,oy){const tx=ox-sn.x,ty=oy-sn.y,tl=Math.hypot(tx,ty)||1;
+  if(sn.port)return sn.entry?[-sn.dir[0],-sn.dir[1]]:[sn.dir[0],sn.dir[1]];   // z pruhu ve směru jízdy, do pruhu ve směru jízdy
   const toward=(x,y)=>{const s=x*tx+y*ty>=0?1:-1;return [x*s,y*s]};
   if(sn.type==="edge"){const e=S.edges[sn.edge];const p=pointAt(e.g,sn.u);return toward(p.nx,p.ny)}
   if(sn.type==="node"){const n=S.nodes[sn.node];

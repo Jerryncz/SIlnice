@@ -3,6 +3,7 @@
 function local(e){const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]}
 // přichycení: uzel, bod na silnici (ve zvolené výšce, pak v ostatních); volný bod na střed pole
 function snapAny(x,y,pref,raw){const order=[pref,0,1,2].filter((v,k,a)=>a.indexOf(v)===k);
+  if(UI.tool==="build"){for(const l of order){const p=snapPort(S,x,y,l);if(p)return p}}   // konec / začátek pruhu má přednost
   for(const l of order){const s=snapPoint(S,x,y,l);if(s.type!=="free")return s}return {type:"free",x:raw?x:Math.floor(x)+0.5,y:raw?y:Math.floor(y)+0.5,lvl:pref}}
 // směr silnice v bodě přichycení (úhly se pak drží vůči ní, ne vůči mřížce)
 function baseAngle(sn){if(sn.type==="edge"){const e=S.edges[sn.edge];const p=pointAt(e.g,sn.u);return Math.atan2(p.ty,p.tx)}
@@ -21,6 +22,7 @@ function planLine(st,en){return planRoad(S,spec(mkLine(st.x,st.y,en.x,en.y),st,e
 function planCurve(st,cx,cy,en){return planRoad(S,spec(mkBezier(st.x,st.y,cx,cy,en.x,en.y),st,en))}
 // směr, kterým z bodu napojení vyrazit: z boku silnice kolmo, z konce silnice jejím směrem
 function tanFor(sn,ox,oy){const tx=ox-sn.x,ty=oy-sn.y,tl=Math.hypot(tx,ty)||1;
+  if(sn.port)return sn.entry?[-sn.dir[0],-sn.dir[1]]:[sn.dir[0],sn.dir[1]];   // z pruhu ve směru jízdy, do pruhu ve směru jízdy
   const toward=(x,y)=>{const s=x*tx+y*ty>=0?1:-1;return [x*s,y*s]};
   if(sn.type==="edge"){const e=S.edges[sn.edge];const p=pointAt(e.g,sn.u);return toward(p.nx,p.ny)}
   if(sn.type==="node"){const n=S.nodes[sn.node];

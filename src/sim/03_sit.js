@@ -127,10 +127,29 @@ function armOf(S,n,eid){const e=S.edges[eid];const atA=e.a===n.id;const g=e.g;co
 const linkLanes=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.lb:e.lf};
 const linkFrom=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.b:e.a};
 const linkTo=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.a:e.b};
+// silnice, která uzlem plynule prochází, a z boku jsou napojené jen jednosměrky / nájezdy (odbočky):
+// dvojice průběžných ramen, jinak null. Taková silnice má přednost a kreslí se vcelku.
+function sideJoinPair(S,n){if(n.edges.length<3||n.ring)return null;let best=null,bd=-0.9;
+  for(let i=0;i<n.arms.length;i++)for(let j=i+1;j<n.arms.length;j++){const a=n.arms[i],b=n.arms[j];const d=a.hx*b.hx+a.hy*b.hy;const ea=S.edges[a.e],eb=S.edges[b.e];
+    if(d<bd&&(ea.kind===eb.kind||ea.kind==="hwy"&&eb.kind==="hwy")&&!RK[ea.kind].oneway){bd=d;best=[a.e,b.e]}}
+  if(!best)return null;for(const a of n.arms){if(best.includes(a.e))continue;const e=S.edges[a.e];if(!(RK[e.kind].oneway||e.lf===0||e.lb===0))return null}
+  return best}
+// místa napojení na pruh: v uzlu, kde úsek přibírá nebo ztrácí krajní pruh (konec odbočovacího pruhu,
+// začátek připojovacího). Silnice začatá tady vede z toho pruhu: {x, y, dir (směr jízdy), node}
+function lanePorts(S,n){const out=[];if(n.dead||n.edges.length!==2||n.ring)return out;const A=n.arms[0],B=n.arms[1];if(A.hx*B.hx+A.hy*B.hy>-0.9)return out;
+  const side=(arm)=>{const e=S.edges[arm.e],atA=e.a===n.id;return {e,out:atA?e.id*2:e.id*2+1,in:atA?e.id*2+1:e.id*2,R:atA?e.lf:e.lb,L:atA?e.lb:e.lf,len:e.g.len}};
+  for(const [P,Q,ap] of [[A,B,A],[B,A,B]]){const p=side(P),q=side(Q);
+    // provoz z Q do P na straně vpravo od směru ven do P
+    if(p.R>q.L&&p.R>0){const ps=lanePose(S,p.out,p.R-1,0);out.push({x:ps.x,y:ps.y,dir:[ap.hx,ap.hy],node:n.id,entry:true})}
+    else if(q.L>p.R&&q.L>0){const ps=lanePose(S,q.in,q.L-1,q.len);out.push({x:ps.x,y:ps.y,dir:[ap.hx,ap.hy],node:n.id,entry:false})}}
+  return out}
+function snapPort(S,x,y,lvl){let best=null,bd=0.45;for(const n of S.nodes){if(n.dead||n.edges.length!==2||Math.abs(n.lvl-lvl)>=0.5||Math.abs(n.x-x)>2||Math.abs(n.y-y)>2)continue;
+  for(const p of lanePorts(S,n)){const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;best={type:"node",node:n.id,x:p.x,y:p.y,lvl:n.lvl,port:true,dir:p.dir,entry:p.entry}}}}return best}
 function topoNode(S,n){
   n.arms=n.edges.map(id=>armOf(S,n,id));const deg=n.arms.length;
   const isH=e=>e.kind==="hwy";
   const hw=n.arms.filter(a=>isH(S.edges[a.e])).length;
+  n.pass=sideJoinPair(S,n);
   n.rad=0;if(deg>=3)for(const a of n.arms){const e=S.edges[a.e];n.rad=Math.max(n.rad,e.er,e.el)}
   // plocha křižovatky na každém rameni (+ přechod)
   for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3?n.rad+0.05+(crossOn(S,n,e)?XW:0):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
@@ -155,6 +174,7 @@ function topoNode(S,n){
   else if(n.ctl===3)n.eff="light";
   else if(n.ctl===1)n.eff="right";
   else if(n.ctl===2&&n.mainManual&&n.mainManual.every(id=>n.edges.includes(id))){n.eff="main";n.mainEdges=new Set(n.mainManual)}
+  else if(n.pass){n.eff="main";n.mainEdges=new Set(n.pass)}   // jednosměrka napojená z boku dává přednost
   else{const rk=n.arms.map(a=>{const e=S.edges[a.e];return RK[e.kind].rank*8+e.lf+e.lb});const mx=Math.max(...rk);const top=n.arms.filter((a,k)=>rk[k]===mx);
     if(top.length===2&&rk.some(r=>r<mx)){n.eff="main";n.mainEdges=new Set(top.map(a=>a.e))}else n.eff="right"}
   if(n.eff==="light"){if(!n.light)n.light={axis:0,t:0,amber:false}}else n.light=null}
@@ -263,12 +283,13 @@ function commitRoad(S,plan){
       reshapeEdge(S,t,()=>{t.kind=sp.kind;t.lf=s.lf;t.lb=s.lb;t.owState=0;if(!RK[sp.kind].walk||!RK[sp.kind].side)t.xw=null});touched.push(S.nodes[t.a],S.nodes[t.b])}
     tidyNodes(S,touched);return {ok:true,edges:[],rebuilt:true}}
   const g0=plan.g,K=RK[sp.kind],lanes=plan.lanes;
-  const seq=[{u:0,node:resolvePoint(S,plan.start.x,plan.start.y,plan.start.lvl)}];
+  const nodeOf=q=>q.type==="node"&&q.port&&S.nodes[q.node]&&!S.nodes[q.node].dead?S.nodes[q.node]:resolvePoint(S,q.x,q.y,q.lvl);
+  const seq=[{u:0,node:nodeOf(plan.start)}];
   for(const j of plan.junctions)seq.push({u:j.ua,node:resolvePoint(S,j.x,j.y,j.lvl)});
   // začátek a konec ramp mostu
   const rp=plan.ramps||[0,0];
   for(const u of [rp[0],g0.len-rp[1]]){if(u<=0.05||u>=g0.len-0.05||(u===rp[0]&&!rp[0])||(u===g0.len-rp[1]&&!rp[1]))continue;const q=pointAt(g0,u);seq.push({u,node:resolvePoint(S,q.x,q.y,rp[2])})}
-  seq.push({u:g0.len,node:resolvePoint(S,plan.end.x,plan.end.y,plan.end.lvl)});
+  seq.push({u:g0.len,node:nodeOf(plan.end)});
   seq.sort((a,b)=>a.u-b.u);
   const made=[];
   for(let k=0;k<seq.length-1;k++){const A=seq[k],B=seq[k+1];if(A.node===B.node||B.u-A.u<0.05)continue;

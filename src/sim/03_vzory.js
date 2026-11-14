@@ -51,7 +51,7 @@ function templateParts(type,hw){const parts=[];const cub=(A,ta,B,tb)=>{const d=M
     parts.push({a:{x:0,y:-J,l:1},b:{x:-X,y:0,l:0},pts:cub([0,-J],Wd,[-X,0],Wd)});  // nájezd ve směru -T
     return {parts,span:X+1,size:Math.max(X,D)}}
   // čtyřlístek: smyčky R kolem rohů, vnější rampy přes body za smyčkami
-  const R=3,g=1.0,h=hw+0.8,x0=g+R-2.5,y1=h+R-2.5,Q=16,Qr=13,D=Qr+2,C=Math.ceil(y1+4.2);
+  const R=4,g=1.0,h=hw+0.8,K3=3,x0=g+R-K3,y1=h+R-K3,Q=18,Qr=15,D=Qr+2,C=Math.ceil(y1+4.2);
   // most nad dálnicí (smyčky se připojují na něm), dál po zemi (vnější rampy)
   parts.push({road:true,a:{x:0,y:-C,l:0},b:{x:0,y:C,l:0},level:1,pts:mkLine(0,-C,0,C)});
   parts.push({road:true,a:{x:0,y:C,l:0},b:{x:0,y:D,l:0},pts:mkLine(0,C,0,D)});

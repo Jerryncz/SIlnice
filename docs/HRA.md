@@ -76,7 +76,10 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
     druhu silnice i s pruhy (1–3), i z dálnice; dálnice může do kruhu ústit.
   - Napojit: dva body, mezi nimi plynulá křivka. Bod na boku silnice se
     napojí kolmo, bod na konci silnice pokračuje jejím směrem, volný bod
-    míří k druhému.
+    míří k druhému. Bod na konci přidaného pruhu (kde se úsek rozšiřuje nebo
+    zužuje, kurzor ho ukazuje modrou tečkou) napojí silnici přímo na krajní
+    pruh: z konce rozšíření se sjíždí ve směru jízdy, do začátku zúžení se
+    najíždí. Silnice tam vychází plynule z pruhu, ne kolmo.
   - Odbočka: tah ze silnice (mimo křižovatku). Strana tahu určuje jízdní
     pás, tah ve směru jízdy udělá **odbočku**, proti směru **nájezd**. Silnice
     dostane na 4 pole odbočovací (před odbočkou) nebo připojovací (za
@@ -90,12 +93,16 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
     - **Kosodélník**: most přes dálnici, na jeho koncích dvě křižovatky,
       do každé sjezd a nájezd z dálnice. Potřebuje 20 polí rovné dálnice.
     - **Čtyřlístek**: čtyři smyčky pro odbočení vlevo a čtyři vnější rampy
-      pro odbočení vpravo, silnice nad dálnicí. Potřebuje 34 polí rovné
+      pro odbočení vpravo, silnice nad dálnicí. Potřebuje 38 polí rovné
       dálnice a hodně místa kolem.
     Na silnici přes dálnici má přednost silnice, nájezdy dávají přednost.
   - Konec u jiné silnice ji napojí; kde se nová silnice v téže výšce protne
     s jinou, vznikne křižovatka. Kurzor ukazuje kroužkem, kam se přichytí
-    (uzel, nebo bod na silnici – i na konci pruhu, kde se úsek zužuje).
+    (uzel, bod na silnici, konec pruhu); ve volném terénu je kurzor křížek
+    v bodě mezi poli – tím bodem povede osa silnice.
+  - Kde se do průběžné silnice z boku napojí jen jednosměrky (odbočka,
+    nájezd, napojení na pruh), má průběžná silnice přednost, nekreslí se
+    stopčáry ani přechody a uzel se nekreslí jako křižovatka.
 - **Přestavět kliknutím** (zaškrtávátko u nástroje Stavět): každý úsek, na
   který se klikne, se změní na zvolený druh a počet pruhů; kruhový objezd celý.
 - **Silnice přes silnici nevznikne.** Tah po existující silnici (aspoň 80 %
