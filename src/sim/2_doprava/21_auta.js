@@ -129,6 +129,7 @@ function startEnter(S,c,l){const to=c.trip&&c.trip.to;leaveBox(S,c);
   c.path=enterPath(S,to,i,[p.x,p.y]);if(!c.path){c.state="arrived";arriveVehicle(S,c);return}
   c.state="enter";c.plen=pathLen(c.path);c.ps=0;S.entering.push(c)}
 function tryExit(S,c){const l=c.links[0];const e=S.edges[l>>1];if(e.dead){killVehicle(S,c);return true}
+  if(!exitGap(S,c))return false;
   const q=e.q[l&1][c.lane];if(!q){killVehicle(S,c);return true}
   for(const o of q){const need=(o.len+c.len)/2+0.12;if(o.s>c.s+need+0.1)continue;if(o.s<c.s-1.1)break;if(o.s<c.s-need&&o.v<0.25)break;return false}
   insertQ(q,c);c.state="drive";c.sid=S.sid;c.wait=0;e.passes++;return true}
@@ -158,6 +159,7 @@ function updateVehicles(S,dt){
           const last=c.li===c.links.length-1;
           let limit=leader?leader.s-(leader.len+c.len)/2-0.12:(last?c.sEnd:(box?sOut-c.len/2-0.04:len+0.3));
           if(zl)for(const z of zl){if(z.zip===k+1&&z!==c&&c.s+c.len/2<z.s-z.len/2+0.05)limit=Math.min(limit,z.s-(z.len+c.len)/2-0.2)}
+          if(e.obusy)for(const o of e.obusy){if(o.d===d&&c.s+c.len/2<o.x0+0.05)limit=Math.min(limit,o.x0-c.len/2-0.2)}
           if(mb)for(const u of mb){const sx=d?len-u:u;if(c.s+c.len/2<sx-0.05)limit=Math.min(limit,sx-0.28-c.len/2)}
           const vt=vb*(c.truck?0.8:1);let ns=Math.min(c.s+vt*dt,limit);if(ns<c.s)ns=c.s;
           c.v=(ns-c.s)/dt;if(c.v<0.1*vt)c.wait+=dt;else if(!leader)c.wait=0;else c.wait=Math.max(0,c.wait-dt);
@@ -174,12 +176,41 @@ function updateVehicles(S,dt){
               if(!nd.includes(k)&&laneSwap(S,e,d,c,i,t)){leader=q[i];i++;continue}
               if(!nd.includes(k)&&c.v<0.05&&c.wait>0.8&&!c.zip){c.zip=t+1;if(!e.zl)e.zl=[[],[]];e.zl[d].push(c)}}
             else c.zip=0}
+          // před autem, které čeká na odbočení do vjezdu: vedlejším pruhem, jinak protisměrem, když je volno
+          if(leader&&leader.turnWait&&c.wait>3&&!c.conn&&!(c.lcT>0)){
+            if(lanes.length>1){let done=false;for(const t of [k+1,k-1])if(t>=0&&t<lanes.length&&laneShift(S,e,d,c,t)){done=true;break}if(done){(q[i]===c&&q.splice(i,1));continue}}
+            else if(tryOvertake(S,e,d,c,leader,q,box?sOut:len)){(q[i]===c&&q.splice(i,1));continue}}
           if(lim>0&&c.wait>lim){(q[i]===c&&q.splice(i,1));giveUp(S,c);continue}
           if(!leader){
-            if(last&&c.s>=c.sEnd-0.03){if(canArrive(S,c)){(q[i]===c&&q.splice(i,1));startEnter(S,c,l);continue}
+            if(last&&c.s>=c.sEnd-0.03){if(canArrive(S,c)){if(!turnGap(S,c,l)){c.turnWait=true;leader=c;i++;continue}c.turnWait=false;(q[i]===c&&q.splice(i,1));startEnter(S,c,l);continue}
               else if(c.wait>4){(q[i]===c&&q.splice(i,1));lotFailed(S,c);continue}}
             else if(!last&&c.s>=(box?sOut-c.len/2-0.04:len)-0.03){if(tryTransition(S,c,l)){(q[i]===c&&q.splice(i,1));continue}}}
           leader=c;i++}}}}}
+// odbočení do vjezdu vlevo přes protisměr: v protisměru nesmí nic přijíždět
+function turnGap(S,c,l){const to=c.trip&&c.trip.to;if(!to||to.isGate||!to.access||to.access.e!==(l>>1))return true;const e=S.edges[l>>1],d=l&1;
+  if(to.access.side===(d?-1:1)||!e.q[1-d].length)return true;const len=e.g.len,x=(1-d)?len-to.access.u:to.access.u;
+  for(const q of e.q[1-d])for(const o of q)if(o.s>x-1.3&&o.s<x+0.3)return false;return true}
+// výjezd z budovy vlevo: přes bližší pruhy protisměru musí být volno
+function exitGap(S,c){const fb=c.trip&&c.trip.from,l=c.links[0];if(!fb||!fb.access||fb.access.e!==(l>>1))return true;const e=S.edges[l>>1],d=l&1;
+  if(fb.access.side===(d?-1:1)||!e.q[1-d].length)return true;const len=e.g.len,x=(1-d)?len-fb.access.u:fb.access.u;
+  for(const q of e.q[1-d])for(const o of q)if(o.s>x-1.6&&o.s<x+0.35)return false;return true}
+// předjetí stojícího auta protisměrem: jen když je protisměr v celém úseku volný a před stojícím autem je místo
+function tryOvertake(S,e,d,c,ld,q,sMax){if(e.ring||!e.q[1-d].length||c.truck)return false;const len=e.g.len;
+  const ns=ld.s+(ld.len+c.len)/2+0.25;if(ns+c.len/2>sMax-0.3)return false;if(c.li===c.links.length-1&&ns>c.sEnd)return false;
+  const iL=q.indexOf(ld);const ahead=iL>0?q[iL-1]:null;if(ahead&&ahead.s-(ahead.len+c.len)/2-0.15<ns)return false;
+  const x0=len-(ns+0.6),x1=len-(c.s-0.5);for(const qq of e.q[1-d])for(const o of qq)if(o.s>x0-2.6&&o.s<x1+0.3)return false;
+  if(e.obusy&&e.obusy.length)return false;
+  const ov={d:1-d,x0,x1,car:c};(e.obusy||(e.obusy=[])).push(ov);
+  c.state="overtake";c.ov={e:e.id,dir:d,s0:c.s,s1:ns,t:0,blk:ov,ver:S.netVer};c.lcD=-1;c.lcT=1;S.overtaking=(S.overtaking||[]);S.overtaking.push(c);S.overtakes=(S.overtakes||0)+1;return true}
+function updateOvertakes(S,dt){const L=S.overtaking;if(!L||!L.length)return;
+  for(let k=L.length-1;k>=0;k--){const c=L[k],o=c.ov,e=S.edges[o.e];
+    const drop=()=>{L.splice(k,1);if(e&&e.obusy){const i=e.obusy.indexOf(o.blk);if(i>=0)e.obusy.splice(i,1)}};
+    if(c.dead||c.state!=="overtake"){drop();continue}if(!e||e.dead||c.links[c.li]>>1!==e.id){drop();killVehicle(S,c);continue}
+    const vt=BASE_SPEED*RK[e.kind].speed*0.9;o.t=Math.min(1,o.t+dt*vt/(o.s1-o.s0+0.8));const f=o.t*o.t*(3-2*o.t);c.s=o.s0+(o.s1-o.s0)*f;c.v=vt;
+    if(o.t>=1){const q=e.q[o.dir][c.lane];if(!q){drop();killVehicle(S,c);continue}
+      // zařazení před předjeté auto, až je místo
+      let ok=true;for(const x of q){if(Math.abs(x.s-c.s)<(x.len+c.len)/2+0.1){ok=false;break}}
+      if(ok){drop();c.state="drive";c.ov=null;c.wait=0;insertQ(q,c);c.sid=S.sid}}}}
 function killVehicle(S,c){if(c.dead)return;if(c.state==="drive")removeQ(S,c);leaveBox(S,c);c.dead=true;c.state="gone";releaseVehicle(S,c)}
 // poloha startu a cíle auta leží mimo plochu křižovatek
 function clampTrip(S,c){const l0=c.links[0],lz=c.links[c.links.length-1];const h=c.len/2+0.05;c.s=clamp(c.s,linkIn(S,l0)+h,Math.max(linkIn(S,l0)+h,linkOut(S,l0)-h));c.sEnd=clamp(c.sEnd,linkIn(S,lz)+h,Math.max(linkIn(S,lz)+h,linkOut(S,lz)-h));if(c.links.length===1)c.sEnd=Math.max(c.sEnd,c.s)}

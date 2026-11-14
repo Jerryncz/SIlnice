@@ -31,8 +31,8 @@ smysl.
 - [x] Nástroj Spojení
 - [x] Chodníky jako dráhy, rohy, přechody, volné přecházení uliček
 - [x] Chodci jako agenti na drahách (odstup, míjení, žádné mizení)
-- [ ] Dráhy pozemků: příjezd, uličky, stání; vjezd a výjezd s mezerou
-- [ ] Pozemky: parkoviště z katalogu, pak budova; druhy domů
-- [ ] Objíždění stojících aut
+- [x] Dráhy pozemků: příjezd, uličky, stání; vjezd a výjezd s mezerou
+- [x] Pozemky: parkoviště z katalogu, pak budova; druhy domů
+- [x] Objíždění stojících aut
 - [ ] Editor silnic (4 funkce)
 - [ ] Dokumentace, testy, poznatky

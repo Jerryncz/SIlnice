@@ -90,7 +90,7 @@ function step(S,dt){
   if(S.reroute.length){const list=S.reroute;S.reroute=[];for(const c of list)if(!c.dead)rerouteVehicle(S,c)}
   if(++S.pTick>=15){S.pTick=0;peopleTick(S,dt*15)}
   processReturns(S);
-  updateLights(S,dt);updateVehicles(S,dt);updateWalkers(S,dt);
+  updateLights(S,dt);updateVehicles(S,dt);updateOvertakes(S,dt);updateWalkers(S,dt);
   let w=0;for(let k=0;k<S.cars.length;k++){const c=S.cars[k];if(!c.dead)S.cars[w++]=c}S.cars.length=w;
   if(++S.congTick>=3){S.congTick=0;updateCongestion(S,dt*3)}
   S.secAcc+=dt;if(S.secAcc>=1){S.secAcc-=1;perSecond(S)}

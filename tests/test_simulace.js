@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,connAdd,connRemove,connReset,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={updateOvertakes,lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,connAdd,connRemove,connReset,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -23,7 +23,8 @@ function zkontroluj(S, kde) {
       const q = e.q[l & 1][c.lane];
       ok(q && q.includes(c), `${kde}: auto chybí ve frontě svého pruhu`);
       if (c.li < c.links.length - 1) { const st = A.stopS(S, l); if (st > c.len + 0.1 && c.s + c.len / 2 > st + 0.02) pres++; }
-    } else ok(c.state === "exit" || c.state === "enter" || c.state === "unpark", `${kde}: auto v neznámém stavu ${c.state}`);
+    } else if (c.state === "overtake") { ok(!!c.ov && (S.overtaking || []).includes(c), `${kde}: předjíždějící auto bez záznamu`); for (const q of S.edges[c.ov.e].q[c.ov.dir]) ok(!q.includes(c), `${kde}: předjíždějící auto zůstalo ve frontě`); }
+    else ok(c.state === "exit" || c.state === "enter" || c.state === "unpark", `${kde}: auto v neznámém stavu ${c.state}`);
   }
   // přechodně (auto otočené od parkoviště, změna sítě) smí být za stopčárou nejvýš pár aut; povolení dostanou v dalším kroku
   // po změně sítě (širší křižovatka) může auto chvíli stát dál, než je nová stopčára
@@ -265,6 +266,22 @@ for (const type of ["diamond", "clover", "trumpet"]) {
   ok(!lowB.ok && /nízko/.test(lowB.msg), "most nejde vést přes silnici tam, kde ještě není dost vysoko (" + lowB.msg + ")");
   for (let k = 0; k < 300; k++) A.step(S, A.STEP); zkontroluj(S, "konec silnice");
 }
+// ---- předjetí: auto čekající na odbočení do vjezdu se objede protisměrem ----
+{
+  const S = A.createSim(11); S.money = 1e8;
+  for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
+  for (const b of [...S.buildings]) A.demolishBuilding(S, b, true);
+  const F = (x, yy) => ({ type: "free", x, y: yy, lvl: 0 });
+  const r = A.buildRoad(S, { pts: A.mkLine(10.5, 40.5, 40.5, 40.5), kind: "road", lanes: 1, start: F(10.5, 40.5), end: F(40.5, 40.5), auto: true });
+  const e = r.edges[0], l = e.id * 2;
+  const orig = ctx.turnGap; ctx.turnGap = (S2, c) => !c.blockMe;   // auto A pořád čeká na mezeru v protisměru
+  const mk = (s, sEnd) => { const c = A.newVehicle(S, { links: [l], s, sEnd, trip: { to: { isGate: true } }, state: "drive" }); c.lane = 0; e.q[0][0].push(c); e.q[0][0].sort((a, b) => b.s - a.s); return c; };
+  const a = mk(12, 12); a.blockMe = true; const b = mk(3, 28);
+  for (let k = 0; k < 600; k++) { A.updateVehicles(S, 1 / 30); A.updateOvertakes(S, 1 / 30); }
+  ctx.turnGap = orig;
+  ok((S.overtakes || 0) >= 1 && (b.dead || b.s > a.s), `předjetí: auto objelo stojící auto (${S.overtakes || 0}, ${b.s.toFixed(1)} > ${a.s.toFixed(1)})`);
+  ok(!e.obusy || !e.obusy.length, "předjetí: protisměr je po předjetí zase volný");
+}
 // ---- spojení pruhů: hráč přidá a zruší spojení, hledání cest to respektuje ----
 {
   const S = A.createSim(11); S.money = 1e8;
@@ -371,7 +388,7 @@ for (const seed of [1, 4242, 98765]) {
   ok(S.trips > 50, `lidé dojíždějí do cíle (${S.trips})`);
   ok(S.transits > 0, `projíždí tranzit (${S.transits})`);
   ok((S.xCount || 0) > 0, `chodci přecházejí po přechodech (${S.xCount || 0})`);
-  souhrn.prechody = (souhrn.prechody || 0) + (S.xCount || 0); souhrn.chodciVzdali = (souhrn.chodciVzdali || 0) + (S.pedAborted || 0); souhrn.chodci = (souhrn.chodci || 0) + (S.pedDone || 0); souhrn.vzdali = (souhrn.vzdali || 0) + S.stuckN; souhrn.minuli = (souhrn.minuli || 0) + (S.missed || 0); souhrn.preplanovali = (souhrn.preplanovali || 0) + (S.replanned || 0);
+  souhrn.prechody = (souhrn.prechody || 0) + (S.xCount || 0); souhrn.chodciVzdali = (souhrn.chodciVzdali || 0) + (S.pedAborted || 0); souhrn.chodci = (souhrn.chodci || 0) + (S.pedDone || 0); souhrn.predjeti = (souhrn.predjeti || 0) + (S.overtakes || 0); souhrn.vzdali = (souhrn.vzdali || 0) + S.stuckN; souhrn.minuli = (souhrn.minuli || 0) + (S.missed || 0); souhrn.preplanovali = (souhrn.preplanovali || 0) + (S.replanned || 0);
   const typy = {}; for (const b of S.buildings) typy[b.type] = (typy[b.type] || 0) + 1;
   for (const t in typy) souhrn[t] = (souhrn[t] || 0) + typy[t];
   // bourání za jízdy
@@ -383,6 +400,6 @@ for (const seed of [1, 4242, 98765]) {
   console.log(`  ${S.towns.length} obcí, ${pop1} obyvatel, ${S.buildings.length} budov, ${S.trips} cest, ${S.transits} tranzitů, vývoz ${S.exported} Kč, aut ${S.cars.length}, chodců ${S.walkers.length}`);
   console.log("  " + JSON.stringify(typy));
 }
-console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, prechody: souhrn.prechody, chodci: souhrn.chodci, chodciVzdali: souhrn.chodciVzdali, vzdali: souhrn.vzdali, minuli: souhrn.minuli, preplanovali: souhrn.preplanovali }));
+console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, prechody: souhrn.prechody, chodci: souhrn.chodci, chodciVzdali: souhrn.chodciVzdali, predjeti: souhrn.predjeti, vzdali: souhrn.vzdali, minuli: souhrn.minuli, preplanovali: souhrn.preplanovali }));
 console.log(`verze ${A.GAME_VERSION}: ${kontroly} kontrol, ${chyby} chyb`);
 process.exit(chyby ? 1 : 0);

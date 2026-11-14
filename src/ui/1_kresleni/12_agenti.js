@@ -6,6 +6,10 @@ function drawCarAt(x,y,ang,color,truck,cargo){const l=truck?0.62:0.4,w=truck?0.2
 const _p={};
 const doorXY=b=>b&&b.drive?b.drive.door:b&&b.front!==undefined?[wxOf(b.front),wyOf(b.front)]:null;
 function carPose(c){
+  // předjíždění: posun do protisměru a zpět
+  if(c.state==="overtake"&&c.ov){const e=S.edges[c.ov.e];if(!e||e.dead)return null;const l=e.id*2+c.ov.dir,q=lanePose(S,l,c.lane,c.s);const d=c.ov.dir;
+    const o1=laneOffset(e,d,c.lane),o2=-laneOffset(e,1-d,0),f=Math.sin(Math.PI*c.ov.t),off=(o2-o1)*f;const sg=d?-1:1;const p=pointAt(e.g,clamp(d?e.g.len-c.s:c.s,0,e.g.len));
+    return {x:q.x+p.nx*off*sg,y:q.y+p.ny*off*sg,ang:q.ang-0.35*Math.cos(Math.PI*c.ov.t)*Math.sign(o2-o1)*(c.ov.t<0.98?1:0),lvl:lvlAt(S,e,q.u),L:edgeLayer(e)}}
   if((c.state==="enter"||c.state==="unpark")&&c.path){const q=pathPose(c.path,c.ps);return {x:q.x,y:q.y,ang:q.ang,lvl:0}}
   if(c.state==="exit"){const l=c.links[0],e=S.edges[l>>1];if(!e||e.dead)return null;const d=l&1;const u=d?e.g.len-c.s:c.s;const p=pointAt(e.g,clamp(u,0,e.g.len),_p);
     if(c.ux!==undefined)return {x:c.ux,y:c.uy,ang:c.uang!==undefined?c.uang:Math.atan2(p.y-c.uy,p.x-c.ux),lvl:0};
