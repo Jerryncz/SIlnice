@@ -49,6 +49,14 @@ nebo změna pravidel světa = plný průchod.
   hned a konkrétně.
 - Ke každé námitce alternativa + doporučené výchozí řešení, ať stačí „ok“.
 - Víc cest → srovnání (+ / –) a doporučení.
+- **Než začneš, důkladně promysli, co zadání znamená** pro svět hry, pro
+  ostatní mechaniky (doprava, chodci, obce, pozemky, výkon) a pro hráče.
+  U čehokoli většího se nejdřív zeptej; i jednoduše znějící přání může
+  vyžadovat přestavbu jádra. Nedělej novou grafiku přes starou logiku:
+  když se mění, jak věc vypadá, musí se změnit i to, jak se chová.
+- **Co nestihneš nebo co zatím nestavíš, zapiš do `napady/`** (soubor na
+  nápad, stav „zatím není ve hře“), a na konci odpovědi řekni, co zůstalo
+  jen v nápadech.
 - Otázky v jedné dávce s navrženou výchozí odpovědí. Zadání s dopadem na
   pravidla světa nebo uložené hry nejdřív vyjasni; technické drobnosti
   (ladění čísel, vzhled) rozhodni sám a napiš, co jsi rozhodl.

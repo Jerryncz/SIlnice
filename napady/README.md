@@ -30,6 +30,16 @@ Až je rozhodnuto ji dělat: popis se přenese do `docs/HRA.md`, rozhodnutí do
 | Nápad | Stav |
 |---|---|
 | [Ukládání rozehrané hry](ukladani_hry.md) | nápad |
+| [Přestavba 0.14: jádro drah](prestavba_drahy.md) | rozpracováno |
+| [Editor postavených silnic](editor_silnic.md) | zadáno do 0.14 |
+| [Editor spojení pruhů](spojeni_pruhu.md) | zadáno do 0.14 |
+| [Chodníky jako dráhy](chodci_drahy.md) | zadáno do 0.14 |
+| [Druhy domů a pozemky](druhy_domu.md) | zadáno do 0.14 |
+| [Objíždění stojících aut](objizdeni.md) | zadáno do 0.14 |
+| [Autobusy, kola, taxi](dalsi_doprava.md) | nápad |
+| [Fáze semaforů](semafory_faze.md) | nápad |
+| [Parkování v ulici](parkovani_v_ulici.md) | nápad |
+| [Natočené budovy](natocene_budovy.md) | nápad |
 | [Křižovatky a semafory](krizovatky.md) | → ve hře od verze 0.3 |
 | [Typy obcí](typy_obci.md) | nápad |
 | [Železnice](zeleznice.md) | nápad |
