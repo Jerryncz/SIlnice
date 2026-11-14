@@ -17,9 +17,12 @@ způsob práce převzat z repozitáře BIMPOLIS a upraven pro hru.
   nápadu ho přečti, ale nic z něj nestav bez výslovného zadání.
 - `poznatky/` – poznatky z jednotlivých chatů (soubor na chat), čekající
   na zapracování; zpracované v `poznatky/zpracovano/`.
-- `src/` – zdroje hry: `template.html`, `sim/*.js` (simulace bez DOM),
-  `ui/*.js` (vykreslování a ovládání). `node build.js` z nich složí
-  `index.html` (rozhodnutí R26). `index.html` se ručně needituje.
+- `src/` – zdroje hry: `template.html`, `sim/` (simulace bez DOM) a `ui/`
+  (vykreslování a ovládání), rozdělené do složek podle témat
+  (`sim/0_zaklad`, `1_sit`, `2_doprava`, `3_obce`, `4_svet`;
+  `ui/1_kresleni`). Pořadí sestavení určují číselné předpony. `node build.js`
+  z nich složí `index.html` (rozhodnutí R26). `index.html` se ručně
+  needituje. Sahej jen do souborů, kterých se změna týká.
 - `tests/` – automatické testy simulace v Node.js (bez prohlížeče).
 - `CHANGELOG.md` – změny podle verzí.
 

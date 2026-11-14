@@ -26,7 +26,7 @@ smysl.
   přídavného pruhu.
 
 ## Postup (zaškrtává se v průběhu)
-- [ ] Rozdělení kódu do složek
+- [x] Rozdělení kódu do složek
 - [ ] Křižovatka: skutečný začátek každého ramene, stopčára a přechod tam
 - [ ] Nástroj Spojení
 - [ ] Chodníky jako dráhy, rohy, přechody, volné přecházení uliček

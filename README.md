@@ -20,8 +20,13 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 |---|---|
 | `index.html` | sestavená hra (needitovat ručně, vzniká z `src/`) |
 | `src/template.html` | HTML a CSS stránky |
-| `src/sim/*.js` | simulace bez DOM: síť silnic, hledání cest, doprava, obce, lidé, hospodářství, svět |
-| `src/ui/*.js` | vykreslování, panely a ovládání |
+| `src/sim/0_zaklad/` | mapa, druhy silnic a budov, geometrie |
+| `src/sim/1_sit/` | síť silnic: úseky a uzly, křižovatky a spojení pruhů, stavba, úpravy, vzory |
+| `src/sim/2_doprava/` | hledání cest, auta, chodci, pozemky a parkoviště |
+| `src/sim/3_obce/` | obce a budovy, lidé a cesty, hospodářství |
+| `src/sim/4_svet/` | mapa světa, krok simulace |
+| `src/ui/1_kresleni/` | vykreslování: silnice, budovy, auta a chodci, mapa a náhled |
+| `src/ui/*.js` | základ, panely, ovládání, start |
 | `build.js` | skládá `src/` do `index.html` |
 | `docs/HRA.md` | **základní dokument** – jak se svět hry chová a proč, lidskou řečí |
 | `docs/ROZHODNUTI.md` | záznam rozhodnutí s datem, důvodem a zvažovanými možnostmi |

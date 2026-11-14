@@ -1,5 +1,5 @@
 // Sestavení hry: node build.js
-// Složí src/template.html, src/sim/*.js (simulace bez DOM) a src/ui/*.js (vykreslování a ovládání)
+// Složí src/template.html, src/sim/**/*.js (simulace bez DOM) a src/ui/**/*.js (vykreslování a ovládání)
 // do jednoho souboru index.html, který se otevře dvojklikem bez instalace.
 "use strict";
 const fs = require("fs");
@@ -7,13 +7,14 @@ const path = require("path");
 
 const SRC = path.join(__dirname, "src");
 const read = f => fs.readFileSync(f, "utf8").replace(/\r\n/g, "\n");
-const listJs = dir => fs.readdirSync(dir).filter(f => f.endsWith(".js")).sort().map(f => path.join(dir, f));
+// soubory i v podsložkách, seřazené podle cesty (pořadí určují číselné předpony složek a souborů)
+const listJs = dir => fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).flatMap(d => d.isDirectory() ? listJs(path.join(dir, d.name)) : d.name.endsWith(".js") ? [path.join(dir, d.name)] : []);
 
 function simSource() {
-  return listJs(path.join(SRC, "sim")).map(f => "// ---- " + path.basename(f) + " ----\n" + read(f)).join("\n");
+  return listJs(path.join(SRC, "sim")).map(f => "// ---- " + path.relative(SRC, f).replace(/\\/g, "/") + " ----\n" + read(f)).join("\n");
 }
 function uiSource() {
-  return listJs(path.join(SRC, "ui")).map(f => "// ---- " + path.basename(f) + " ----\n" + read(f)).join("\n");
+  return listJs(path.join(SRC, "ui")).map(f => "// ---- " + path.relative(SRC, f).replace(/\\/g, "/") + " ----\n" + read(f)).join("\n");
 }
 function build() {
   const tpl = read(path.join(SRC, "template.html"));
