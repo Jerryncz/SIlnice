@@ -212,14 +212,14 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
     <div class="card" role="dialog" aria-labelledby="helpTitle">
       <button class="close" id="helpClose">Zavřít</button>
       <h2 id="helpTitle">Jak krajina žije</h2>
-      <p>Stavíš a řídíš silnice. Všechno ostatní vzniká samo podle toho, kudy, kdy a kolik se jezdí. Verze 0.13.0.</p>
+      <p>Stavíš a řídíš silnice. Všechno ostatní vzniká samo podle toho, kudy, kdy a kolik se jezdí. Verze 0.14.0.</p>
       <div class="grid">
         <div><h3>Stavění</h3><p>Nástroj Stavět má tři volby: druh silnice, tvar (Rovně, Oblouk, Kruh, Napojit) a výšku. Napojit vede plynulou křivku mezi dvěma body: z boku silnice kolmo, z konce silnice v jejím směru. Tah po existující silnici ji přestaví. „Přestavět kliknutím“ mění každý úsek, na který klikneš, na zvolený druh a pruhy.</p></div>
         <div><h3>Druhy silnic a mosty</h3><p>Ulička (bez středové čáry), ulice, silnice (plná čára), jednosměrka, bulvár se zeleným středem, dálnice a nájezd. Most a vysoký most mají na koncích rampu 3 pole na výšku; na most ani na rampu se nic nepřipojí. Dálnici nejde křížit v úrovni; silnice napojená z boku dálnice funguje jen vpravo.</p></div>
-        <div><h3>Úseky a pruhy</h3><p>Silnice se dělí na úseky mezi křižovatkami; rovně navazující stejné úseky se spojí samy. Rozdělit: klik rozdělí úsek. Pruhy: klik na polovinu silnice přidá pruh v tom směru, tah podél silnice jen na kus úseku, Shift ubírá.</p></div>
-        <div><h3>Pruhy a napojení</h3><p>Každý pruh vede v křižovatce jen tam, kam ukazuje jeho šipka; auta se řadí předem a přejíždějí, jen když je vedle místo. Jednosměrka nebo nájezd napojený z boku dostane vlastní připojovací pruh (sjezd odbočovací) a neplete se průběžné dopravě. Pruh navíc přidá nástroj Pruhy, kam smí auta z kterého pruhu jet, změní nástroj Spojení (tah křivky z pruhu do pruhu). Auto, které se nestihne zařadit, odbočku mine a hledá jinou cestu.</p></div>
-        <div><h3>Křižovatky a přechody</h3><p>Auta stojí na stopčáře a křižovatkou projedou po oblouku, až mají přednost, volnou křižovatku i místo za ní. Na ramenech křižovatek jsou přechody samy; nástroj Přechod je ruší a přidává i doprostřed úseku. Chodci přecházejí jen po nich a auta jim dávají přednost.</p></div>
-        <div><h3>Lidé a obce</h3><p>Děti ráno do školy, dospělí do práce, odpoledne nákupy. Domy stojí podél silnic na jemné síti (půl pole), obce si samy staví uličky a rostou do bloků.</p></div>
+        <div><h3>Úseky a pruhy</h3><p>Silnice se dělí na úseky mezi křižovatkami; rovně navazující stejné úseky se spojí samy. Upravit (0): tah za úchyty posune křižovatku nebo konec, přepojí konec úseku jinam, ohne úsek nebo posune začátek přídavného pruhu. Rozdělit: klik rozdělí úsek. Pruhy: klik na polovinu silnice přidá pruh v tom směru, tah podél silnice jen na kus úseku, Shift ubírá.</p></div>
+        <div><h3>Pruhy a napojení</h3><p>Každý pruh vede v křižovatce jen tam, kam má spojení (šipka na pruhu ho ukazuje); auta se řadí předem a přejíždějí, jen když je vedle místo. Jednosměrka nebo nájezd napojený z boku dostane vlastní připojovací pruh (sjezd odbočovací) a neplete se průběžné dopravě. Pruh navíc přidá nástroj Pruhy, kam smí auta z kterého pruhu jet, změní nástroj Spojení (tah křivky z pruhu do pruhu). Auto, které se nestihne zařadit, odbočku mine a hledá jinou cestu.</p></div>
+        <div><h3>Křižovatky a přechody</h3><p>Auta stojí na stopčáře a křižovatkou projedou po oblouku, až mají přednost, volnou křižovatku i místo za ní. Stopčára a přechod jsou tam, kde rameno skutečně začíná. Na ramenech křižovatek jsou přechody samy; nástroj Přechod je ruší a přidává i doprostřed úseku. Chodci chodí po chodnících a přes Silnici, Bulvár a jednosměrku jen po přechodech (auta jim dávají přednost); Uličku a Ulici přejdou i jinde, když nic nejede.</p></div>
+        <div><h3>Lidé a obce</h3><p>Děti ráno do školy, dospělí do práce, odpoledne nákupy. Každý dům má pozemek s příjezdem, stáním a zahradou: rodinné domy, vily, dvojdomky, řadovky, viladomy, bytové a blokové domy. Podniky mají nejdřív parkoviště, za ním budovu. Obce si samy staví uličky a rostou do bloků.</p></div>
         <div><h3>Vnější svět</h3><p>Dálnice na okrajích vedou do měst. Po napojení přijedou turisté a tranzit a průmysl vyváží zboží.</p></div>
       </div>
       <h3>Nastavení</h3>
@@ -236,7 +236,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
 // Osady a cesty – simulace (bez DOM). Soubory v src/sim se skládají v abecedním
 // pořadí do <script id="sim"> v index.html (build.js) a testují se v Node.js.
 
-const GAME_VERSION="0.13.0";
+const GAME_VERSION="0.14.0";
 const MW=128,MH=80;                         // mapa ve světových jednotkách (1 = pole silnice)
 const CS=0.5,W=MW*2,H=MH*2,N=W*H;           // jemná síť terénu a budov: buňka = půl pole
 const STEP=1/30,BASE_SPEED=2.0,MAX_CARS=900,MAX_WALKERS=600;

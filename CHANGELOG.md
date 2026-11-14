@@ -3,6 +3,38 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.14.0 – 14. 11. 2026
+
+Přestavba na jádro drah (R80–R89), jeden pull request.
+
+- Křižovatka zná skutečný začátek každého ramene (průsečík okrajů vozovky
+  sousedních ramen): tam je stopčára a přechod, plocha křižovatky mezi nimi.
+- Nástroj **Spojení** (klávesa 9) místo Šipek: spojení pruh → pruh jako
+  křivky; tah z konce pruhu na začátek pruhu za křižovatkou spojení přidá,
+  klik na křivku ho zruší, „Vrátit samočinná“. Odbočení bez spojení nejde
+  naplánovat.
+- Chodníky jsou síť drah: chodník po každé straně, rohy kolem obrubníku,
+  přechody, obrácení na slepém konci. Přes Uličku a Ulici se smí přejít
+  i mimo přechod, když je mezera. Chodci hledají cestu po síti, drží odstup,
+  míjejí se vpravo, nechodí do středu křižovatky a nemizí.
+- Pozemky domů: nejdřív pozemek s příjezdem, stáním a zahradou, pak dům.
+  Nové druhy: rodinný dům, vila se zahradou, dvojdomek, řadové domy (3 a 4),
+  viladům, bytový dům a blokový dům kolem dvora s průjezdem do garáží.
+- Podniky (hospoda, kavárna, obchod, kanceláře, nákupní centrum, obchodní
+  zóna): nejdřív parkoviště z katalogu podle potřebného počtu míst, za ním
+  budova.
+- Odbočení vlevo do vjezdu a výjezd vlevo čekají na mezeru v protisměru;
+  auto za odbočujícím ho po 3 s objede (vedlejším pruhem nebo protisměrem,
+  když je volno).
+- Nástroj **Upravit** (klávesa 0): posunout křižovatku nebo konec (konec
+  puštěný na silnici se na ni napojí), přepojit konec úseku jinam, ohnout
+  úsek, posunout hranici přídavného pruhu. Náhled s cenou a důvodem
+  odmítnutí; auta na upravených úsecích jedou dál.
+- Kód rozdělený do složek podle témat (`src/sim/0_zaklad` … `4_svet`,
+  `src/ui/1_kresleni`).
+- Oprava: průhledné mezery mezi panely nahoře a dole zachytávaly klik
+  a mapa pod nimi nereagovala.
+
 ## 0.13.0 – 14. 11. 2026
 
 - Příjezdy a parkoviště přepsané jako jedna logika (R79): vjezd je hrdlo

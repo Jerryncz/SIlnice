@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.13.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.14.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -21,7 +21,7 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | `index.html` | sestavená hra (needitovat ručně, vzniká z `src/`) |
 | `src/template.html` | HTML a CSS stránky |
 | `src/sim/0_zaklad/` | mapa, druhy silnic a budov, geometrie |
-| `src/sim/1_sit/` | síť silnic: úseky a uzly, křižovatky a spojení pruhů, stavba, úpravy, vzory |
+| `src/sim/1_sit/` | síť silnic: úseky a uzly, křižovatky a spojení pruhů, stavba, úpravy, vzory, editor (Upravit) |
 | `src/sim/2_doprava/` | hledání cest, auta, chodci, pozemky a parkoviště |
 | `src/sim/3_obce/` | obce a budovy, lidé a cesty, hospodářství |
 | `src/sim/4_svet/` | mapa světa, krok simulace |
@@ -30,7 +30,7 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | `build.js` | skládá `src/` do `index.html` |
 | `docs/HRA.md` | **základní dokument** – jak se svět hry chová a proč, lidskou řečí |
 | `docs/ROZHODNUTI.md` | záznam rozhodnutí s datem, důvodem a zvažovanými možnostmi |
-- `docs/PARKOVISTE.md` – pravidla skládání parkovišť a katalog předloh (`docs/parkoviste/katalog.html`).
+| `docs/PARKOVISTE.md` | pravidla skládání parkovišť a katalog předloh (`docs/parkoviste/katalog.html`) |
 | `napady/` | nápady do budoucna (ukládání hry, křižovatky, železnice …) – nic z nich není ve hře |
 | `poznatky/` | poznatky z jednotlivých chatů, čekající na zapracování |
 | `tests/test_simulace.js` | automatický test simulace (`node tests/test_simulace.js`) |
@@ -44,8 +44,9 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | Stavět silnici | `1`; tvar `A` rovně (tah), `S` oblouk (3 kliky), `D` kruh (tah od středu), `F` napojit (2 kliky), `G` odbočka / nájezd (tah ze silnice), `H` vzor křižovatky (klik na dálnici); tah po silnici ji přestaví |
 | Druh, pruhy, tvar, výška | panel nad nástroji; výška také `Q` / `E`; zaškrtávátko „Přestavět kliknutím“ |
 | Pruhy | `2`, klik na polovinu silnice = pruh v tom směru (u jednosměrky na tom okraji), tah podél = jen kus úseku, Shift ubere |
+| Upravit silnici | `0`; úchyty na silnici pod kurzorem: kolečko posune křižovatku nebo konec, čtvereček přepojí konec úseku, kosočtverec ohne úsek, příčka posune hranici přídavného pruhu; Shift bez přichycení |
 | Pravidlo křižovatky | `3`, klik na křižovatku |
-| Šipky pruhů | `9`, klik na pruh před křižovatkou přepíná vlevo / rovně / vpravo |
+| Spojení pruhů | `9`, klik na křižovatku; tah z barevného konce pruhu na bílý začátek pruhu za křižovatkou spojení přidá, klik na křivku ho zruší |
 | Přechod pro chodce | `4`, klik u křižovatky přepne, jinde přidá / zruší |
 | Rozdělit úsek | `5`, klik na silnici; klik na značku rozdělení ho zruší |
 | Bourat | `6`, tah přes silnice nebo budovy |

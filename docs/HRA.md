@@ -171,6 +171,31 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
   jen otočení směru auta na úseku zruší.
 - **Kruhový objezd** se mění celý: druh i pruhy (1–3) platí pro všechny jeho
   úseky.
+- **Upravit** (nástroj, klávesa 0): postavenou silnici jde přetvarovat
+  tahem za úchyty, které se ukážou na úseku pod kurzorem (klik úsek vybere):
+  - **kolečko** v křižovatce nebo na konci silnice: posune uzel na jiné pole;
+    všechny úseky v něm se na tom konci posunou a jejich druhý konec zůstane.
+    Volný konec puštěný na jinou silnici nebo uzel se na ni napojí (vznikne
+    křižovatka);
+  - **čtvereček** u konce úseku v křižovatce: odpojí úsek od křižovatky
+    a přepojí ho jinam (na uzel, na místo na silnici, nebo nechá volný
+    konec). Ze zbylé křižovatky se dvěma rovnými kusy se zase stane silnice;
+  - **kosočtverec** uprostřed úseku: úsek ohne do oblouku, který vede
+    taženým bodem; tah na spojnici konců ho narovná;
+  - **příčka** na hranici dvou různých úseků za sebou (začátek přídavného
+    pruhu, změna druhu, ruční rozdělení): posune hranici po silnici, takže
+    přídavný pruh je delší nebo kratší.
+  Úchyty se přichytávají na pole (oblouk na čtvrt pole), Shift přichycení
+  vypne. Úprava stojí polovinu ceny nové silnice za upravené úseky (posun
+  hranice jen rozdíl ceny širšího úseku) a nabídne zbourání budov, přes
+  které by silnice vedla. Odmítne se, když by úsek křížil jinou silnici
+  (křižovatka se staví nástrojem Stavět), vedl po ní, ležel na ní volným
+  koncem, měl s jiným ramenem v uzlu úhel ostřejší než 18°, vedl mimo mapu
+  nebo byl kratší než 0,8 pole; důvod je v náhledu. Kruhový objezd, dálnice
+  do světa a okraj mapy se neupravují; konec se nepřepojí do jiné výšky.
+  Druh, pruhy, přechody a ruční spojení pruhů úseku zůstanou; auta na
+  upravených úsecích jedou dál (poloha se přepočítá poměrem délek), chodci
+  si najdou novou cestu, budovy si najdou nový příjezd.
 - **Grafika spojů**: navazující úseky se potkávají ostrým rohem (pokosem),
   čáry, pruhy, zelený střed i svodidla běží přes spoj bez přerušení. Na
   napojení z boku dálnice dálnice pokračuje celá, napojená silnice se k ní
@@ -184,8 +209,12 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
 ## 4. Křižovatky
 
 Křižovatka (uzel se 3 a více rameny) má **plochu křižovatky** a na ramenech
-s chodníky **přechody**. Auto **zastaví na stopčáře** před přechodem
-(kreslí se při velkém přiblížení) a vjede, když:
+s chodníky **přechody**. Každé rameno má **skutečný začátek**: tam, kde se
+protnou okraje vozovky (s obrubníkem) sousedních ramen. Tam je stopčára,
+za ní přechod a mezi začátky ramen plocha křižovatky. U ostrého úhlu je
+rameno delší, u pravého kratší; nejvýš 8 polí a nejvýš 45 % délky úseku.
+Auto **zastaví na stopčáře** před přechodem (kreslí se při velkém
+přiblížení) a vjede, když:
 1. mu to dovolí pravidlo přednosti,
 2. na ploše není jiné auto, jehož dráha se s jeho dráhou kříží a ještě
    místem křížení neprojelo,
@@ -226,11 +255,16 @@ Každý pruh má v uzlu dané, do kterých pruhů z něj jde pokračovat:
   tvaru T se pruhy rozdělí napůl;
 - se **třemi a více pruhy** je vnitřní pruh jen vlevo, krajní jen vpravo
   a pruhy mezi nimi rovně (pokud ty směry v křižovatce jsou);
-- hráč to změní nástrojem **Šipky** (klávesa 9): klik na pruh před
-  křižovatkou přepíná vlevo / rovně / vpravo a jejich kombinace; ručně
-  nastavená šipka je modrá, poslední klik vrátí samočinnou. Každý směr si
-  vždy nějaký pruh ponechá. Šipky jsou vidět na pruzích před křižovatkou
-  (kde má příjezd aspoň dva pruhy).
+- hráč to změní nástrojem **Spojení** (klávesa 9): klik na křižovatku ukáže
+  všechna spojení jako křivky z konce pruhu před křižovatkou (barva podle
+  ramene) na začátek pruhu za ní (bílé kolečko). Tah z barevného konce na
+  bílý začátek spojení přidá, klik na křivku ho zruší, „Vrátit samočinná“
+  vrátí výchozí stav. Kam žádné spojení nevede, tam se odbočit nedá:
+  hledání cest s tím počítá. Otočit se do stejného ramene nejde. Křižovatky
+  s ručními spojeními jsou v nástroji zvýrazněné; šipky na pruzích před
+  křižovatkou ukazují, kam pruh vede (ručně změněné modře). Ruční spojení
+  zůstanou při rozdělení a spojení úseku i při úpravě nástrojem Upravit,
+  zruší se při otočení jednosměrky.
 
 Auto zná pruhy, ze kterých dojede dál po své trase (dívá se tři uzly
 dopředu), a **přeřazuje se už na úseku**: do sousedního pruhu přejede, když
@@ -257,17 +291,31 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
   na dálnici), je přechod sám od sebe – když se vejde: rameno musí být
   dost dlouhé a nesmí se sousedním ramenem svírat úhel menší než asi 50°. Nástroj **Přechod** (klávesa 4) ho
   u křižovatky zruší nebo vrátí a uprostřed úseku přidá nový (10 Kč) nebo
-  zruší. Chodec přechází jen po přechodu: počká na mezeru, po 3 s čekání
-  si přechod vyžádá a auta mu zastaví.
+  zruší. Na přechodu chodec počká na mezeru, po 3 s čekání si přechod
+  vyžádá a auta mu zastaví. Přes Silnici, Bulvár a jednosměrku se chodí
+  jen po přechodech, přes Uličku a Ulici i jinde (kap. 6).
 
 ## 5. Obce a domy
 
 - **Bez silnice nic nevznikne.** Každá budova stojí u silnice (ne u dálnice)
   a má vlastní vjezd. Osada začíná jedním domkem u polní cesty.
 - Domy přibývají podél silnic v okolí obce, nejradši blízko návsi a u rušné
-  silnice. Tvary: domek, dvojdomek, dům se zahradou, statky do L, Z a U,
-  ve středu větších obcí bytové domy s venkovním stáním před domem (auta
-  obyvatel, kteří jsou doma, na něm stojí).
+  silnice. **Nejdřív se vybere pozemek, pak na něm stojí dům**: pozemek má
+  příjezd ze silnice, stání (nebo garáž), dům a zahradu; auto obyvatel, kteří
+  jsou doma, stojí na stání. Druhy:
+
+| Druh | Pozemek | Kdy |
+|---|---|---|
+| Rodinný dům | příjezd na stání u boku domu, zahrada kolem | vždy |
+| Vila se zahradou | větší dům uprostřed velké zahrady, příjezd z boku | obec od 20 obyvatel |
+| Dvojdomek | dva domy vedle sebe, každý s příjezdem, předzahrádkou a zahradou za domem | od 12 |
+| Řadové domy | 3 nebo 4 domy v řadě, každý s příjezdem a předzahrádkou, společná zahrada vzadu | od 30 (4 domy od 60) |
+| Statek do L, Z, U | dvůr s polem | od 16 |
+| Viladům | malý bytový dům, společné parkoviště před domem, zahrada | ve středu obce |
+| Bytový dům | velký bytový dům, parkoviště před domem | od 100 obyvatel |
+| Blokový dům | dům kolem dvora (jako v Dejvicích), auta vjíždějí průjezdem do garáží | od 150 obyvatel |
+
+  Dvojdomek a řadové domy jsou víc domácností, každá se svým příjezdem.
 - **Budova bez příjezdu zanikne**: když silnice u budovy zmizí nebo se změní
   na dálnici či nájezd (domy k nim nemají vjezd), budova po 60 s zanikne
   zdarma a kronika to zapíše.
@@ -315,11 +363,19 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 
 - Blízko se chodí **pěšky po chodnících** (dospělí do 5 polí, děti do 8,
   senioři do 6), jinak autem. Auto zaparkuje u cíle a odveze lidi zpátky.
-- Chodec jde po chodníku na jedné straně silnice. Na druhou stranu přejde
-  jen po přechodu: v křižovatce si vybere cestu s co nejméně přechody
-  (a k cíli tak, aby skončil na straně domu), v úseku použije přechod mezi
-  sebou a cílem. Když žádný přechod není (dům naproti na stejném úseku),
-  přejde u cíle a auta mu dají přednost.
+- **Chodníky jsou síť**: chodník po každé straně silnice je dráha, která
+  v křižovatce končí na úrovni přechodu; rohy křižovatky spojuje oblouk
+  kolem obrubníku, přechod je dráha napříč ramenem, na slepém konci se
+  chodník stočí na druhou stranu. Chodec si na této síti najde nejkratší
+  cestu (přechod a přejití mimo přechod ji trochu prodlouží, takže je
+  použije, jen když se to vyplatí) a jde po ní. Po vozovce mimo přechody
+  nechodí, do středu křižovatky nevchází.
+- Přes **Uličku a Ulici** smí přejít i mimo přechod (místa po 2 polích
+  a na ramenech křižovatek), jen když v pruzích nic nejede blízko. Přes
+  Silnici, Bulvár a jednosměrku jen po přechodu.
+- Chodci na chodníku drží odstup a míjejí se vpravo. **Nikdo nemizí**:
+  po stavbě nebo úpravě silnic si chodec najde cestu znovu; kdo novou
+  nenajde, dojde po té své.
 - Lidé **vycházejí z budov a vcházejí do nich** (od dveří na chodník a zpět).
 - **Příjezd**: každá budova má jeden příjezd od okraje silnice. U budovy
   s parkovištěm vede k hrdlu parkoviště, jinak ke dveřím (u domků úzký,
@@ -329,6 +385,15 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
   jezdí vpravo: protijedoucí se míjejí, za sebou jedoucí si drží odstup.
   Nikdo nemizí na silnici ani nejede přes budovu.
   U hranice mapy auta odjíždějí rovnou do světa.
+- **Odbočení vlevo do vjezdu** přes protisměr: auto zastaví v pruhu a počká,
+  až v protisměru kolem vjezdu nic nejede. Stejně tak **výjezd vlevo**
+  z budovy čeká na mezeru v obou směrech.
+- **Objíždění**: auto, které stojí déle než 3 s za autem čekajícím na
+  odbočení vlevo, ho objede. Na silnici s víc pruhy v jednom směru přejede
+  do vedlejšího pruhu; na silnici s jedním pruhem v každém směru objede
+  protisměrem, ale jen když je protisměr v celém potřebném kusu volný
+  a před stojícím autem je místo. Nákladní auta neobjíždějí; na kruhovém
+  objezdu se neobjíždí.
 - Pro výkon se lidé počítají po domácnostech; jednotlivě se simulují jen ti,
   kdo jsou právě na cestě.
 - Auto vyjede z domu, jen když je v pruhu místo; po 8 s lidé cestu vzdají.
@@ -342,7 +407,10 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 - **Pumpa** u silnice s velkým provozem; auta na ni cestou zajíždějí.
 - **Hospoda** (od 24 obyvatel), **obchod** (od 40), **nákupní centrum**
   (od 90), **obchodní zóna** (od 150, nebo od 100 při napojení na svět).
-  Všechny s parkovištěm.
+  Všechny s parkovištěm. U nich, u kavárny a kanceláří se **nejdřív vybere
+  parkoviště** z katalogu podle potřebného počtu míst (hospoda 12, kavárna
+  6, obchod a kanceláře 16, nákupní centrum 40, obchodní zóna 70) a budova
+  stojí za ním; když se celé nevejde, vezme se menší.
 - **Parkoviště** je obdélník u silnice a skládá se z modulů
   (`docs/PARKOVISTE.md`): od budovy k silnici dvouřadé moduly (stání,
   ulička, stání), případně jeden jednořadý, zbytek u silnice je zeleň se
@@ -389,9 +457,10 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 ## 9. Hráč a rozhraní
 
 - Hra běží přes celou obrazovku; panely plavou nad mapou.
-- Nástroje: Stavět (1), Pruhy (2), Křižovatka (3, klik přepíná pravidlo),
-  Přechod (4), Rozdělit (5), Bourat (6), Uzávěra (7, po celých polích),
-  Ruka (8). Tvar silnice A rovně, S oblouk, D kruh, F napojit, G odbočka,
+- Nástroje: Stavět (1), Pruhy (2), Upravit (0), Křižovatka (3, klik
+  přepíná pravidlo), Spojení (9), Přechod (4), Rozdělit (5), Bourat (6),
+  Uzávěra (7, po celých polích), Ruka (8). Klik projde průhlednými
+  mezerami mezi panely na mapu. Tvar silnice A rovně, S oblouk, D kruh, F napojit, G odbočka,
   H vzor; výška Q/E. Nad nástroji je panel s volbami nástroje (u Stavět
   druh, pruhy, tvar, vzor, výška, Přestavět kliknutím). Vjezdy k domům se
   kreslí pod silnicí.
@@ -425,13 +494,12 @@ Nástroj Ruka ukáže trasy na mapě:
 - Nemá železnici, kopce ani typy obcí (`napady/`).
 - Má jen tři vzory mimoúrovňových křižovatek (kosodélník, čtyřlístek,
   trubka); jiné se staví z mostů a nájezdů.
-- Spojení pruh → pruh nejde kreslit jednotlivě; hráč volí jen šipky pruhu.
 - Semafor má dvě fáze (dvě osy křižovatky), nemá zvláštní fázi pro odbočení
   vlevo ani nastavení časů.
-- Konec připojovacího pruhu nejde chytit a táhnout; délka se mění nástrojem
-  Pruhy.
-- Postavenou silnici nejde přetvarovat ani přepojit tahem za konec; musí se
-  zbourat a postavit znovu (návrh režimu úprav čeká na rozhodnutí).
+- Editor silnic nemá Zpět; oblouk vede jedním taženým bodem (esíčko se
+  skládá ze dvou úseků); kruhový objezd se neupravuje.
+- Jezdí jen osobní a nákladní auta; autobusy, kola a taxíky ne
+  (`napady/dalsi_doprava.md`). Auta neparkují podél ulice.
 - Nemá tunely (`napady/tunely.md`).
 - Budovy nejsou natočené podél šikmých silnic; u diagonál zůstávají zubaté
   mezery.

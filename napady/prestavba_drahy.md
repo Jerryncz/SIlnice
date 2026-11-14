@@ -1,6 +1,6 @@
 # Přestavba 0.14: jádro drah
-Stav: rozpracováno (verze 0.14, jeden pull request)
-Zapsáno: 14. 11. 2026
+Stav: → ve hře od verze 0.14 (jeden pull request)
+Zapsáno: 14. 11. 2026, naposledy upraveno: 14. 11. 2026
 
 ## Co a proč
 Všechno, co se ve hře hýbe, se má pohybovat po skutečných drahách a hledat
@@ -35,4 +35,9 @@ smysl.
 - [x] Pozemky: parkoviště z katalogu, pak budova; druhy domů
 - [x] Objíždění stojících aut
 - [x] Editor silnic (4 funkce)
-- [ ] Dokumentace, testy, poznatky
+- [x] Dokumentace, testy, poznatky
+
+## Co zůstalo jen v nápadech
+Autobusy, kola, taxi (`dalsi_doprava.md`), fáze semaforů
+(`semafory_faze.md`), parkování v ulici (`parkovani_v_ulici.md`), natočené
+budovy (`natocene_budovy.md`) a zbytky v souborech výše.
