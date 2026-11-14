@@ -40,3 +40,11 @@ Nástroj: `tests/krizovatky/` (scénáře, měření, snímky). Měření: `node
   `vm.runInContext("linkTo", ctx)`.
 - Cíl na bulváru potřebuje `side` (allowedDirs), jinak findPath nepovolí žádný směr; `goal.dirs`
   findPath ignoruje.
+
+## Ověření na větvi `verze-0-17` (PR #14, 0.17.0)
+- Rozhraní simulace je stejné, `tests/krizovatky/` běží beze změny a všech 5 pokusných oprav sedí na zdroj.
+- Úplné zablokování scénáře 20 už nenastává (163 aut místo 65), ale auta tam čekají až 158 s (hladovění).
+- Vzdávání v pomalé koloně, semafor s dvěma odbočeními vlevo (oprava 5: semafor 1+1 144 → 247 aut,
+  mřížka p95 51 → 14 s) a přednost zprava na symetrické křižovatce platí dál.
+- Překrytí aut na kruhových objezdech je víc než v 0.12 (dvoupruhový kruh 10–21, kruh s bulváry
+  12–18, dálnice do kruhu 18–21 dvojic za běh); kosodélník při silném provozu 21.
