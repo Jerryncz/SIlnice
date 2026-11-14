@@ -16,9 +16,10 @@ function resize(){const r=cv.getBoundingClientRect();vw=r.width;vh=r.height;dpr=
   zmin=Math.max(2,Math.min(vw/MW,vh/MH)*0.9);clampCam()}
 function fit(){cam.z=Math.max(zmin,Math.min(vw/MW,vh/MH));cam.x=(MW*cam.z-vw)/2;cam.y=(MH*cam.z-vh)/2;
   if(vw<860){const t=[...S.towns].sort((a,b)=>b.pop-a.pop)[0];cam.z=Math.max(cam.z,vh*0.75/MH);if(t){cam.x=t.cx*cam.z-vw/2;cam.y=t.cy*cam.z-vh/2}}clampCam()}
-function clampCam(){cam.z=clamp(cam.z,zmin,64);const mw=MW*cam.z,mh=MH*cam.z;
+const ZMAX=256;   // největší přiblížení (px na pole)
+function clampCam(){cam.z=clamp(cam.z,zmin,ZMAX);const mw=MW*cam.z,mh=MH*cam.z;
   cam.x=mw<vw?(mw-vw)/2:clamp(cam.x,-vw*0.3,mw-vw*0.7);cam.y=mh<vh?(mh-vh)/2:clamp(cam.y,-vh*0.3,mh-vh*0.7)}
-function zoomAt(sx,sy,f){const wx=(sx+cam.x)/cam.z,wy=(sy+cam.y)/cam.z;cam.z=clamp(cam.z*f,zmin,64);cam.x=wx*cam.z-sx;cam.y=wy*cam.z-sy;clampCam()}
+function zoomAt(sx,sy,f){const wx=(sx+cam.x)/cam.z,wy=(sy+cam.y)/cam.z;cam.z=clamp(cam.z*f,zmin,ZMAX);cam.x=wx*cam.z-sx;cam.y=wy*cam.z-sy;clampCam()}
 function focusXY(x,y){cam.z=Math.max(cam.z,20);cam.x=x*cam.z-vw/2;cam.y=y*cam.z-vh/2;clampCam();flash={x,y,t:performance.now()};UI.pinned=hitTest(x,y);UI.selDirty=true}
 const toWorld=(sx,sy)=>[(sx+cam.x)/cam.z,(sy+cam.y)/cam.z];
 const fmt=n=>Math.round(n).toLocaleString("cs-CZ");

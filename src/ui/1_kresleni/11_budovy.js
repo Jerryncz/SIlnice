@@ -13,9 +13,13 @@ function drawDriveways(vis){ctx.lineCap="butt";ctx.strokeStyle=colors.lot;
   for(const b of vis){const dr=b.drive;if(!dr||!b.access)continue;const w=b.lay?LOT_A:isHome(b)?0.24:0.42;ctx.lineWidth=w;
     const dx=dr.T[0]-dr.E[0],dy=dr.T[1]-dr.E[1],l=Math.hypot(dx,dy)||1;ctx.beginPath();ctx.moveTo(dr.E[0]-dx/l*0.12,dr.E[1]-dy/l*0.12);ctx.lineTo(dr.T[0]+dx/l*0.02,dr.T[1]+dy/l*0.02);ctx.stroke()}
   ctx.lineCap="round"}
+const GARDEN_COL="#c9dcb2";
 function drawBuildings(vis){const ins=0.07,z=cam.z;
   ctx.fillStyle="rgba(0,0,0,.18)";
   for(const b of vis)for(const j of b.tiles){if(isLotRole(S.role[j]))continue;const q=mergedRect(j,b,ins);ctx.fillRect(q[0]+0.05,q[1]+0.07,q[2],q[3])}
+  // zahrady domů jako jedna souvislá zeleň (i přes hranici pozemků): pod domem, příjezdem i zahradou
+  ctx.fillStyle=GARDEN_COL;for(const b of vis){if(b.type!=="house"&&b.type!=="flat")continue;
+    for(const j of b.tiles){const r=S.role[j];if(r===R_GARDEN||r===R_HOUSE||r===R_FLAT||r===R_DRIVE||r===R_GAR)ctx.fillRect(tx(j)*CS-0.004,ty(j)*CS-0.004,CS+0.008,CS+0.008)}}
   for(const b of vis){const K=KIND[b.type];
     for(const j of b.tiles){const r=S.role[j];
       if(r===R_HOUSE){ctx.fillStyle=b.town?b.town.color:"#888";ctx.fillRect(...mergedRect(j,b,ins))}
@@ -25,7 +29,7 @@ function drawBuildings(vis){const ins=0.07,z=cam.z;
         if(b.type==="office"&&z>=10){ctx.fillStyle="rgba(210,230,255,.55)";const x=tx(j)*CS,y=ty(j)*CS;ctx.fillRect(x+0.1,y+0.08,0.1,0.34);ctx.fillRect(x+0.3,y+0.08,0.1,0.34)}}
       else if(r===R_GAR){const q=mergedRect(j,b,ins*0.6);ctx.fillStyle=colors["road-edge"];ctx.fillRect(...q);ctx.fillStyle=colors.lot;ctx.fillRect(q[0]+0.05,q[1]+0.05,q[2]-0.1,q[3]-0.1)}
       else if(r===R_LOT){if(!b.lay){ctx.fillStyle="#bcd3a6";ctx.fillRect(...mergedRect(j,b,0.04))}}
-      else if(r===R_GARDEN){const x=tx(j)*CS,y=ty(j)*CS;ctx.fillStyle="#c9dcb2";ctx.fillRect(x+0.02,y+0.02,CS-0.04,CS-0.04);
+      else if(r===R_GARDEN){const x=tx(j)*CS,y=ty(j)*CS;
         if(z>=8&&((tx(j)*7+ty(j)*13)%5===0)){ctx.fillStyle="#86ad6e";ctx.beginPath();ctx.arc(x+0.25,y+0.25,0.14,0,Math.PI*2);ctx.fill()}}
       else if(r===R_DRIVE){const x=tx(j)*CS,y=ty(j)*CS;ctx.fillStyle=colors.lot;ctx.fillRect(x+0.1,y,CS-0.2,CS)}
       else{const q=mergedRect(j,b,0.04);ctx.fillStyle=r===R_YARD?(b.type==="school"?"rgba(201,149,42,.28)":shade(K.color,1.9).replace(/rgb\((\d+),(\d+),(\d+)\)/,(m,a,b2,c)=>`rgba(${a},${b2},${c},.55)`)):colors.lot;ctx.fillRect(...q);
@@ -68,5 +72,9 @@ function drawLot(b){const lay=b.lay;if(!lay||!b.access)return;const W=lay.W;let 
   for(const q of lay.bays){ctx.fillStyle="rgba(224,184,58,.45)";rect(q.dep-q.hd,q.lat-q.hl,q.dep+q.hd,q.lat+q.hl);ctx.fill();if(cam.z>=12){ctx.strokeStyle="#d8a92a";ctx.lineWidth=0.035;ctx.stroke();ctx.beginPath();for(let t=-q.hl+0.12;t<q.hl;t+=0.16)line(q.dep-q.hd,q.lat+t,q.dep+q.hd,q.lat+t+0.1);ctx.stroke()}}
   if(cam.z>=10){ctx.strokeStyle=colors["lot-line"];ctx.lineWidth=0.025;ctx.beginPath();for(const s of lay.spots){if(s.truck)continue;
       if(s.along==="d")for(const dl of [-s.hw,s.hw])line(s.dep-LOT_RD/2+0.02,s.lat+dl,s.dep+LOT_RD/2-0.02,s.lat+dl);else for(const dl of [-s.hw,s.hw])line(s.dep+dl,s.lat-LOT_RD/2+0.02,s.dep+dl,s.lat+LOT_RD/2-0.02)}ctx.stroke()}
+  // pumpa: stříška nad stáními a stojany mezi nimi
+  if(b.type==="gas"){const cs=lay.spots.filter(s=>!s.truck);ctx.fillStyle=colors.canopy;ctx.globalAlpha=0.55;
+    for(const s of cs){if(s.along==="d")rect(s.dep-LOT_RD/2-0.03,s.lat-s.hw-0.03,s.dep+LOT_RD/2+0.03,s.lat+s.hw+0.03);else rect(s.dep-s.hw-0.03,s.lat-LOT_RD/2-0.03,s.dep+s.hw+0.03,s.lat+LOT_RD/2+0.03);ctx.fill()}
+    ctx.globalAlpha=1;if(cam.z>=10){ctx.fillStyle=KIND.gas.color;for(let i=0;i<cs.length;i+=2){const s=cs[i];rect(s.dep-0.05,s.lat-0.05,s.dep+0.05,s.lat+0.05);ctx.fill()}}}
   if(cam.z>=8){ctx.fillStyle="#6f9a5c";for(const t of lay.trees){ctx.beginPath();ctx.arc(t[0],t[1],0.16,0,Math.PI*2);ctx.fill()}}
   ctx.lineCap="round"}

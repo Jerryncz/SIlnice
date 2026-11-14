@@ -199,7 +199,9 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
 - **Grafika spojů**: navazující úseky se potkávají ostrým rohem (pokosem),
   čáry, pruhy, zelený střed i svodidla běží přes spoj bez přerušení. Na
   napojení z boku dálnice dálnice pokračuje celá, napojená silnice se k ní
-  přimkne.
+  přimkne. Na rohu dvou úseků bez křižovatky vede i každý pruh až do pokosu,
+  kde se potká se stejným pruhem druhého úseku, takže auta v ostré zatáčce
+  zůstávají ve svém pruhu.
 - **Dálnice**: auta z dálnice smí jen pokračovat nebo sjet vpravo. Na dálnici
   se dá z boku napojit nájezd i obyčejná silnice; takové napojení funguje
   **jen vpravo**: najet ve směru jízdy pruhu na té straně, sjet doprava,
@@ -316,6 +318,7 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 | Blokový dům | dům kolem dvora (jako v Dejvicích), auta vjíždějí průjezdem do garáží | od 150 obyvatel |
 
   Dvojdomek a řadové domy jsou víc domácností, každá se svým příjezdem.
+  Zahrady sousedních domů tvoří jednu souvislou zeleň (bez hranic pozemků).
 - **Budova bez příjezdu zanikne**: když silnice u budovy zmizí nebo se změní
   na dálnici či nájezd (domy k nim nemají vjezd), budova po 60 s zanikne
   zdarma a kronika to zapíše.
@@ -324,6 +327,12 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
   pátého domu). Přednost mají místa uprostřed dlouhých úseků, aby obec
   nerostla do „nudle“ podél jedné silnice; když ulička narazí na jinou
   silnici, propojí je a vznikne blok. Uličky nevedou přes vodu ani k mostům.
+  **Odstup**: kolem každé silnice je pás 4 polí od okraje vozovky, do kterého
+  obec žádnou uličku nepostaví; výjimkou je jen silnice, ze které ulička
+  vychází, a silnice, na kterou se na konci kolmo napojí. Ulička proto
+  začíná aspoň 4 pole od křižovatky, propojka mezi dvěma silnicemi je
+  dlouhá aspoň 4 pole a nevznikají úzké ostrůvky ani trojúhelníky.
+  Silnice hráče se to netýká; už postavené uličky zůstanou.
 - Domy stojí na jemné síti (půl pole): tvar domu je v celých polích, ale
   posunout se dá o půl pole, takže sedí těsně u silnice i na jejím konci.
 - **Vybavenost** vzniká sama podle velikosti obce:
@@ -404,13 +413,17 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 
 ## 7. Služby, kanceláře a školy
 
-- **Pumpa** u silnice s velkým provozem; auta na ni cestou zajíždějí.
+- **Pumpa** u silnice s velkým provozem; má parkoviště ze stavebnice se
+  stříškou a stojany (6 míst). Auta na ni zatím nezajíždějí (kap. 10).
 - **Hospoda** (od 24 obyvatel), **obchod** (od 40), **nákupní centrum**
   (od 90), **obchodní zóna** (od 150, nebo od 100 při napojení na svět).
   Všechny s parkovištěm. U nich, u kavárny a kanceláří se **nejdřív vybere
   parkoviště** z katalogu podle potřebného počtu míst (hospoda 12, kavárna
   6, obchod a kanceláře 16, nákupní centrum 40, obchodní zóna 70) a budova
-  stojí za ním; když se celé nevejde, vezme se menší.
+  stojí za ním; když se celé nevejde, vezme se menší. Stejně od 0.16 škola
+  (10 míst, za budovou školní dvůr), pumpa (6) a průmysl (těžba dřeva 6,
+  lom 8, důl 10, pila 12, ocelárna 24; za budovou dvůr se zbožím); průmysl
+  má na parkovišti i místo pro nákladní auta.
 - **Parkoviště** je obdélník u silnice a skládá se z modulů
   (`docs/PARKOVISTE.md`): od budovy k silnici dvouřadé moduly (stání,
   ulička, stání), případně jeden jednořadý, zbytek u silnice je zeleň se
@@ -444,7 +457,8 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 | Pila | těžba dřeva v síti, obec od 30 obyvatel | dřevo, 6 pracovníků | řezivo | obce, svět |
 | Ocelárna | důl i lom v síti, obec od 50 obyvatel | rudu a kámen, 10 pracovníků | ocel | svět |
 
-- Pracovníci dojíždějí z obcí a parkují na dvoře podniku; bez nich se nevyrábí.
+- Pracovníci dojíždějí z obcí a parkují na parkovišti před podnikem; bez nich
+  se nevyrábí. Nákladní auta stojí na místě pro nákladní auta.
 - Nákladní auta (delší, pomalejší, s barvou nákladu) vozí zboží nejbližšímu
   odběrateli, jinak ven do světa (vývoz platí o polovinu víc).
 - Řezivo a kámen v obci jsou stavební materiál a zrychlují růst.
@@ -456,7 +470,8 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 
 ## 9. Hráč a rozhraní
 
-- Hra běží přes celou obrazovku; panely plavou nad mapou.
+- Hra běží přes celou obrazovku; panely plavou nad mapou. Přiblížit jde až
+  na 256 px na pole (pruhy a spojení v křižovatce se pohodlně upravují).
 - Nástroje: Stavět (1), Pruhy (2), Upravit (0), Křižovatka (3, klik
   přepíná pravidlo), Spojení (9), Přechod (4), Rozdělit (5), Bourat (6),
   Uzávěra (7, po celých polích), Ruka (8). Klik projde průhlednými
@@ -504,7 +519,12 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 Nástroj Ruka ukáže trasy na mapě:
 
 - klik na **auto nebo chodce**: odkud a kam jde; trasa plně, kudy půjde,
-  slabě, kudy už šel; kroužky u výchozí (oranžově) a cílové (modře) budovy;
+  slabě, kudy už šel; kroužky u výchozí (oranžově) a cílové (modře) budovy.
+  Auto ukáže trasu **po pruzích**: ve kterém pruhu jede, kde přejede do
+  pruhu, ze kterého jeho cesta pokračuje, a oblouky v křižovatkách podle
+  spojení pruhů. Když stojí, panel řekne **proč** (kolona a co drží první
+  auto, červená, přednost, plno za křižovatkou, chodci na přechodu, čeká na
+  mezeru vedle nebo v protisměru);
 - klik na **budovu**: modře trasy všech, kdo jsou na cestě sem, oranžově
   všech, kdo odtud právě odjeli nebo odešli; počty v panelu;
 - klik na **silnici**: trasy všech aut a chodců, kteří přes úsek pojedou,
@@ -512,6 +532,8 @@ Nástroj Ruka ukáže trasy na mapě:
 
 ## 10. Co hra zatím nedělá
 
+- Na pumpu auta nezajíždějí: pumpa nemá zákazníky (do 0.15 tu stálo, že
+  zajíždějí, ale kód to nedělal; `napady/pumpa_tankovani.md`).
 - Neukládá rozehranou hru pro hráče (pozice, automatické ukládání);
   celý stav jde jen uložit hlášením a nahrát v Test (`napady/ukladani_hry.md`).
   Uložený stav se mezi verzemi nepřevádí.

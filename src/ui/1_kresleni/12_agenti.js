@@ -19,7 +19,7 @@ function carPose(c){
   const u=clamp(d?e.g.len-c.s:c.s,0,e.g.len);const p=pointAt(e.g,u,_p);
   // boční posun do nového pruhu plynule
   const off0=laneOffset(e,d,c.lane);if(c._o===undefined||Math.abs(c._o-off0)>0.9)c._o=off0;else c._o+=(off0-c._o)*0.18;
-  const off=c._o,sg=d?-1:1;return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),lvl:lvlAt(S,e,u),L:edgeLayer(e)}}
+  const off=c._o,sg=d?-1:1;const m=cornerShift(e,u,off*sg);return {x:p.x+p.nx*off*sg+m[0],y:p.y+p.ny*off*sg+m[1],ang:Math.atan2(p.ty*sg,p.tx*sg),lvl:lvlAt(S,e,u),L:edgeLayer(e)}}
 // chodec na své cestě, kousek vpravo od osy chodníku (protijdoucí se míjejí)
 function walkerPose(w){if(!w.path)return null;const q=pathPose(w.path,w.s);const o=w.state==="walk"?PED_KEEP:0;return [q.x-Math.sin(q.ang)*o,q.y+Math.cos(q.ang)*o]}
 function drawVehicles(layer){if(cam.z<3)return;const blinkOn=((performance.now()/380)|0)%2===0;

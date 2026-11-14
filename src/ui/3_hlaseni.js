@@ -43,7 +43,7 @@ function markLabel(m){const o=m.o;
 function markDetail(m){const o=m.o,f=v=>v===undefined||v===null?"–":typeof v==="number"?String(r3(v)):String(v);
   if(m.type==="car"){const t=o.trip||{};const l=o.state==="drive"?o.links[o.li]:o.state==="exit"?o.links[0]:-1;const e=l>=0?S.edges[l>>1]:null;
     return `id ${o.id}, stav ${o.state}`+(l>=0?`, úsek ${l>>1} směr ${l&1} pruh ${o.lane}, poloha ${f(o.s)} z ${f(e&&e.g.len)}`:"")+`, rychlost ${f(o.v)}, čeká ${f(o.wait)} s`+
-      (o.conn?`, v křižovatce ${o.conn.node}`:"")+(o.turnWait?", čeká na odbočení":"")+`, trasa úsek ${o.li+1} z ${o.links?o.links.length:0}, účel ${f(t.purpose)}, z ${bName(t.from)} do ${bName(t.to)}`}
+      (o.conn?`, v křižovatce ${o.conn.node}`:"")+(o.turnWait?", čeká na odbočení":"")+(whyWait(S,o)?`, proč stojí: ${whyWait(S,o)}`:"")+`, trasa úsek ${o.li+1} z ${o.links?o.links.length:0}, účel ${f(t.purpose)}, z ${bName(t.from)} do ${bName(t.to)}`}
   if(m.type==="walker"){const t=o.trip||{};return `id ${o.id}, stav ${o.state}, čeká ${f(o.wait)} s, z ${bName(t.from)} do ${bName(t.to)}`}
   if(m.type==="bld")return `id ${o.id}, druh ${o.type}, ${o.tiles.length} buněk, obyvatel ${f(o.pop)}, na parkovišti ${f(o.parked)} z ${f(o.cap)}, příjezd `+(o.access?`úsek ${o.access.e} u ${f(o.access.u)} strana ${o.access.side}`:"žádný");
   if(m.type==="node"){const C=["automaticky","přednost zprava","hlavní silnice","semafor"];return `id ${o.id}, ${o.edges.length} ${o.edges.length>=2&&o.edges.length<=4?"ramena":"ramen"} (úseky ${o.edges.join(", ")}), pravidlo ${C[o.ctl]||o.ctl} (${o.eff}), v ploše ${o.box.length} aut`+(o.ring?", kruhový objezd":"")+`, poloha ${f(o.x)}, ${f(o.y)}`}
@@ -130,7 +130,7 @@ async function readStateFile(file){let J;
   return J}
 function applyLoaded(J){const S2=loadState(J);S=S2;repHist=[];repHistS=S;UI.pinned=null;UI.hover=null;UI.draw=null;UI.plan=null;UI.editEdge=null;UI.editDrag=null;UI.connNode=null;UI.connDrag=null;
   if(UI.report)reportClose();hideConfirm();readColors();applySettings();
-  if(J.camera&&J.camera.center){cam.z=clamp(J.camera.z,zmin,200);cam.x=J.camera.center[0]*cam.z-vw/2;cam.y=J.camera.center[1]*cam.z-vh/2;clampCam()}else fit();
+  if(J.camera&&J.camera.center){cam.z=clamp(J.camera.z,zmin,ZMAX);cam.x=J.camera.center[0]*cam.z-vw/2;cam.y=J.camera.center[1]*cam.z-vh/2;clampCam()}else fit();
   lastLogLen=-1;lastProbKey="";lastOptsKey="";setSpeed(0);updateUI();toast("Stav nahrán: den "+dayOf(S)+", "+clock(S)+". Hra stojí.")}
 async function loadStateFile(file){$("help").hidden=true;
   try{const J=await readStateFile(file);

@@ -41,7 +41,7 @@ function roadAt(S,T,d){const ox=T[0]-d[0]*0.25,oy=T[1]-d[1]*0.25;const c=cellAt(
 
 // ---- rozvržení parkoviště (stavebnice) v místních souřadnicích: dep 0 = okraj u silnice, D = u budovy ----
 function buildLot(S,b,F,xc){const A=LOT_A,SW=LOT_SW,W2=frameW(F),D=F.D,Wd=F.Wd;
-  const spots=[],aisles=[],bays=[],green=[],trees=[];const pull=!isHome(b)&&KIND[b.type]&&!!KIND[b.type].pull;
+  const spots=[],aisles=[],bays=[],green=[],trees=[];const pull=!isHome(b)&&lotBays(b.type);
   const spines=[xc];
   // intervaly napříč (lat) mimo pásy uliček
   const free=(sp)=>{const bands=sp.map(s=>[s-A/2-0.03,s+A/2+0.03]).sort((u,v)=>u[0]-v[0]);const out=[];let a=0.02;for(const q of bands){if(q[0]-a>0.2)out.push([a,q[0]]);a=Math.max(a,q[1])}if(Wd-0.02-a>0.2)out.push([a,Wd-0.02]);return out};
@@ -113,7 +113,7 @@ function refreshAccess(S,b){
     b.front=j;b.access={e:e.id,u,side,x:p.x,y:p.y};b.drive={E,T:door,door};return}}
 // nové rozvržení: zaparkovaná a přijíždějící auta dostanou místa znovu (jiný tvar = jiné indexy)
 function setLay(S,b,lay){const had=b.lay;b.lay=lay;
-  if(b.cap0===undefined)b.cap0=b.cap;if(!isHome(b)&&!(KIND[b.type]&&KIND[b.type].industry))b.cap=lay?lay.carSpots:b.cap0;
+  if(b.cap0===undefined)b.cap0=b.cap;if(!isHome(b))b.cap=lay?lay.carSpots:b.cap0;
   b.spotUsed=lay?new Array(lay.spots.length).fill(null):null;
   if(!had)return;let nx=0;const take=()=>{if(!lay)return -1;while(nx<lay.spots.length&&(b.spotUsed[nx]||lay.spots[nx].truck))nx++;return nx<lay.spots.length?nx:-1};
   for(const pe of b.parked||[]){if(pe.spot===undefined)continue;const i=take();if(i<0)pe.spot=undefined;else{pe.spot=i;b.spotUsed[i]=pe}}
