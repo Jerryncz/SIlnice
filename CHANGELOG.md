@@ -3,6 +3,12 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.12.0 – 14. 11. 2026
+
+- Parkoviště skládaná z modulů podle pozemku, místo pro zásobování u podniků,
+  zeleň ve zbytku (R78); katalog předloh v `docs/parkoviste/katalog.html`.
+- Oprava: po změně vjezdu budovy zůstávala obsazená místa bez aut.
+
 ## 0.11.0 – 14. 11. 2026
 
 - Jednosměrky napojené na jednotlivé pruhy slepého konce silnice (R74).

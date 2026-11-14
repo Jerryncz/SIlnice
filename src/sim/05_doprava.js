@@ -126,7 +126,7 @@ function startEnter(S,c,l){const to=c.trip&&c.trip.to;leaveBox(S,c);
   if(!to||to.isGate||to.dead||to.front===undefined){c.state="arrived";arriveVehicle(S,c);return}
   const p=lanePose(S,l,c.lane,c.s);c.state="enter";c.t=0;c.ex=p.x;c.ey=p.y;c.eang=p.ang;
   // na parkoviště: rezervované místo a cesta po uličce
-  const lay=lotLayout(S,to);if(lay){let i=-1;if(isHome(to)){if(to.type==="flat")i=Math.min(lay.spots.length-1,homeCars(to))}else{i=freeSpot(S,to);if(i>=0){to.spotUsed[i]=c;c.spotB=to;c.spot=i}}
+  const lay=lotLayout(S,to);if(lay){let i=-1;if(isHome(to)){if(to.type==="flat")i=Math.min(lay.carSpots-1,homeCars(to))}else{i=freeSpot(S,to,!!(c.truck||c.trip&&c.trip.truck));if(i>=0){to.spotUsed[i]=c;c.spotB=to;c.spot=i}}
     if(i>=0){c.path=[[p.x,p.y],...spotPath(lay,i)];c.plen=pathLen(c.path);c.ps=0}}
   S.entering.push(c)}
 function tryExit(S,c){const l=c.links[0];const e=S.edges[l>>1];if(e.dead){killVehicle(S,c);return true}
