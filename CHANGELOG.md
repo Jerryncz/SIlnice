@@ -3,6 +3,18 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.15.0 – 14. 11. 2026
+
+- **Hlášení** (tlačítko vpravo nahoře, klávesa R, R90–R94): hra se zastaví,
+  hráč napíše, co vidí, klikem očísluje prvky (auto, chodec, budova,
+  křižovatka, úsek, místo) a k nim poznámky. Uložit zapíše do vybrané
+  složky (`OneDrive\GIT\Silnice\hlaseni`) snímek s čísly, popis, celý stav
+  hry a posledních 30 s pohybu; bez zápisu do složky se stáhne jeden soubor.
+- Celý stav hry jde uložit a nahrát (Pravidla → Test → Nahrát stav);
+  nahraná hra pokračuje přesně stejně (i náhoda). `tests/hlaseni.js` nahraje
+  hlášení mimo prohlížeč, zkontroluje ho a pustí dál.
+- Sestavení nese otisk zdrojů (`BUILD_ID`), podle kterého se najde commit.
+
 ## 0.14.0 – 14. 11. 2026
 
 Přestavba na jádro drah (R80–R89), jeden pull request.

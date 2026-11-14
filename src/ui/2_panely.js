@@ -142,7 +142,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
   let groups="",cur=null;for(const a of acts){if(a.group!==cur){cur=a.group;groups+=`<span class="lbl">${esc(cur)}</span>`}groups+=`<button data-act="${a.act}" aria-pressed="${a.pressed?"true":"false"}">${esc(a.label)}</button>`}
   return`<span class="pin">${UI.pinned?"vybráno · Esc":"klikni Rukou pro výběr"}</span><h3>${esc(title)}</h3>${sub?`<div class="sub">${esc(sub)}</div>`:""}
     <div class="rows">${rows.map(r=>`<span>${esc(r[0])}</span><b>${esc(r[1])}</b>`).join("")}</div>${why?`<p class="why${ok?" ok":""}">${esc(why)}</p>`:""}${acts.length?`<div class="acts">${groups}</div>`:""}`}
-function updateSel(){const t=UI.pinned||(UI.draw||UI.connDrag||UI.editDrag||UI.tool==="conn"||UI.tool==="edit"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
+function updateSel(){if(UI.report){$("sel").hidden=true;return}const t=UI.pinned||(UI.draw||UI.connDrag||UI.editDrag||UI.tool==="conn"||UI.tool==="edit"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
 $("sel").addEventListener("click",ev=>{const btn=ev.target.closest("[data-act]");if(!btn)return;const t=UI.pinned||UI.hover;if(!t)return;const a=btn.dataset.act;let r={ok:true};
   if(t.type==="edge"){const e=S.edges[t.id];
     if(a.startsWith("kind:")){runPlan(planKind(S,e,a.slice(5)),commitKind,"Změna druhu silnice");return}

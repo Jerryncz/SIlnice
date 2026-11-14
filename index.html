@@ -125,6 +125,23 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
 .sel .acts button{border:1px solid var(--line);background:var(--panel);font-size:12.5px;padding:5px 9px}
 .sel .acts button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
 .sel .pin{float:right;color:var(--muted);font-size:11px}
+.rep{z-index:3;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 230px)}
+.rep .sub{font-size:12.5px}
+.rep textarea{font:13px/1.4 var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 9px;resize:vertical;min-height:70px;width:100%;box-sizing:border-box}
+.rep>*{flex:none}
+.rep ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.rep li{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:12.5px}
+.rep li.empty{display:block;color:var(--muted)}
+.rep li b{background:#d6336c;color:#fff;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-size:11px;font-family:var(--f-mono)}
+.rep li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rep li input{grid-column:2/4;font:12.5px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 7px;min-width:0}
+.rep li button{border:1px solid var(--line);background:var(--panel);padding:1px 7px;font-size:13px}
+.rep .acts{display:flex;gap:6px;margin:0}
+.rep .acts button{border:1px solid var(--line);background:var(--panel);padding:6px 12px}
+.rep .acts button.go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.rep .acts button:disabled{opacity:.5;cursor:default}
+.rep .dir{margin:0;font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.rep .dir button{border:1px solid var(--line);background:var(--panel);font-size:11.5px;padding:2px 7px}
 .toast{left:50%;top:calc(env(safe-area-inset-top,0px) + 72px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:7px 13px;border-radius:9px;font-weight:500;pointer-events:none;white-space:nowrap;z-index:5;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
 .modal{position:absolute;inset:0;z-index:10;background:rgba(10,14,12,.45);display:grid;place-items:center;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
 .modal .card{max-width:820px;width:100%;max-height:85vh;overflow:auto;padding:20px 22px;background:var(--panel)}
@@ -142,6 +159,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
   .sel{top:auto;width:auto;right:max(16px, env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 150px);max-height:32vh}
   .bottom{left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));transform:none;max-width:none}
   #chron{display:none}
+  .rep{max-height:52vh}
   .opts{flex-wrap:nowrap;overflow-x:auto;width:100%}.opts .grp{flex-wrap:nowrap;flex:none}.opts .hint{display:none}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
@@ -169,6 +187,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
   <div class="hud tr">
     <div class="card seg">
       <button id="ovl" aria-pressed="false">Vytížení</button>
+      <button id="repBtn" aria-pressed="false" title="Popsat, co vidíš, a uložit to pro Claude (R)">Hlášení</button>
       <button id="helpBtn">Pravidla</button>
       <button id="newMap">Nová mapa</button>
     </div>
@@ -183,6 +202,14 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
   </div>
 
   <section class="hud card sel" id="sel" hidden></section>
+  <section class="hud card sel rep" id="report" hidden aria-label="Hlášení">
+    <h3>Hlášení</h3>
+    <p class="sub">Hra stojí. Klikni do mapy: auto, chodec, budova, silnice, křižovatka nebo místo dostane číslo. Tahem posuneš mapu.</p>
+    <textarea id="repText" rows="4" placeholder="Co se děje a co by se mělo dít"></textarea>
+    <ol id="repMarks"></ol>
+    <div class="acts"><button class="go" id="repSave">Uložit</button><button id="repCancel">Zrušit</button></div>
+    <p class="dir"><span id="repDir"></span> <button id="repPick">Změnit složku</button></p>
+  </section>
 
   <div class="hud bottom">
     <div class="card confirm" id="confirm" hidden>
@@ -212,7 +239,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
     <div class="card" role="dialog" aria-labelledby="helpTitle">
       <button class="close" id="helpClose">Zavřít</button>
       <h2 id="helpTitle">Jak krajina žije</h2>
-      <p>Stavíš a řídíš silnice. Všechno ostatní vzniká samo podle toho, kudy, kdy a kolik se jezdí. Verze 0.14.0.</p>
+      <p>Stavíš a řídíš silnice. Všechno ostatní vzniká samo podle toho, kudy, kdy a kolik se jezdí. Verze 0.15.0.</p>
       <div class="grid">
         <div><h3>Stavění</h3><p>Nástroj Stavět má tři volby: druh silnice, tvar (Rovně, Oblouk, Kruh, Napojit) a výšku. Napojit vede plynulou křivku mezi dvěma body: z boku silnice kolmo, z konce silnice v jejím směru. Tah po existující silnici ji přestaví. „Přestavět kliknutím“ mění každý úsek, na který klikneš, na zvolený druh a pruhy.</p></div>
         <div><h3>Druhy silnic a mosty</h3><p>Ulička (bez středové čáry), ulice, silnice (plná čára), jednosměrka, bulvár se zeleným středem, dálnice a nájezd. Most a vysoký most mají na koncích rampu 3 pole na výšku; na most ani na rampu se nic nepřipojí. Dálnici nejde křížit v úrovni; silnice napojená z boku dálnice funguje jen vpravo.</p></div>
@@ -224,8 +251,8 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
       </div>
       <h3>Nastavení</h3>
       <div class="set" id="setStuck"><span>Zaseknuté auto to vzdá po</span><button data-stuck="0">Nikdy</button><button data-stuck="20">20 s</button><button data-stuck="40">40 s</button><button data-stuck="120">2 min</button></div>
-      <div class="set"><span>Test (pro zkoušení)</span><button data-money="10000">+10 000 Kč</button><button data-money="100000">+100 000 Kč</button></div>
-      <p class="keys">Myš: levé tlačítko kreslí, pravé nebo prostřední tlačítko posouvá mapu, kolečko přibližuje, pravý klik zruší rozkreslenou silnici. Dotyk: jeden prst kreslí, dva posouvají a přibližují. Klávesy 1–8 nástroje, A S D F tvar silnice, Q/E výška, mezerník pauza, V vytížení, Esc zrušit.</p>
+      <div class="set"><span>Test (pro zkoušení)</span><button data-money="10000">+10 000 Kč</button><button data-money="100000">+100 000 Kč</button><button id="loadState">Nahrát stav…</button><input type="file" id="stateFile" accept=".gz,.json" hidden></div>
+      <p class="keys">Myš: levé tlačítko kreslí, pravé nebo prostřední tlačítko posouvá mapu, kolečko přibližuje, pravý klik zruší rozkreslenou silnici. Dotyk: jeden prst kreslí, dva posouvají a přibližují. Klávesy 1–9 a 0 nástroje, A S D F G H tvar silnice, Q/E výška, mezerník pauza, V vytížení, R hlášení, Esc zrušit.</p><p class="keys">Hlášení: když něco nefunguje, jak má, stiskni Hlášení (R). Hra se zastaví; napiš, co se děje, a klikni na auta, budovy nebo silnice, o kterých mluvíš (dostanou čísla). Uložit zapíše snímek, popis a celý stav hry do vybrané složky (doporučeno OneDrive\GIT\Silnice\hlaseni). Uložený stav jde nahrát v Test → Nahrát stav.</p>
     </div>
   </div>
 </div>
@@ -236,7 +263,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
 // Osady a cesty – simulace (bez DOM). Soubory v src/sim se skládají v abecedním
 // pořadí do <script id="sim"> v index.html (build.js) a testují se v Node.js.
 
-const GAME_VERSION="0.14.0";
+const GAME_VERSION="0.15.0";
 const MW=128,MH=80;                         // mapa ve světových jednotkách (1 = pole silnice)
 const CS=0.5,W=MW*2,H=MH*2,N=W*H;           // jemná síť terénu a budov: buňka = půl pole
 const STEP=1/30,BASE_SPEED=2.0,MAX_CARS=900,MAX_WALKERS=600;
@@ -247,7 +274,8 @@ const DX=[1,-1,0,0],DY=[0,0,1,-1];
 const NB=new Int32Array(N*4);
 (function(){for(let i=0;i<N;i++){const x=i%W,y=(i/W)|0;for(let d=0;d<4;d++){const nx=x+DX[d],ny=y+DY[d];NB[i*4+d]=(nx<0||ny<0||nx>=W||ny>=H)?-1:ny*W+nx}}})();
 
-function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+// generátor náhody; stav je vidět v f.s, aby šel uložit a nahrát (03_stav.js)
+function mulberry32(a){const f=()=>{let s=f.s;s=s+0x6D2B79F5|0;f.s=s;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};f.s=a|0;return f}
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const tx=i=>i%W, ty=i=>(i/W)|0;
 const wxOf=i=>(i%W+0.5)*CS, wyOf=i=>(((i/W)|0)+0.5)*CS;   // střed buňky ve světě
@@ -430,6 +458,71 @@ function splitPts(g,u){const i=segIndex(g,u),q=pointAt(g,u),p=g.pts;const A=[],B
 function subPts(g,u0,u1){const p=g.pts,out=[];const a=pointAt(g,u0);out.push(a.x,a.y);for(let k=0;k<g.n;k++){if(g.cum[k]>u0+1e-6&&g.cum[k]<u1-1e-6)out.push(p[2*k],p[2*k+1])}const b=pointAt(g,u1);out.push(b.x,b.y);return cleanPts(out)}
 function cleanPts(p){const o=[p[0],p[1]];for(let k=2;k<p.length;k+=2){if(Math.hypot(p[k]-o[o.length-2],p[k+1]-o[o.length-1])>0.02)o.push(p[k],p[k+1])}if(o.length<4){o.push(p[p.length-2]+1e-3,p[p.length-1])}return o}
 function reversePts(p){const o=[];for(let k=p.length-2;k>=0;k-=2)o.push(p[k],p[k+1]);return o}
+
+// ---- sim/0_zaklad/03_stav.js ----
+// Uložení a nahrání celého stavu simulace (hlášení ze hry, nástroj tests/hlaseni.js).
+// Stav je graf objektů s odkazy (auto → budova → obec, fronty pruhů → auta, Map, Set, typovaná pole).
+// Ukládá se obecně: každý objekt dostane číslo a odkazy se zapíšou jako {$r: číslo}, takže se nahraje
+// přesně stejný graf a simulace pokračuje stejně (i náhoda: stav generátoru S.R.s).
+// Klíče začínající „_“ jsou mezipaměti kreslení a neukládají se. Neznámá funkce nebo třída = chyba
+// (aby se nový druh dat nezapomněl potichu).
+
+const STATE_FORMAT=1;
+const STATE_CLASSES={Heap};
+const B64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function b64enc(u8){let out="";const n=u8.length;let i=0;
+  for(;i+2<n;i+=3){const v=u8[i]<<16|u8[i+1]<<8|u8[i+2];out+=B64[v>>18&63]+B64[v>>12&63]+B64[v>>6&63]+B64[v&63]}
+  if(i<n){const v=u8[i]<<16|(i+1<n?u8[i+1]<<8:0);out+=B64[v>>18&63]+B64[v>>12&63]+(i+1<n?B64[v>>6&63]:"=")+"="}return out}
+function b64dec(s){const L=new Int16Array(128).fill(-1);for(let k=0;k<64;k++)L[B64.charCodeAt(k)]=k;
+  let pad=0;if(s.endsWith("=="))pad=2;else if(s.endsWith("="))pad=1;const n=s.length/4*3-pad,u8=new Uint8Array(n);let j=0;
+  for(let i=0;i<s.length;i+=4){const v=L[s.charCodeAt(i)]<<18|L[s.charCodeAt(i+1)]<<12|(L[s.charCodeAt(i+2)]&63)<<6|(L[s.charCodeAt(i+3)]&63);
+    if(j<n)u8[j++]=v>>16&255;if(j<n)u8[j++]=v>>8&255;if(j<n)u8[j++]=v&255}return u8}
+const TYPED={Uint8Array,Uint16Array,Int16Array,Int32Array,Uint32Array,Float32Array,Float64Array,Int8Array,Uint8ClampedArray};
+
+// vrací text JSON; extra = údaje navíc do hlavičky (čas uložení, kamera …)
+function saveState(S,extra){const ids=new Map(),objs=[],queue=[];
+  const ref=o=>{let id=ids.get(o);if(id===undefined){id=objs.length;ids.set(o,id);objs.push(null);queue.push(o)}return id};
+  const enc=v=>{const t=typeof v;
+    if(v===null||t==="string"||t==="boolean")return v;
+    if(t==="number")return Number.isFinite(v)?v:{$n:String(v)};
+    if(t==="undefined")return {$u:1};
+    if(t==="function"){if(v===S.R)return {$rng:v.s|0};if(v.F)return {$fw:ref(v.F)};throw new Error("Stav: neznámou funkci nejde uložit")}
+    if(t==="object")return {$r:ref(v)};
+    throw new Error("Stav: hodnotu typu "+t+" nejde uložit")};
+  const obj=o=>{const r={};for(const k of Object.keys(o)){if(k.charCodeAt(0)===95)continue;r[k]=enc(o[k])}return r};
+  ref(S);
+  for(let qi=0;qi<queue.length;qi++){const o=queue[qi],id=ids.get(o);let e;
+    if(Array.isArray(o)){const a=new Array(o.length);for(let k=0;k<o.length;k++)a[k]=enc(o[k]);e={a}}
+    else if(ArrayBuffer.isView(o)){const nm=o.constructor.name;if(!TYPED[nm])throw new Error("Stav: pole "+nm+" nejde uložit");e={t:nm,d:b64enc(new Uint8Array(o.buffer,o.byteOffset,o.byteLength))}}
+    else if(o instanceof Map){const m=[];for(const [k,v] of o)m.push([enc(k),enc(v)]);e={m}}
+    else if(o instanceof Set){const s=[];for(const v of o)s.push(enc(v));e={s}}
+    else{const P=Object.getPrototypeOf(o);if(P===Object.prototype||P===null)e={o:obj(o)};
+      else{const cn=P.constructor&&P.constructor.name;if(!STATE_CLASSES[cn])throw new Error("Stav: objekt třídy "+cn+" nejde uložit");e={c:cn,o:obj(o)}}}
+    objs[id]=e}
+  return JSON.stringify(Object.assign({format:"osady-stav",formatVersion:STATE_FORMAT,game:GAME_VERSION},extra||{},{objs}))}
+
+// text JSON (nebo už přečtený objekt) → stav simulace S
+function loadState(src){const J=typeof src==="string"?JSON.parse(src):src;
+  if(!J||J.format!=="osady-stav")throw new Error("Tohle není uložený stav hry.");
+  if(J.formatVersion!==STATE_FORMAT)throw new Error("Stav je ve formátu "+J.formatVersion+", hra umí "+STATE_FORMAT+".");
+  const E=J.objs,O=new Array(E.length),fix=[];
+  for(let i=0;i<E.length;i++){const e=E[i];
+    if(e.a)O[i]=new Array(e.a.length);
+    else if(e.t){const C=TYPED[e.t];if(!C)throw new Error("Stav: neznámé pole "+e.t);const u8=b64dec(e.d);O[i]=new C(u8.buffer,0,u8.byteLength/C.BYTES_PER_ELEMENT)}
+    else if(e.m)O[i]=new Map();else if(e.s)O[i]=new Set();
+    else if(e.c){const C=STATE_CLASSES[e.c];if(!C)throw new Error("Stav: neznámá třída "+e.c);O[i]=Object.create(C.prototype)}
+    else O[i]={}}
+  const dec=(v,host,key)=>{if(v===null||typeof v!=="object")return v;
+    if(v.$r!==undefined)return O[v.$r];if(v.$n!==undefined)return Number(v.$n);if(v.$u)return undefined;
+    if(v.$rng!==undefined)return mulberry32(v.$rng);if(v.$fw!==undefined){fix.push([host,key,v.$fw]);return null}
+    throw new Error("Stav: neznámá hodnota")};
+  for(let i=0;i<E.length;i++){const e=E[i],o=O[i];
+    if(e.a){for(let k=0;k<e.a.length;k++)o[k]=dec(e.a[k],o,k)}
+    else if(e.m){for(const [k,v] of e.m)o.set(dec(k),dec(v))}
+    else if(e.s){for(const v of e.s)o.add(dec(v))}
+    else if(e.o){for(const k in e.o)o[k]=dec(e.o[k],o,k)}}
+  for(const [host,key,fid] of fix)host[key]=frameW(O[fid]);
+  return O[0]}
 
 // ---- sim/1_sit/10_sit.js ----
 // Silniční síť: uzly (křižovatky, konce, body na kruhu, ruční rozdělení) a úseky mezi nimi.
@@ -1795,7 +1888,8 @@ function lotRect(S,b){const cells=b.tiles.filter(j=>S.role[j]===R_LOT);if(!cells
 function lotFrames(r){const X0=r.x0*CS,X1=(r.x1+1)*CS,Y0=r.y0*CS,Y1=(r.y1+1)*CS;
   return [{id:0,d:[0,1],p:[1,0],O:[X0,Y0],Wd:X1-X0,D:Y1-Y0},{id:1,d:[0,-1],p:[1,0],O:[X0,Y1],Wd:X1-X0,D:Y1-Y0},
           {id:2,d:[1,0],p:[0,1],O:[X0,Y0],Wd:Y1-Y0,D:X1-X0},{id:3,d:[-1,0],p:[0,1],O:[X1,Y0],Wd:Y1-Y0,D:X1-X0}]}
-const frameW=F=>(dep,lat)=>[F.O[0]+F.d[0]*dep+F.p[0]*lat,F.O[1]+F.d[1]*dep+F.p[1]*lat];
+// převod souřadnic rámu parkoviště na mapu; f.F nese rám, aby šel stav uložit (03_stav.js)
+const frameW=F=>{const f=(dep,lat)=>[F.O[0]+F.d[0]*dep+F.p[0]*lat,F.O[1]+F.d[1]*dep+F.p[1]*lat];f.F=F;return f};
 // bod napojení na silnici pro hrdlo v bodě T (okraj pozemku), směr ven -d: {e,u,side,x,y,E} nebo null
 function roadAt(S,T,d){const ox=T[0]-d[0]*0.25,oy=T[1]-d[1]*0.25;const c=cellAt(ox,oy);if(c<0||!S.cellG[c])return null;let best=null;
   for(const e of edgesNear(S,ox,oy,1)){if(e.dead||!RK[e.kind].front||e.ring||!isGroundEdge(S,e))continue;
@@ -2446,6 +2540,7 @@ function addLog(S,text,tile){S.log.unshift({day:dayOf(S),hour:hourOf(S),text,til
 <script>
 (function(){
 "use strict";
+const BUILD_ID="98ba4898fd";
 // ---- ui/0_zaklad.js ----
 // Rozhraní: společný stav, kamera, barvy, terén. Soubory v src/ui sdílejí jeden obal (build.js).
 const cv=document.getElementById("map"),ctx=cv.getContext("2d");
@@ -2864,7 +2959,7 @@ function render(){
     if(z>=7){ctx.fillStyle="rgba(255,214,120,"+(na*2.2).toFixed(2)+")";for(const b of S.buildings){if(!isHome(b)||b.away>=b.pop*0.8)continue;const x=tx(b.front),y=ty(b.front);if(x<x0-1||x>x1+1||y<y0-1||y>y1+1)continue;ctx.fillRect(wxOf(b.front)-0.11,wyOf(b.front)-0.11,0.22,0.22)}}}
   ctx.setTransform(dpr*z,0,0,dpr*z,-cam.x*dpr,-cam.y*dpr);
   strokeTarget(UI.pinned,colors.ink);if(UI.hover&&!UI.draw&&!(UI.tool==="build"&&!UI.rebuild))strokeTarget(UI.hover,colors.accent);
-  drawTrace();drawPreview();
+  drawTrace();drawPreview();drawReport();
   if(flash){const age=(performance.now()-flash.t)/1000;if(age>2.4)flash=null;else{ctx.strokeStyle=colors.accent;ctx.globalAlpha=Math.max(0,1-age/2.4);ctx.lineWidth=3/z;ctx.beginPath();ctx.arc(flash.x,flash.y,0.8+age*1.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}}
   drawLabels();drawCursorLabel()}
 
@@ -3013,7 +3108,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
   let groups="",cur=null;for(const a of acts){if(a.group!==cur){cur=a.group;groups+=`<span class="lbl">${esc(cur)}</span>`}groups+=`<button data-act="${a.act}" aria-pressed="${a.pressed?"true":"false"}">${esc(a.label)}</button>`}
   return`<span class="pin">${UI.pinned?"vybráno · Esc":"klikni Rukou pro výběr"}</span><h3>${esc(title)}</h3>${sub?`<div class="sub">${esc(sub)}</div>`:""}
     <div class="rows">${rows.map(r=>`<span>${esc(r[0])}</span><b>${esc(r[1])}</b>`).join("")}</div>${why?`<p class="why${ok?" ok":""}">${esc(why)}</p>`:""}${acts.length?`<div class="acts">${groups}</div>`:""}`}
-function updateSel(){const t=UI.pinned||(UI.draw||UI.connDrag||UI.editDrag||UI.tool==="conn"||UI.tool==="edit"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
+function updateSel(){if(UI.report){$("sel").hidden=true;return}const t=UI.pinned||(UI.draw||UI.connDrag||UI.editDrag||UI.tool==="conn"||UI.tool==="edit"?null:UI.hover);const el=$("sel");if(!t){el.hidden=true;return}const h=selHTML(t);if(!h){el.hidden=true;if(UI.pinned===t)UI.pinned=null;return}el.hidden=false;el.innerHTML=h}
 $("sel").addEventListener("click",ev=>{const btn=ev.target.closest("[data-act]");if(!btn)return;const t=UI.pinned||UI.hover;if(!t)return;const a=btn.dataset.act;let r={ok:true};
   if(t.type==="edge"){const e=S.edges[t.id];
     if(a.startsWith("kind:")){runPlan(planKind(S,e,a.slice(5)),commitKind,"Změna druhu silnice");return}
@@ -3025,6 +3120,154 @@ $("sel").addEventListener("click",ev=>{const btn=ev.target.closest("[data-act]")
   else if(t.type==="bld"&&a==="demolish"){r=demolishBuilding(S,t.b,false);if(r.ok){toast("Zbouráno za "+fmt(r.cost)+" Kč");UI.pinned=null}}
   else if(t.type==="cell"&&a.startsWith("zone:"))S.zone[t.c]=+a.slice(5);
   if(r&&!r.ok)toast(r.msg);UI.selDirty=true;updateSel()});
+
+// ---- ui/3_hlaseni.js ----
+// ---- Hlášení: hráč popíše, co vidí, očísluje prvky na mapě a uloží snímek, popis, celý stav hry ----
+// a posledních 30 s pohybu do složky hlaseni vedle hry (File System Access v Chrome a Edge; jinde
+// jeden soubor ke stažení). Stav se nahraje v Pravidla → Test → Nahrát stav nebo v tests/hlaseni.js.
+
+const REP_HIST=60,REP_DT=0.5,REP_COL="#d6336c";   // historie: 60 vzorků po 0,5 s herního času
+let repHist=[],repHistT=-1,repHistS=null,repDirH=null;
+const r3=v=>typeof v==="number"&&isFinite(v)?Math.round(v*1000)/1000:null;
+// průběžná historie poloh a stavů aut a chodců (volá ji hlavní smyčka)
+function recordHistory(){if(repHistS!==S){repHist=[];repHistT=-1;repHistS=S}if(S.time-repHistT<REP_DT-1e-9)return;repHistT=S.time;
+  const cars=[];for(const c of S.cars){if(c.dead)continue;const q=carPose(c);const l=c.state==="drive"?c.links[c.li]:-1;
+    cars.push([c.id,q?r3(q.x):null,q?r3(q.y):null,c.state,l,c.lane,r3(c.s),r3(c.v),r3(c.wait||0),c.conn?c.conn.node:-1])}
+  const walkers=[];for(const w of S.walkers){if(w.dead)continue;const q=walkerPose(w);walkers.push([w.id,q?r3(q[0]):null,q?r3(q[1]):null,w.state])}
+  repHist.push({t:r3(S.time),cars,walkers});if(repHist.length>REP_HIST)repHist.shift()}
+
+// ---- režim hlášení ----
+function reportOpen(){if(UI.report)return;UI.report={marks:[],prevSpeed:speed};setSpeed(0);UI.draw=null;UI.plan=null;UI.editDrag=null;UI.connDrag=null;UI.pinned=null;
+  $("report").hidden=false;$("repBtn").setAttribute("aria-pressed","true");$("repText").value="";renderMarks();updateRepDir();UI.selDirty=true;setTimeout(()=>{try{$("repText").focus()}catch(e){}},0)}
+function reportClose(){const r=UI.report;if(!r)return;UI.report=null;$("report").hidden=true;$("repBtn").setAttribute("aria-pressed","false");setSpeed(r.prevSpeed);UI.selDirty=true}
+const bName=b=>!b?"–":b.isGate?"svět (okraj mapy)":(isHome(b)?b.name:KIND[b.type]?KIND[b.type].name:b.type)+(b.town&&b.town.name?" ("+b.town.name+")":"")+(b.id!==undefined?" #"+b.id:"");
+// klik do mapy v režimu hlášení: auto / chodec / budova / křižovatka / úsek / místo
+function reportMark(wx,wy){const r=UI.report;if(!r)return;const mv=pickMover(wx,wy),h=mv?null:hitTest(wx,wy);let m;
+  if(mv&&mv.type==="car")m={type:"car",o:mv.c};else if(mv&&mv.type==="walker")m={type:"walker",o:mv.w};
+  else if(h&&h.type==="bld")m={type:"bld",o:h.b};else if(h&&h.type==="node")m={type:"node",o:S.nodes[h.id]};
+  else if(h&&h.type==="edge"){const e=S.edges[h.id];m={type:"edge",o:e,u:nearestOn(e.g,wx,wy).u}}
+  else m={type:"point",x:wx,y:wy};
+  if(m.o&&r.marks.some(q=>q.o===m.o)){toast("Tenhle prvek už v hlášení je");return}
+  m.note="";r.marks.push(m);renderMarks()}
+function markPos(m){const o=m.o;
+  if(m.type==="car"){const q=!o.dead&&carPose(o);if(q)m.last=[q.x,q.y];return m.last||null}
+  if(m.type==="walker"){const q=!o.dead&&walkerPose(o);if(q)m.last=[q[0],q[1]];return m.last||null}
+  if(m.type==="bld"){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const j of o.tiles){const x=wxOf(j),y=wyOf(j);x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}m.box=[x0-CS/2,y0-CS/2,x1+CS/2,y1+CS/2];return [(x0+x1)/2,(y0+y1)/2]}
+  if(m.type==="node")return [o.x,o.y];
+  if(m.type==="edge"){if(o.dead)return m.last||null;const p=pointAt(o.g,Math.min(m.u,o.g.len));m.last=[p.x,p.y];return m.last}
+  return [m.x,m.y]}
+function markLabel(m){const o=m.o;
+  if(m.type==="car")return (o.truck?"Nákladní auto ":"Auto ")+o.id+(o.dead?" (už nejede)":"");
+  if(m.type==="walker")return "Chodec "+o.id+(o.dead?" (už nejde)":"");
+  if(m.type==="bld")return bName(o)+(o.dead?" (zbouráno)":"");
+  if(m.type==="node")return (o.edges.length>=3?"Křižovatka ":"Uzel ")+o.id;
+  if(m.type==="edge")return "Úsek "+o.id+" · "+RK[o.kind].name+" "+o.lf+"+"+o.lb+(o.dead?" (už není)":"");
+  return "Místo "+m.x.toFixed(1)+", "+m.y.toFixed(1)}
+// podrobnosti pro popis.md (pro Claude)
+function markDetail(m){const o=m.o,f=v=>v===undefined||v===null?"–":typeof v==="number"?String(r3(v)):String(v);
+  if(m.type==="car"){const t=o.trip||{};const l=o.state==="drive"?o.links[o.li]:o.state==="exit"?o.links[0]:-1;const e=l>=0?S.edges[l>>1]:null;
+    return `id ${o.id}, stav ${o.state}`+(l>=0?`, úsek ${l>>1} směr ${l&1} pruh ${o.lane}, poloha ${f(o.s)} z ${f(e&&e.g.len)}`:"")+`, rychlost ${f(o.v)}, čeká ${f(o.wait)} s`+
+      (o.conn?`, v křižovatce ${o.conn.node}`:"")+(o.turnWait?", čeká na odbočení":"")+`, trasa úsek ${o.li+1} z ${o.links?o.links.length:0}, účel ${f(t.purpose)}, z ${bName(t.from)} do ${bName(t.to)}`}
+  if(m.type==="walker"){const t=o.trip||{};return `id ${o.id}, stav ${o.state}, čeká ${f(o.wait)} s, z ${bName(t.from)} do ${bName(t.to)}`}
+  if(m.type==="bld")return `id ${o.id}, druh ${o.type}, ${o.tiles.length} buněk, obyvatel ${f(o.pop)}, na parkovišti ${f(o.parked)} z ${f(o.cap)}, příjezd `+(o.access?`úsek ${o.access.e} u ${f(o.access.u)} strana ${o.access.side}`:"žádný");
+  if(m.type==="node"){const C=["automaticky","přednost zprava","hlavní silnice","semafor"];return `id ${o.id}, ${o.edges.length} ${o.edges.length>=2&&o.edges.length<=4?"ramena":"ramen"} (úseky ${o.edges.join(", ")}), pravidlo ${C[o.ctl]||o.ctl} (${o.eff}), v ploše ${o.box.length} aut`+(o.ring?", kruhový objezd":"")+`, poloha ${f(o.x)}, ${f(o.y)}`}
+  if(m.type==="edge")return `id ${o.id}, ${RK[o.kind].name}, pruhy ${o.lf}+${o.lb}, délka ${f(o.g.len)}, uzly ${o.a} → ${o.b}, vytížení ${f(o.cong[0])} / ${f(o.cong[1])}, aut ve frontách ${o.q[0].reduce((a,q)=>a+q.length,0)} / ${o.q[1].reduce((a,q)=>a+q.length,0)}, klik u ${f(m.u)}`;
+  const c=cellAt(m.x,m.y);return `poloha ${f(m.x)}, ${f(m.y)}, buňka ${c}, terén ${c>=0?S.terrain[c]:"–"}, silnic v buňce ${c>=0?S.roadCnt[c]:0}`}
+function markData(m,i){const p=markPos(m);return {n:i+1,type:m.type,id:m.o?m.o.id:null,x:p?r3(p[0]):null,y:p?r3(p[1]):null,u:m.u!==undefined?r3(m.u):undefined,note:m.note,label:markLabel(m),detail:markDetail(m)}}
+function renderMarks(){const r=UI.report;if(!r)return;const ol=$("repMarks");ol.innerHTML="";
+  if(!r.marks.length){const li=document.createElement("li");li.className="empty";li.textContent="Zatím nic. Klikni do mapy na to, o čem píšeš.";ol.appendChild(li);return}
+  r.marks.forEach((m,i)=>{const li=document.createElement("li");const n=document.createElement("b");n.textContent=i+1;const sp=document.createElement("span");sp.textContent=markLabel(m);
+    const inp=document.createElement("input");inp.type="text";inp.placeholder="poznámka";inp.value=m.note;inp.addEventListener("input",()=>{m.note=inp.value});
+    const x=document.createElement("button");x.type="button";x.textContent="×";x.title="Odebrat";x.setAttribute("aria-label","Odebrat "+(i+1));x.addEventListener("click",()=>{r.marks.splice(i,1);renderMarks()});
+    li.append(n,sp,x,inp);ol.appendChild(li)})}
+// čísla na mapě (a tím i na snímku)
+function drawReport(){const r=UI.report;if(!r||!r.marks.length)return;const z=cam.z,R=Math.max(0.16,10/z);
+  ctx.save();ctx.lineWidth=Math.max(0.03,2.5/z);ctx.strokeStyle=REP_COL;ctx.textAlign="center";ctx.textBaseline="middle";ctx.font=`600 ${Math.max(0.12,11/z)}px "IBM Plex Sans",system-ui,sans-serif`;
+  r.marks.forEach((m,i)=>{const p=markPos(m);if(!p)return;
+    if(m.type==="edge"&&!m.o.dead){ctx.save();ctx.globalAlpha=0.35;ctx.lineWidth=m.o.w||0.6;ctx.lineCap="butt";const q=m.o.g.pts;ctx.beginPath();ctx.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)ctx.lineTo(q[k],q[k+1]);ctx.stroke();ctx.restore()}
+    if(m.type==="bld"&&m.box){const b=m.box;ctx.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1])}
+    else{ctx.beginPath();ctx.arc(p[0],p[1],R,0,Math.PI*2);ctx.stroke()}
+    const bx=p[0]+R*0.95,by=p[1]-R*0.95;ctx.fillStyle=REP_COL;ctx.beginPath();ctx.arc(bx,by,R*0.75,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.fillText(String(i+1),bx,by+R*0.03)});
+  ctx.restore()}
+
+// ---- uložení ----
+const pad2=v=>String(v).padStart(2,"0");
+const clock=S0=>{const h=hourOf(S0);return pad2(Math.floor(h))+":"+pad2(Math.floor((h%1)*60))};
+function repSlug(t){return t.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim().split(" ").slice(0,5).join("-").slice(0,32)}
+async function gzipBlob(text){if(typeof CompressionStream==="undefined")return null;return await new Response(new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"))).blob()}
+function popisMd(meta){const L=[];const d=new Date(meta.saved);
+  L.push("# Hlášení "+meta.id,"");
+  L.push(`- Uloženo: ${d.getDate()}. ${d.getMonth()+1}. ${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`);
+  L.push(`- Hra: verze ${meta.game}, sestavení ${meta.build}, mapa (seed) ${meta.seed}`);
+  L.push(`- Herní čas: den ${meta.day}, ${meta.clock} (S.time ${meta.time} s), rychlost před hlášením ${meta.speed}×`);
+  L.push(`- Výřez: střed ${meta.camera.center.map(v=>r3(v)).join(", ")}, přiblížení ${r3(meta.camera.z)} px na pole, nástroj ${meta.tool}${meta.overlay?", vytížení zapnuté":""}`);
+  L.push(`- Soubory: mapa.png (snímek s čísly)`+(meta.files.includes("stav.json.gz")?", stav.json.gz (celý stav: Pravidla → Test → Nahrát stav, nebo node tests/hlaseni.js)":"")+(meta.files.includes("historie.json.gz")?", historie.json.gz (posledních "+Math.round(meta.histSec)+" s pohybu)":""));
+  if(meta.stateError)L.push("- Stav se nepodařilo uložit: "+meta.stateError);
+  L.push("","## Popis","",meta.text||"(bez popisu)","","## Vybrané prvky","");
+  if(!meta.marks.length)L.push("(žádné)");
+  for(const m of meta.marks){L.push(`${m.n}. **${m.label}**`+(m.note?" – "+m.note:""));L.push("   "+m.detail)}
+  return L.join("\n")+"\n"}
+// IndexedDB: pamatuje si vybranou složku (FileSystemDirectoryHandle) mezi spuštěními
+function idbOpen(){return new Promise((res,rej)=>{const q=indexedDB.open("osady",1);q.onupgradeneeded=()=>q.result.createObjectStore("kv");q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function kvGet(k){try{const db=await idbOpen();return await new Promise(res=>{const t=db.transaction("kv").objectStore("kv").get(k);t.onsuccess=()=>res(t.result||null);t.onerror=()=>res(null)})}catch(e){return null}}
+async function kvSet(k,v){try{const db=await idbOpen();await new Promise(res=>{const t=db.transaction("kv","readwrite");t.objectStore("kv").put(v,k);t.oncomplete=res;t.onerror=res})}catch(e){}}
+// složka pro hlášení: zapamatovaná (s povolením zápisu), jinak výběr; pick = vždy vybrat znovu
+async function reportDir(pick){if(!window.showDirectoryPicker)return null;
+  let h=pick?null:repDirH||await kvGet("hlaseni");
+  if(h){let p="denied";try{p=await h.queryPermission({mode:"readwrite"});if(p!=="granted")p=await h.requestPermission({mode:"readwrite"})}catch(e){}if(p==="granted"){repDirH=h;return h}}
+  h=await window.showDirectoryPicker({id:"osady-hlaseni",mode:"readwrite"});repDirH=h;await kvSet("hlaseni",h);updateRepDir();return h}
+async function updateRepDir(){const el=$("repDir");if(!window.showDirectoryPicker){el.textContent="Tento prohlížeč neumí zapisovat do složky: hlášení se stáhne jako jeden soubor.";$("repPick").hidden=true;return}
+  const h=repDirH||await kvGet("hlaseni");el.textContent=h?"Složka: "+h.name:"Složka: vybereš při prvním uložení (OneDrive\\GIT\\Silnice\\hlaseni)";$("repPick").hidden=false}
+async function writeReport(dir,id,files){
+  if(dir){const d=await dir.getDirectoryHandle(id,{create:true});for(const [n,b] of files){const fh=await d.getFileHandle(n,{create:true});const w=await fh.createWritable();await w.write(b);await w.close()}return dir.name+"/"+id}
+  // záloha bez přístupu ke složce: jeden soubor ke stažení (tests/hlaseni.js ho umí přečíst)
+  const pack={format:"osady-hlaseni",id,files:{}};for(const [n,b] of files)pack.files[n]=b64enc(new Uint8Array(await b.arrayBuffer()));
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(pack)],{type:"application/json"}));a.download="hlaseni_"+id+".json";
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},5000);return "soubor ke stažení hlaseni_"+id+".json"}
+async function reportSave(){const r=UI.report;if(!r)return;const btn=$("repSave");if(btn.disabled)return;btn.disabled=true;
+  try{let dir=null;
+    // složku vybrat hned po kliknutí (prohlížeč to dovolí jen krátce po kliknutí)
+    if(window.showDirectoryPicker){try{dir=await reportDir(false)}catch(e){if(e&&e.name==="AbortError"){toast("Hlášení neuloženo: nebyla vybrána složka");return}dir=null}}
+    const text=$("repText").value.trim(),now=new Date();
+    const id=`${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}_${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`+(repSlug(text)?"_"+repSlug(text):"");
+    render();const png=await new Promise(res=>cv.toBlob(res,"image/png"));
+    const c=toWorld(vw/2,vh/2);
+    const meta={format:"osady-hlaseni",id,text,saved:now.toISOString(),game:GAME_VERSION,build:typeof BUILD_ID!=="undefined"?BUILD_ID:"?",seed:S.seed,time:r3(S.time),day:dayOf(S),clock:clock(S),
+      speed:r.prevSpeed,camera:{x:cam.x,y:cam.y,z:cam.z,vw,vh,center:c},tool:UI.tool,overlay,histSec:repHist.length?repHist[repHist.length-1].t-repHist[0].t:0,marks:r.marks.map(markData),files:["popis.md","hlaseni.json","mapa.png"]};
+    const files=[];if(png)files.push(["mapa.png",png]);
+    let stav=null;try{stav=saveState(S,{saved:meta.saved,build:meta.build,camera:meta.camera})}catch(e){meta.stateError=e.message}
+    if(stav){const gz=await gzipBlob(stav);if(gz){files.push(["stav.json.gz",gz]);meta.files.push("stav.json.gz")}else{files.push(["stav.json",new Blob([stav])]);meta.files.push("stav.json")}}
+    const hist=JSON.stringify({dt:REP_DT,cars:["id","x","y","stav","odkaz (úsek*2+směr)","pruh","s","v","čeká","křižovatka"],walkers:["id","x","y","stav"],samples:repHist});
+    const hg=await gzipBlob(hist);if(hg){files.push(["historie.json.gz",hg]);meta.files.push("historie.json.gz")}
+    files.unshift(["popis.md",new Blob([popisMd(meta)],{type:"text/markdown"})],["hlaseni.json",new Blob([JSON.stringify(meta,null,1)],{type:"application/json"})]);
+    const where=await writeReport(dir,id,files);toast("Hlášení uloženo: "+where);reportClose()}
+  catch(e){toast("Hlášení se nepodařilo uložit: "+(e&&e.message||e))}
+  finally{btn.disabled=false}}
+
+// ---- nahrání stavu (Pravidla → Test) ----
+async function readStateFile(file){let J;
+  if(/\.gz$/i.test(file.name)){if(typeof DecompressionStream==="undefined")throw new Error("Prohlížeč neumí rozbalit .gz");J=JSON.parse(await new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).text())}
+  else J=JSON.parse(await file.text());
+  // záložní soubor hlášení (vše v jednom): vytáhnout stav
+  if(J&&J.format==="osady-hlaseni"&&J.files){const gz=J.files["stav.json.gz"],raw=J.files["stav.json"];if(!gz&&!raw)throw new Error("V hlášení není uložený stav.");
+    const u8=b64dec(gz||raw);const blob=new Blob([u8]);J=JSON.parse(gz?await new Response(blob.stream().pipeThrough(new DecompressionStream("gzip"))).text():await blob.text())}
+  return J}
+function applyLoaded(J){const S2=loadState(J);S=S2;repHist=[];repHistS=S;UI.pinned=null;UI.hover=null;UI.draw=null;UI.plan=null;UI.editEdge=null;UI.editDrag=null;UI.connNode=null;UI.connDrag=null;
+  if(UI.report)reportClose();hideConfirm();readColors();applySettings();
+  if(J.camera&&J.camera.center){cam.z=clamp(J.camera.z,zmin,200);cam.x=J.camera.center[0]*cam.z-vw/2;cam.y=J.camera.center[1]*cam.z-vh/2;clampCam()}else fit();
+  lastLogLen=-1;lastProbKey="";lastOptsKey="";setSpeed(0);updateUI();toast("Stav nahrán: den "+dayOf(S)+", "+clock(S)+". Hra stojí.")}
+async function loadStateFile(file){$("help").hidden=true;
+  try{const J=await readStateFile(file);
+    if(J.game!==GAME_VERSION)askConfirm(`Stav je z verze ${J.game}, hra je ${GAME_VERSION}. Nahrát i tak? (může selhat)`,"Nahrát",()=>{try{applyLoaded(J)}catch(e){toast("Stav se nepodařilo nahrát: "+e.message)}});
+    else applyLoaded(J)}
+  catch(e){toast("Stav se nepodařilo nahrát: "+(e&&e.message||e))}}
+
+$("repBtn").addEventListener("click",()=>{if(UI.report)reportClose();else reportOpen()});
+$("repSave").addEventListener("click",reportSave);
+$("repCancel").addEventListener("click",reportClose);
+$("repPick").addEventListener("click",async()=>{try{await reportDir(true)}catch(e){}});
+$("loadState").addEventListener("click",()=>$("stateFile").click());
+$("stateFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(f)loadStateFile(f)});
 
 // ---- ui/3_vstup.js ----
 // Ovládání: nástroje, stavění silnic (druh, tvar, výška) s přichytáváním, posun a přiblížení mapy.
@@ -3090,7 +3333,7 @@ cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);const [s
   if(ptrs.size===2){stroke=null;pan=null;UI.laneDrag=null;if(UI.draw&&UI.draw.tool!=="curve"&&UI.draw.tool!=="connect"){UI.draw=null;UI.plan=null}const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),cx:(a.x+b.x)/2,cy:(a.y+b.y)/2};return}
   if(ptrs.size>2)return;moved=false;downXY=[sx,sy];
   const [wx,wy]=toWorld(sx,sy);UI.mouse.wx=wx;UI.mouse.wy=wy;UI.mouse.shift=e.shiftKey;
-  if(e.button===1||e.button===2||UI.tool==="hand"){pan={x:sx,y:sy,cx:cam.x,cy:cam.y,btn:e.button};return}
+  if(e.button===1||e.button===2||UI.tool==="hand"||UI.report){pan={x:sx,y:sy,cx:cam.x,cy:cam.y,btn:e.button};return}
   const t=UI.tool;
   if(t==="build"&&!UI.rebuild){const sh=UI.shape;
     if(sh==="line"){UI.draw={tool:"line",start:snapAny(wx,wy,UI.level,e.shiftKey)};refreshPlan()}
@@ -3127,6 +3370,7 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
   if(pinch){if(ptrs.size<2)pinch=null;return}
   if(!had)return;
   if(pan){const click=!moved;const btn=pan.btn;pan=null;
+    if(click&&UI.report&&btn===0){const [wx,wy]=toWorld(sx,sy);reportMark(wx,wy);UI.selDirty=true;return}
     if(click&&btn===2){if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;UI.selDirty=true}
     else if(click&&UI.tool==="hand"){const [wx,wy]=toWorld(sx,sy);UI.pinned=pickMover(wx,wy)||hitTest(wx,wy);UI.selDirty=true}
     return}
@@ -3189,9 +3433,10 @@ window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("inp
   else if(shp[k]&&!e.ctrlKey&&!e.metaKey)setShape(shp[k]);
   else if(e.key===" "){e.preventDefault();if(speed){prevSpeed=speed;setSpeed(0)}else setSpeed(prevSpeed||1)}
   else if(k==="v")$("ovl").click();
+  else if(k==="r"&&!e.ctrlKey&&!e.metaKey){if(!UI.report)reportOpen()}
   else if(k==="q"){UI.level=Math.max(0,UI.level-1);lastOptsKey="";updateOpts();refreshPlan()}
   else if(k==="e"){UI.level=Math.min(2,UI.level+1);lastOptsKey="";updateOpts();refreshPlan()}
-  else if(e.key==="Escape"){if(!$("confirm").hidden)hideConfirm();else if(UI.editDrag){UI.editDrag=null;UI.plan=null}else if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;$("help").hidden=true;UI.selDirty=true}
+  else if(e.key==="Escape"){if(!$("confirm").hidden)hideConfirm();else if(UI.report){if(!UI.report.marks.length&&!$("repText").value.trim())reportClose()}else if(UI.editDrag){UI.editDrag=null;UI.plan=null}else if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;$("help").hidden=true;UI.selDirty=true}
   else if(e.key==="Shift"){UI.mouse.shift=true;if(UI.draw)refreshPlan()}
   else if(e.key.startsWith("Arrow")){e.preventDefault();keysDown.add(e.key)}
   else if(e.key==="+"||e.key==="=")zoomAt(vw/2,vh/2,1.2);else if(e.key==="-")zoomAt(vw/2,vh/2,1/1.2)});
@@ -3254,10 +3499,11 @@ let lastT=performance.now(),acc=0,lastUI=0;
 function frame(now){const dt=Math.min(0.1,(now-lastT)/1000);lastT=now;
   if(keysDown.size){const v=600*dt;if(keysDown.has("ArrowLeft"))cam.x-=v;if(keysDown.has("ArrowRight"))cam.x+=v;if(keysDown.has("ArrowUp"))cam.y-=v;if(keysDown.has("ArrowDown"))cam.y+=v;clampCam()}
   if(speed>0){acc+=dt*speed;let n=0;while(acc>=STEP&&n<24){step(S,STEP);acc-=STEP;n++}if(n>=24)acc=0}
+  recordHistory();
   try{render()}catch(err){console.error(err)}
   if(now-lastUI>300||UI.selDirty){updateUI();lastUI=now;UI.selDirty=false}requestAnimationFrame(frame)}
 updateUI();requestAnimationFrame(frame);
-window.__osady={get S(){return S},cam,UI,carPose:c=>carPose(c),ui:{connMarks,toWorld}};
+window.__osady={get S(){return S},cam,UI,carPose:c=>carPose(c),ui:{connMarks,toWorld},report:{open:reportOpen,mark:reportMark,save:reportSave,hist:()=>repHist,load:J=>applyLoaded(J)}};
 
 })();
 </script>

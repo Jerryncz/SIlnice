@@ -466,7 +466,29 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
   kreslí pod silnicí.
 - **Nastavení** (v okně Pravidla): po jaké době to zaseknuté auto vzdá;
   pamatuje si ho prohlížeč. Oddíl **Test** přidá peníze (+10 000 Kč,
-  +100 000 Kč) pro zkoušení; kronika to zapíše.
+  +100 000 Kč) pro zkoušení (kronika to zapíše) a **Nahrát stav…** nahraje
+  stav uložený v hlášení (soubor `stav.json.gz`). Nahraná hra stojí; stav
+  z jiné verze se nahraje jen po potvrzení a může selhat.
+- **Hlášení** (tlačítko vpravo nahoře, klávesa R): když něco nefunguje, jak
+  má, nebo hráč chce něco navrhnout. Hra se zastaví, otevře se panel
+  s textem; klik do mapy přidá číslovaný prvek (auto, chodec, budova,
+  křižovatka, úsek nebo místo), tah posouvá mapu, ke každému prvku jde
+  napsat poznámka a × ho odebere. Čísla jsou vidět na mapě i na snímku.
+  **Uložit** zapíše do vybrané složky (doporučeno
+  `OneDrive\GIT\Silnice\hlaseni`) podsložku `datum_čas_začátek-popisu`:
+  - `popis.md` – text, vybrané prvky s podrobnostmi, verze, otisk sestavení,
+    herní čas, výřez;
+  - `mapa.png` – snímek mapy s čísly;
+  - `stav.json.gz` – celý stav hry (silnice, budovy, obce, auta, chodci,
+    peníze, i stav náhody), takže nahraná hra pokračuje přesně stejně;
+  - `historie.json.gz` – polohy a stavy aut a chodců za posledních 30 s
+    herního času (každou půlsekundu);
+  - `hlaseni.json` – totéž co popis, strojově.
+  Složku si prohlížeč pamatuje; po novém spuštění se jednou zeptá na
+  povolení zápisu. Prohlížeč bez zápisu do složky (Firefox, Safari)
+  hlášení stáhne jako jeden soubor `hlaseni_….json`. Zrušit panel zavře
+  bez uložení; Esc ho zavře, jen když je prázdný. Hlášení nic ve hře
+  nemění.
 - **Co řešit**: nejvýš 8 nejdůležitějších problémů a tipů (červené = blokuje
   dopravu, oranžové = brzdí rozvoj, modré = příležitost), každý s radou;
   klik přenese na místo.
@@ -490,7 +512,9 @@ Nástroj Ruka ukáže trasy na mapě:
 
 ## 10. Co hra zatím nedělá
 
-- Neukládá rozehranou hru (`napady/ukladani_hry.md`).
+- Neukládá rozehranou hru pro hráče (pozice, automatické ukládání);
+  celý stav jde jen uložit hlášením a nahrát v Test (`napady/ukladani_hry.md`).
+  Uložený stav se mezi verzemi nepřevádí.
 - Nemá železnici, kopce ani typy obcí (`napady/`).
 - Má jen tři vzory mimoúrovňových křižovatek (kosodélník, čtyřlístek,
   trubka); jiné se staví z mostů a nájezdů.

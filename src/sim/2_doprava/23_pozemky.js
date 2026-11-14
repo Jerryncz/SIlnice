@@ -22,7 +22,8 @@ function lotRect(S,b){const cells=b.tiles.filter(j=>S.role[j]===R_LOT);if(!cells
 function lotFrames(r){const X0=r.x0*CS,X1=(r.x1+1)*CS,Y0=r.y0*CS,Y1=(r.y1+1)*CS;
   return [{id:0,d:[0,1],p:[1,0],O:[X0,Y0],Wd:X1-X0,D:Y1-Y0},{id:1,d:[0,-1],p:[1,0],O:[X0,Y1],Wd:X1-X0,D:Y1-Y0},
           {id:2,d:[1,0],p:[0,1],O:[X0,Y0],Wd:Y1-Y0,D:X1-X0},{id:3,d:[-1,0],p:[0,1],O:[X1,Y0],Wd:Y1-Y0,D:X1-X0}]}
-const frameW=F=>(dep,lat)=>[F.O[0]+F.d[0]*dep+F.p[0]*lat,F.O[1]+F.d[1]*dep+F.p[1]*lat];
+// převod souřadnic rámu parkoviště na mapu; f.F nese rám, aby šel stav uložit (03_stav.js)
+const frameW=F=>{const f=(dep,lat)=>[F.O[0]+F.d[0]*dep+F.p[0]*lat,F.O[1]+F.d[1]*dep+F.p[1]*lat];f.F=F;return f};
 // bod napojení na silnici pro hrdlo v bodě T (okraj pozemku), směr ven -d: {e,u,side,x,y,E} nebo null
 function roadAt(S,T,d){const ox=T[0]-d[0]*0.25,oy=T[1]-d[1]*0.25;const c=cellAt(ox,oy);if(c<0||!S.cellG[c])return null;let best=null;
   for(const e of edgesNear(S,ox,oy,1)){if(e.dead||!RK[e.kind].front||e.ring||!isGroundEdge(S,e))continue;

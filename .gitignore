@@ -16,3 +16,10 @@ node_modules/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# hlášení ze hry a uložené stavy (patří do OneDrive, ne do gitu)
+hlaseni/
+hlaseni_*.json
+stav.json
+stav.json.gz
+historie.json.gz

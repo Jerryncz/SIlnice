@@ -125,6 +125,23 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
 .sel .acts button{border:1px solid var(--line);background:var(--panel);font-size:12.5px;padding:5px 9px}
 .sel .acts button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
 .sel .pin{float:right;color:var(--muted);font-size:11px}
+.rep{z-index:3;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 230px)}
+.rep .sub{font-size:12.5px}
+.rep textarea{font:13px/1.4 var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 9px;resize:vertical;min-height:70px;width:100%;box-sizing:border-box}
+.rep>*{flex:none}
+.rep ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.rep li{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:12.5px}
+.rep li.empty{display:block;color:var(--muted)}
+.rep li b{background:#d6336c;color:#fff;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-size:11px;font-family:var(--f-mono)}
+.rep li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rep li input{grid-column:2/4;font:12.5px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 7px;min-width:0}
+.rep li button{border:1px solid var(--line);background:var(--panel);padding:1px 7px;font-size:13px}
+.rep .acts{display:flex;gap:6px;margin:0}
+.rep .acts button{border:1px solid var(--line);background:var(--panel);padding:6px 12px}
+.rep .acts button.go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.rep .acts button:disabled{opacity:.5;cursor:default}
+.rep .dir{margin:0;font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.rep .dir button{border:1px solid var(--line);background:var(--panel);font-size:11.5px;padding:2px 7px}
 .toast{left:50%;top:calc(env(safe-area-inset-top,0px) + 72px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:7px 13px;border-radius:9px;font-weight:500;pointer-events:none;white-space:nowrap;z-index:5;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
 .modal{position:absolute;inset:0;z-index:10;background:rgba(10,14,12,.45);display:grid;place-items:center;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
 .modal .card{max-width:820px;width:100%;max-height:85vh;overflow:auto;padding:20px 22px;background:var(--panel)}
@@ -142,6 +159,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
   .sel{top:auto;width:auto;right:max(16px, env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 150px);max-height:32vh}
   .bottom{left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));transform:none;max-width:none}
   #chron{display:none}
+  .rep{max-height:52vh}
   .opts{flex-wrap:nowrap;overflow-x:auto;width:100%}.opts .grp{flex-wrap:nowrap;flex:none}.opts .hint{display:none}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
@@ -169,6 +187,7 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
   <div class="hud tr">
     <div class="card seg">
       <button id="ovl" aria-pressed="false">Vytížení</button>
+      <button id="repBtn" aria-pressed="false" title="Popsat, co vidíš, a uložit to pro Claude (R)">Hlášení</button>
       <button id="helpBtn">Pravidla</button>
       <button id="newMap">Nová mapa</button>
     </div>
@@ -183,6 +202,14 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
   </div>
 
   <section class="hud card sel" id="sel" hidden></section>
+  <section class="hud card sel rep" id="report" hidden aria-label="Hlášení">
+    <h3>Hlášení</h3>
+    <p class="sub">Hra stojí. Klikni do mapy: auto, chodec, budova, silnice, křižovatka nebo místo dostane číslo. Tahem posuneš mapu.</p>
+    <textarea id="repText" rows="4" placeholder="Co se děje a co by se mělo dít"></textarea>
+    <ol id="repMarks"></ol>
+    <div class="acts"><button class="go" id="repSave">Uložit</button><button id="repCancel">Zrušit</button></div>
+    <p class="dir"><span id="repDir"></span> <button id="repPick">Změnit složku</button></p>
+  </section>
 
   <div class="hud bottom">
     <div class="card confirm" id="confirm" hidden>
@@ -224,8 +251,8 @@ details[open].card summary::after{transform:rotate(-135deg) translateY(-2px)}
       </div>
       <h3>Nastavení</h3>
       <div class="set" id="setStuck"><span>Zaseknuté auto to vzdá po</span><button data-stuck="0">Nikdy</button><button data-stuck="20">20 s</button><button data-stuck="40">40 s</button><button data-stuck="120">2 min</button></div>
-      <div class="set"><span>Test (pro zkoušení)</span><button data-money="10000">+10 000 Kč</button><button data-money="100000">+100 000 Kč</button></div>
-      <p class="keys">Myš: levé tlačítko kreslí, pravé nebo prostřední tlačítko posouvá mapu, kolečko přibližuje, pravý klik zruší rozkreslenou silnici. Dotyk: jeden prst kreslí, dva posouvají a přibližují. Klávesy 1–8 nástroje, A S D F tvar silnice, Q/E výška, mezerník pauza, V vytížení, Esc zrušit.</p>
+      <div class="set"><span>Test (pro zkoušení)</span><button data-money="10000">+10 000 Kč</button><button data-money="100000">+100 000 Kč</button><button id="loadState">Nahrát stav…</button><input type="file" id="stateFile" accept=".gz,.json" hidden></div>
+      <p class="keys">Myš: levé tlačítko kreslí, pravé nebo prostřední tlačítko posouvá mapu, kolečko přibližuje, pravý klik zruší rozkreslenou silnici. Dotyk: jeden prst kreslí, dva posouvají a přibližují. Klávesy 1–9 a 0 nástroje, A S D F G H tvar silnice, Q/E výška, mezerník pauza, V vytížení, R hlášení, Esc zrušit.</p><p class="keys">Hlášení: když něco nefunguje, jak má, stiskni Hlášení (R). Hra se zastaví; napiš, co se děje, a klikni na auta, budovy nebo silnice, o kterých mluvíš (dostanou čísla). Uložit zapíše snímek, popis a celý stav hry do vybrané složky (doporučeno OneDrive\GIT\Silnice\hlaseni). Uložený stav jde nahrát v Test → Nahrát stav.</p>
     </div>
   </div>
 </div>
