@@ -209,7 +209,7 @@ function killOnEdge(S,eid){
     if(c.state==="drive"&&(c.links[c.li]>>1)===eid){removeQ(S,c);leaveBox(S,c);c.state="gone";c.dead=true;releaseVehicle(S,c);continue}
     if(c.state==="exit"&&(c.links[0]>>1)===eid){c.dead=true;c.state="gone";releaseVehicle(S,c);continue}
     for(let k=c.li;k<c.links.length;k++)if((c.links[k]>>1)===eid){c.rerouteFrom=eid;S.reroute.push(c);break}}
-  for(const w of S.walkers){if(w.dead)continue;for(let k=w.li;k<w.links.length;k++)if((w.links[k]>>1)===eid){walkerEnd(S,w,true);break}}}
+}
 function updateCongestion(S,dt){const a=Math.min(1,dt*0.6);
   for(const e of S.edges){if(e.dead)continue;for(let d=0;d<2;d++){const L=d?e.lb:e.lf;if(!L){e.cong[d]=0;continue}let n=0;for(const q of e.q[d])n+=q.length;
     const cap=Math.max(1,e.g.len*L/0.62);e.cong[d]+=(Math.min(1.5,n/cap)-e.cong[d])*a}}}

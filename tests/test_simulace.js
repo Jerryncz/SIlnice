@@ -48,6 +48,10 @@ function zkontroluj(S, kde) {
     if (b.away !== undefined && (b.type === "house" || b.type === "flat")) ok(b.away > -0.01, `${kde}: záporný počet lidí mimo dům ${b.name} (${b.away})`);
     for (const j of b.tiles) ok(!S.roadCnt[j] && S.bld[j] === b, `${kde}: budova ${b.name} na silnici nebo nesedí mapa`);
   }
+  // chodci: do vozovky vstoupí jen na přechodu (nebo přes uličku), a jen když na něj smějí; jdou po chodníkové síti
+  for (const w of S.walkers) { if (w.dead) continue; ok(Array.isArray(w.path) && w.path.length >= 2, `${kde}: chodec bez cesty`);
+    w.spans.forEach((sp, i) => { if (w.s > sp.s0 + 0.02 && w.s < sp.s1 - 0.02) ok(w.state === "cross" && i === w.si && !!w.held, `${kde}: chodec ve vozovce bez povolení (${w.state})`); });
+    if (w.state === "cross") ok(!!w.held, `${kde}: přecházející chodec nedrží přechod`); }
   // příjezdy a parkoviště: cesta od okraje silnice vede jen po příjezdu a uličkách, stání se nepřekrývají s uličkami
   for (const b of S.buildings) { if (b.dead || !b.access) continue;
     ok(!!b.drive, `${kde}: ${b.name} má vjezd bez příjezdu`);
@@ -367,7 +371,7 @@ for (const seed of [1, 4242, 98765]) {
   ok(S.trips > 50, `lidé dojíždějí do cíle (${S.trips})`);
   ok(S.transits > 0, `projíždí tranzit (${S.transits})`);
   ok((S.xCount || 0) > 0, `chodci přecházejí po přechodech (${S.xCount || 0})`);
-  souhrn.prechody = (souhrn.prechody || 0) + (S.xCount || 0); souhrn.vzdali = (souhrn.vzdali || 0) + S.stuckN; souhrn.minuli = (souhrn.minuli || 0) + (S.missed || 0); souhrn.preplanovali = (souhrn.preplanovali || 0) + (S.replanned || 0);
+  souhrn.prechody = (souhrn.prechody || 0) + (S.xCount || 0); souhrn.chodciVzdali = (souhrn.chodciVzdali || 0) + (S.pedAborted || 0); souhrn.chodci = (souhrn.chodci || 0) + (S.pedDone || 0); souhrn.vzdali = (souhrn.vzdali || 0) + S.stuckN; souhrn.minuli = (souhrn.minuli || 0) + (S.missed || 0); souhrn.preplanovali = (souhrn.preplanovali || 0) + (S.replanned || 0);
   const typy = {}; for (const b of S.buildings) typy[b.type] = (typy[b.type] || 0) + 1;
   for (const t in typy) souhrn[t] = (souhrn[t] || 0) + typy[t];
   // bourání za jízdy
@@ -379,6 +383,6 @@ for (const seed of [1, 4242, 98765]) {
   console.log(`  ${S.towns.length} obcí, ${pop1} obyvatel, ${S.buildings.length} budov, ${S.trips} cest, ${S.transits} tranzitů, vývoz ${S.exported} Kč, aut ${S.cars.length}, chodců ${S.walkers.length}`);
   console.log("  " + JSON.stringify(typy));
 }
-console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, prechody: souhrn.prechody, vzdali: souhrn.vzdali, minuli: souhrn.minuli, preplanovali: souhrn.preplanovali }));
+console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, prechody: souhrn.prechody, chodci: souhrn.chodci, chodciVzdali: souhrn.chodciVzdali, vzdali: souhrn.vzdali, minuli: souhrn.minuli, preplanovali: souhrn.preplanovali }));
 console.log(`verze ${A.GAME_VERSION}: ${kontroly} kontrol, ${chyby} chyb`);
 process.exit(chyby ? 1 : 0);

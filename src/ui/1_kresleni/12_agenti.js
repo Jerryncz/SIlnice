@@ -16,12 +16,8 @@ function carPose(c){
   // boční posun do nového pruhu plynule
   const off0=laneOffset(e,d,c.lane);if(c._o===undefined||Math.abs(c._o-off0)>0.9)c._o=off0;else c._o+=(off0-c._o)*0.18;
   const off=c._o,sg=d?-1:1;return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),lvl:lvlAt(S,e,u),L:edgeLayer(e)}}
-function walkerPose(w){
-  if(w.ph==="cross"&&w.cur){const x=w.cur,t=x.go?clamp(w.t,0,1):0;return [x.x0+(x.x1-x.x0)*t,x.y0+(x.y1-x.y0)*t]}
-  const l=w.links[w.li],e=S.edges[l>>1];if(!e||e.dead)return null;const d=l&1;const u=clamp(d?e.g.len-w.s:w.s,0,e.g.len);
-  if(lvlAt(S,e,u)>=0.5)return null;const p=pointAt(e.g,u,_p);const sd=RK[e.kind].side/2;const side=w.sd*(d?-1:1);const off=side>0?e.er-sd:-(e.el-sd);let x=p.x+p.nx*off,y=p.y+p.ny*off;
-  if(w.ph==="out"||w.ph==="in"){const dr=doorXY(w.ph==="out"?w.trip.from:w.trip.to);if(dr){const f=w.ph==="out"?1-w.t:w.t;x+=(dr[0]-x)*f*0.85;y+=(dr[1]-y)*f*0.85}}
-  return [x,y]}
+// chodec na své cestě, kousek vpravo od osy chodníku (protijdoucí se míjejí)
+function walkerPose(w){if(!w.path)return null;const q=pathPose(w.path,w.s);const o=w.state==="walk"?PED_KEEP:0;return [q.x-Math.sin(q.ang)*o,q.y+Math.cos(q.ang)*o]}
 function drawVehicles(layer){if(cam.z<3)return;const blinkOn=((performance.now()/380)|0)%2===0;
   for(const c of S.cars){if(c.dead)continue;const q=carPose(c);if(!q)continue;const L=q.L!==undefined?q.L:q.lvl<0.5?0:q.lvl<1.5?1:2;if(L!==layer||!inView(q.x,q.y,1))continue;
     if(cam.z<6){ctx.fillStyle=c.trip&&c.trip.truck?"#3b4148":c.color;ctx.fillRect(q.x-0.2,q.y-0.2,0.4,0.4);continue}

@@ -78,7 +78,7 @@ function traceSet(t){const out=[];if(!t)return out;
   else if(t.type==="bld"){const b=t.b;for(const c of S.cars){if(c.dead||!c.trip)continue;if(c.trip.to===b)out.push({m:c,car:true,cls:0});else if(c.trip.from===b)out.push({m:c,car:true,cls:1})}
     for(const w of S.walkers){if(w.dead||!w.trip)continue;if(w.trip.to===b)out.push({m:w,car:false,cls:0});else if(w.trip.from===b)out.push({m:w,car:false,cls:1})}}
   else if(t.type==="edge"){const id=t.id;for(const c of S.cars){if(c.dead||!c.links)continue;const k=c.links.findIndex(l=>(l>>1)===id);if(k>=0)out.push({m:c,car:true,cls:0,past:k<c.li})}
-    for(const w of S.walkers){if(w.dead||!w.links)continue;const k=w.links.findIndex(l=>(l>>1)===id);if(k>=0)out.push({m:w,car:false,cls:0,past:k<w.li})}}
+}
   return out}
 function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;const A=(label,act,pressed,group)=>acts.push({label,act,pressed,group});
   if(t.type==="car"){const c=t.c;if(c.dead)return"";const tr=c.trip||{};title=tr.truck?"Nákladní auto":"Auto";

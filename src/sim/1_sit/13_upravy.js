@@ -47,8 +47,7 @@ function reshapeEdge(S,e,fn,hard){
   for(const c of on){const l=c.state==="drive"?c.links[c.li]:c.links[0];const L=linkLanes(S,l);if(!L){killVehicle(S,c);continue}
     c.lane=clamp(c.lane+(e._lsh||0),0,L-1);if(c.state==="drive")insertQ(e.q[l&1][c.lane],c)}
   e._lsh=0;
-  if(!hard){for(const c of S.cars){if(c.dead)continue;for(let k=c.li+1;k<c.links.length;k++)if((c.links[k]>>1)===e.id&&!linkLanes(S,c.links[k])){S.reroute.push(c);break}}
-    if(!RK[e.kind].walk)for(const w of S.walkers){if(w.dead)continue;for(let k=w.li;k<w.links.length;k++)if((w.links[k]>>1)===e.id){walkerEnd(S,w,true);break}}}}
+  if(!hard){for(const c of S.cars){if(c.dead)continue;for(let k=c.li+1;k<c.links.length;k++)if((c.links[k]>>1)===e.id&&!linkLanes(S,c.links[k])){S.reroute.push(c);break}}}}
 // skupina úseků, kterých se úprava týká: kruhový objezd celý, jinak jen úsek
 const editGroup=(S,e)=>e.ring?ringEdges(S,e.ring):[e];
 function lanesAfter(e,delta,dir){const K=RK[e.kind];

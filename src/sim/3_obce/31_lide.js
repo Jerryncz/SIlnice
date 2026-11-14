@@ -14,11 +14,9 @@ function entDist(S,a,b){const [ax,ay]=entXY(S,a),[bx,by]=entXY(S,b);return Math.
 
 function startTrip(S,tr){
   const fromEp=entEp(S,tr.from),toEp=entEp(S,tr.to);if(!fromEp||!toEp)return false;
+  // pěšky po chodnících a přechodech, když cesta není moc dlouhá; jinak autem
   if(tr.mode==="walk"){if(tr.from.isGate||tr.to.isGate||S.walkers.length>=MAX_WALKERS)tr.mode="car";
-    else{const p=findPath(S,fromEp,toEp,true);if(p&&p.len<10){const l0=p.links[0],lz=p.links[p.links.length-1];
-      const w={id:S.vid++,links:p.links,li:0,s:p.s0,sEnd:p.sEnd,trip:tr,ph:tr.from.front!==undefined?"out":"road",t:0,speed:tr.purpose==="senior"?0.38:0.5,
-        sd:sdOf(l0,fromEp.side||1),goalSd:sdOf(lz,toEp.side||1),xAt:-1,queue:null,cur:null,dead:false,kid:tr.purpose==="school"};
-      S.walkers.push(w);if(w.ph==="road")planFinal(S,w);return true}tr.mode="car"}}
+    else{const r=pedRoute(S,tr.from,tr.to,10);if(r){newWalker(S,tr,r);return true}tr.mode="car"}}
   if(S.cars.length>=MAX_CARS)return false;
   const p=findPath(S,fromEp,toEp);if(!p)return false;
   const c=newVehicle(S,{links:p.links,s:p.s0,sEnd:p.sEnd,trip:tr,startEp:fromEp,goalEp:toEp,truck:!!tr.truck,color:tr.color,start:S.time,free:p.len/BASE_SPEED,firstExit:!tr.ret&&!tr.truck});

@@ -114,7 +114,6 @@ function remapEdges(S,map){
     c.links=c.links.slice(0,i0).concat(r.out);c.s=r.ns;c.sEnd=r.nEnd;
     if(cur){const l=c.links[i0];const L=linkLanes(S,l);if(!L){if(c.state==="drive")c.state="exit";killVehicle(S,c);continue}
       c.lane=Math.min(c.lane,L-1);if(c.state==="drive")insertQ(S.edges[l>>1].q[l&1][c.lane],c)}}
-  for(const w of S.walkers){if(w.dead||!touches(w.links,w.li))continue;const r=rewrite(w.links,w.li,w.s,w.sEnd);w.links=w.links.slice(0,w.li).concat(r.out);w.s=r.ns;w.sEnd=r.nEnd}
   for(const b of S.buildings)if(b.access&&map.has(b.access.e))b.access=mapEp(b.access);
   for(const [oid,ps] of map){const old=S.edges[oid];
     for(const nid of [old.a,old.b]){const n=S.nodes[nid];if(!n.mainManual||!n.mainManual.includes(oid))continue;

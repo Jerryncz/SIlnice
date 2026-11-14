@@ -29,8 +29,8 @@ smysl.
 - [x] Rozdělení kódu do složek
 - [x] Křižovatka: skutečný začátek každého ramene, stopčára a přechod tam
 - [x] Nástroj Spojení
-- [ ] Chodníky jako dráhy, rohy, přechody, volné přecházení uliček
-- [ ] Chodci jako agenti na drahách (odstup, míjení, žádné mizení)
+- [x] Chodníky jako dráhy, rohy, přechody, volné přecházení uliček
+- [x] Chodci jako agenti na drahách (odstup, míjení, žádné mizení)
 - [ ] Dráhy pozemků: příjezd, uličky, stání; vjezd a výjezd s mezerou
 - [ ] Pozemky: parkoviště z katalogu, pak budova; druhy domů
 - [ ] Objíždění stojících aut

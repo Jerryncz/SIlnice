@@ -36,6 +36,9 @@ function drawTrace(){const t=UI.pinned;if(!t||!(t.type==="car"||t.type==="walker
   for(const q of ts){const m=q.m,li=m.li||0;if(!m.links)continue;for(let k=0;k<m.links.length;k++){const id=m.links[k]>>1;const M=k<li?acc[2]:acc[q.cls];M.set(id,(M.get(id)||0)+1)}}
   ctx.lineCap="round";ctx.lineJoin="round";const cols=["#1f6fe0","#e0752d","#1f6fe0"],al=[0.75,0.75,0.25];
   for(const k of [2,1,0]){ctx.strokeStyle=cols[k];ctx.globalAlpha=al[k];for(const [id,n] of acc[k]){const e=S.edges[id];if(!e||e.dead)continue;ctx.lineWidth=Math.min(0.6,0.12+0.035*n)+(k===1?0:0.04);ctx.stroke(edgePath(e))}}
+  // chodci: jejich cesta po chodnících a přechodech (plně před nimi, slabě za nimi)
+  ctx.lineWidth=0.07;for(const q of ts){if(q.car||!q.m.path)continue;const w=q.m;ctx.strokeStyle=cols[q.cls];
+    for(const [a,b,al2] of [[0,w.s,0.25],[w.s,w.plen,0.85]]){if(b-a<0.01)continue;ctx.globalAlpha=al2;ctx.beginPath();const p0=pathPose(w.path,a);ctx.moveTo(p0.x,p0.y);let c=0;for(let i=1;i<w.path.length;i++){const l=Math.hypot(w.path[i][0]-w.path[i-1][0],w.path[i][1]-w.path[i-1][1]);c+=l;if(c>a&&c<b)ctx.lineTo(w.path[i][0],w.path[i][1])}const p1=pathPose(w.path,b);ctx.lineTo(p1.x,p1.y);ctx.stroke()}}
   ctx.globalAlpha=1;ctx.lineWidth=Math.max(0.05,2/cam.z);
   const mark=(b,col)=>{if(!b||b.isGate||b.dead||b.front===undefined)return;ctx.strokeStyle=col;ctx.beginPath();ctx.arc(wxOf(b.front),wyOf(b.front),0.45,0,Math.PI*2);ctx.stroke()};
   const ends=new Set();for(const q of ts){const tr=q.m.trip;if(!tr)continue;if(t.type!=="bld"||q.cls===1){if(!ends.has(tr.to)){ends.add(tr.to);mark(tr.to,"#1f6fe0")}}if(t.type!=="bld"||q.cls===0){if(!ends.has(tr.from)){ends.add(tr.from);mark(tr.from,"#e0752d")}}
