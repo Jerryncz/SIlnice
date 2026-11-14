@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.12.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.13.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 

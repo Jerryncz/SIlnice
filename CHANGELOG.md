@@ -3,6 +3,17 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.13.0 – 14. 11. 2026
+
+- Příjezdy a parkoviště přepsané jako jedna logika (R79): vjezd je hrdlo
+  příčné uličky naproti silnici, auta jezdí po příjezdu a uličkách (vpravo,
+  s odstupem), čekají na okraji silnice, ne v pruhu.
+- Budovy bez parkoviště mají příjezd od okraje silnice ke dveřím.
+- Zrušeno staré kreslení buněk parkoviště a čára od budovy k silnici;
+  asfalt jen pod uličkami a stáními, zbytek zeleň.
+- Vjezd i na slepém konci silnice a u krátkých úseků (dřív parkoviště
+  u nich zůstalo bez rozvržení).
+
 ## 0.12.0 – 14. 11. 2026
 
 - Parkoviště skládaná z modulů podle pozemku, místo pro zásobování u podniků,

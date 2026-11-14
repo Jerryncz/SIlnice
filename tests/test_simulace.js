@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,cycleArrow,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={lotPath,LOT_A,LOT_RD,R_LOT,planRoad2:planRoad,lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,cycleArrow,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -48,6 +48,19 @@ function zkontroluj(S, kde) {
     if (b.away !== undefined && (b.type === "house" || b.type === "flat")) ok(b.away > -0.01, `${kde}: záporný počet lidí mimo dům ${b.name} (${b.away})`);
     for (const j of b.tiles) ok(!S.roadCnt[j] && S.bld[j] === b, `${kde}: budova ${b.name} na silnici nebo nesedí mapa`);
   }
+  // příjezdy a parkoviště: cesta od okraje silnice vede jen po příjezdu a uličkách, stání se nepřekrývají s uličkami
+  for (const b of S.buildings) { if (b.dead || !b.access) continue;
+    ok(!!b.drive, `${kde}: ${b.name} má vjezd bez příjezdu`);
+    const lay = b.lay; if (!lay) continue; const F = lay.F;
+    const loc = q => [(q[0] - F.O[0]) * F.d[0] + (q[1] - F.O[1]) * F.d[1], (q[0] - F.O[0]) * F.p[0] + (q[1] - F.O[1]) * F.p[1]];
+    const inA = (dep, lat) => lay.aisles.some(a => { const d0 = Math.min(a.a[0], a.b[0]) - a.w / 2 - 1e-3, d1 = Math.max(a.a[0], a.b[0]) + a.w / 2 + 1e-3, l0 = Math.min(a.a[1], a.b[1]) - a.w / 2 - 1e-3, l1 = Math.max(a.a[1], a.b[1]) + a.w / 2 + 1e-3; return dep >= d0 && dep <= d1 && lat >= l0 && lat <= l1; });
+    if (!b._ck) { b._ck = 1;
+      for (let i = 0; i < lay.spots.length; i++) { const P = A.lotPath(S, b, i); const sp = lay.spots[i];
+        // kromě úseku od okraje silnice k hrdlu a posledního zajetí na místo leží cesta celá v uličkách
+        for (let k = 1; k < P.length - 2; k++) for (let t = 0; t <= 1; t += 0.1) { const q = [P[k][0] + (P[k + 1][0] - P[k][0]) * t, P[k][1] + (P[k + 1][1] - P[k][1]) * t]; const [dep, lat] = loc(q);
+          if (!inA(dep, lat)) { ok(false, `${kde}: cesta na místo ${i} v ${b.name} vede mimo uličku`); k = 99; break } }
+        const [sd, sl] = loc([sp.x, sp.y]); ok(sd >= -0.01 && sd <= lay.D + 0.01 && sl >= -0.01 && sl <= lay.Wd + 0.01, `${kde}: stání mimo parkoviště v ${b.name}`);
+        ok(!inA(sd, sl), `${kde}: stání ${i} v ${b.name} leží v uličce`) } } }
   // parkovací místa: každé obsazené patří zaparkovanému autu, nebo autu, které zrovna zajíždí / vyjíždí
   for (const b of S.buildings) if (b.spotUsed) { const used = new Set();
     for (let i = 0; i < b.spotUsed.length; i++) { const o = b.spotUsed[i]; if (!o) continue;

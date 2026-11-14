@@ -30,13 +30,6 @@ function createBuilding(S,type,town,tiles,front,name){
   if(isHome(b))newDay(S,b);
   S.buildings.push(b);if(isHome(b)&&town){town.homes.push(b);town.pop+=b.pop;town.tileCount+=units(b)}
   refreshAccess(S,b);return b}
-function refreshAccess(S,b){
-  if(b.access){const e=S.edges[b.access.e];if(e&&!e.dead&&RK[e.kind].front&&!e.ring){for(let d=0;d<4;d++){const n=NB[b.front*4+d];if(n>=0&&S.cellG[n]&&S.cellG[n].includes(e.id))return}}}
-  b.access=null;
-  const order=[...b.tiles].sort((p,q)=>(isLotRole(S.role[q])?1:0)-(isLotRole(S.role[p])?1:0));
-  for(const j of order)for(let d=0;d<4;d++){const n=NB[j*4+d];if(n<0)continue;const e=frontEdgeAt(S,n);if(!e)continue;
-    const cx=wxOf(j),cy=wyOf(j);const r=nearestOn(e.g,cx,cy);if(r.d>Math.max(e.er,e.el)+0.8)continue;const u=clamp(r.u,0.06,e.g.len-0.06);const p=pointAt(e.g,u);
-    const side=((cx-p.x)*p.nx+(cy-p.y)*p.ny)>=0?1:-1;b.front=j;b.access={e:e.id,u,side,x:p.x,y:p.y};return}}
 function fitShape(S,f,r,cells,town){
   const dvx=tx(f)-tx(r),dvy=ty(f)-ty(r);
   const anchors=cells.filter(c=>c[1]===0);

@@ -320,8 +320,14 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
   (a k cíli tak, aby skončil na straně domu), v úseku použije přechod mezi
   sebou a cílem. Když žádný přechod není (dům naproti na stejném úseku),
   přejde u cíle a auta mu dají přednost.
-- Lidé **vycházejí z budov a vcházejí do nich** (od dveří na chodník a zpět),
-  auta **zajíždějí do vjezdu** a z něj vyjíždějí; nikdo nemizí na silnici.
+- Lidé **vycházejí z budov a vcházejí do nich** (od dveří na chodník a zpět).
+- **Příjezd**: každá budova má jeden příjezd od okraje silnice. U budovy
+  s parkovištěm vede k hrdlu parkoviště, jinak ke dveřím (u domků úzký,
+  u ostatních budov širší). Auto z pruhu zahne na příjezd a jede po něm
+  (u parkoviště dál po uličkách na své místo), při odjezdu po něm vyjede
+  a na okraji silnice počká na mezeru v pruhu. Na příjezdu a v uličkách se
+  jezdí vpravo: protijedoucí se míjejí, za sebou jedoucí si drží odstup.
+  Nikdo nemizí na silnici ani nejede přes budovu.
   U hranice mapy auta odjíždějí rovnou do světa.
 - Pro výkon se lidé počítají po domácnostech; jednotlivě se simulují jen ti,
   kdo jsou právě na cestě.
@@ -337,16 +343,23 @@ vejde; do stojící kolony mu stačí mezera na délku auta.
 - **Hospoda** (od 24 obyvatel), **obchod** (od 40), **nákupní centrum**
   (od 90), **obchodní zóna** (od 150, nebo od 100 při napojení na svět).
   Všechny s parkovištěm.
-- **Parkoviště** se skládá z modulů podle místa mezi silnicí a budovou
+- **Parkoviště** je obdélník u silnice a skládá se z modulů
   (`docs/PARKOVISTE.md`): od budovy k silnici dvouřadé moduly (stání,
   ulička, stání), případně jeden jednořadý, zbytek u silnice je zeleň se
-  stromy. Uličky spojuje příčná ulička na straně vjezdu, která vede
-  k silnici; větší parkoviště má i druhou naproti. Podniky se zákazníky
+  stromy. Uličky spojuje příčná ulička, jejíž hrdlo je vjezd z ulice;
+  hrdlo leží u kraje parkoviště naproti silnici (mimo plochu křižovatky,
+  případně přímo na slepém konci silnice). Větší parkoviště má i druhou
+  příčnou uličku naproti. Úzké parkoviště má jen uličku od silnice ke
+  budově a stání kolmo podél ní. Asfalt je jen pod uličkami a stáními,
+  zbytek pozemku je zeleň. Podniky se zákazníky
   mají u budovy žlutě vyznačené **místo pro zásobování**: staví na něm jen
   nákladní auta a osobní auta na něj nesmějí. Kapacita je počet stání.
   Auto zajede po uličce na volné místo, které si při příjezdu zamluví,
   a při odjezdu po ní vyjede k silnici. Dvě auta nikdy nestojí na jednom
-  místě. Parkovací dům má víc míst (patra), než je vidět.
+  místě. Kdo místo nedostane (dojíždějící do práce, když je plno), dojede
+  po uličce k budově a tam vystoupí. Parkoviště, ke kterému nevede žádná
+  silnice, zůstane zelené a auta jezdí příjezdem ke dveřím. Parkovací dům
+  má víc míst (patra), než je vidět.
 - **Škola** v obci od 20 dětí, když žádná není do 14 polí (150 žáků).
 - **Kanceláře** ve středu obce od 70 obyvatel, když lidé nemají práci.
 - **Statky** (domy do L, Z, U) dávají práci na poli.
