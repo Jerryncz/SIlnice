@@ -30,6 +30,17 @@ function lanePorts(S,n){const out=[];if(n.dead||n.edges.length!==2||n.ring)retur
   return out}
 function snapPort(S,x,y,lvl){let best=null,bd=0.45;for(const n of S.nodes){if(n.dead||n.edges.length!==2||Math.abs(n.lvl-lvl)>=0.5||Math.abs(n.x-x)>2||Math.abs(n.y-y)>2)continue;
   for(const p of lanePorts(S,n)){const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;best={type:"node",node:n.id,x:p.x,y:p.y,lvl:n.lvl,port:true,dir:p.dir,entry:p.entry}}}}return best}
+// skutečný začátek každého ramene křižovatky (a.cut, vzdálenost od uzlu): kde se okraj ramene (i s chodníkem)
+// potká s okrajem sousedního ramene, plus zaoblení obrubníku. Šikmé rameno má začátek dál než kolmé.
+const CURB=0.18;
+function armCuts(S,n,deg){for(const a of n.arms){a.cut=0;a.corner=null}n.rad=0;if(deg<3)return;
+  const arms=[...n.arms].sort((a,b)=>Math.atan2(a.hy,a.hx)-Math.atan2(b.hy,b.hx));const m=arms.length;
+  const wid=a=>{const e=S.edges[a.e],out=e.a===n.id;return [out?e.er:e.el,out?e.el:e.er]};   // [vpravo, vlevo] při pohledu z uzlu ven
+  for(let i=0;i<m;i++){const A=arms[i],B=arms[(i+1)%m];if(A===B)continue;const wa=wid(A)[0],wb=wid(B)[1];
+    const P=[n.x-A.hy*wa,n.y+A.hx*wa],Q=[n.x+B.hy*wb,n.y-B.hx*wb];const den=A.hx*B.hy-A.hy*B.hx;if(Math.abs(den)<0.04)continue;
+    const dx=Q[0]-P[0],dy=Q[1]-P[1];const t=(dx*B.hy-dy*B.hx)/den,s=(dx*A.hy-dy*A.hx)/den;if(t<=0||s<=0)continue;
+    A.cut=Math.max(A.cut,t);B.cut=Math.max(B.cut,s);A.corner=[P[0]+A.hx*t,P[1]+A.hy*t]}
+  for(const a of arms){const e=S.edges[a.e];a.cut=Math.min(a.cut+CURB,8,e.g.len*0.45);n.rad=Math.max(n.rad,a.cut)}}
 function topoNode(S,n){
   n.arms=n.edges.map(id=>armOf(S,n,id));const deg=n.arms.length;
   const isH=e=>e.kind==="hwy";
@@ -38,9 +49,9 @@ function topoNode(S,n){
   // konec silnice, na jehož pruhy jsou napojené jednosměrky (jediné rameno bez napojení na pruh)
   n.endPort=!n.ring&&deg>=2&&n.arms.filter(a=>!a.port).length===1;
   n.port=!!(n.pass&&n.arms.every(a=>n.pass.includes(a.e)||a.port))||n.endPort;
-  n.rad=0;if(deg>=3)for(const a of n.arms){const e=S.edges[a.e];n.rad=Math.max(n.rad,e.er,e.el)}
-  // plocha křižovatky na každém rameni (+ přechod)
-  for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3||n.endPort?(n.port?0.3:n.rad+0.05+(crossOn(S,n,e)?XW:0)):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
+  armCuts(S,n,deg);
+  // plocha křižovatky na každém rameni až do jeho skutečného začátku (+ přechod)
+  for(const a of n.arms){const e=S.edges[a.e];const sb=deg>=3||n.endPort?(n.port?0.3:a.cut+0.05+(crossOn(S,n,e)?XW:0)):0;if(e.a===n.id)e.ta=sb;if(e.b===n.id)e.tb=sb}
   n.turns=new Map();
   for(const ai of n.arms){if(!linkLanes(S,ai.inLink))continue;const list=[];const hix=-ai.hx,hiy=-ai.hy;const ei=S.edges[ai.e];
     for(const ao of n.arms){if(!linkLanes(S,ao.outLink))continue;const eo=S.edges[ao.e];

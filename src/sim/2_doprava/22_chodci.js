@@ -20,7 +20,7 @@ function walkerTurn(S,w,l,nl,wantSd){const n=S.nodes[linkTo(S,l)];
   const opts=[{list:keep,sd:w.sd},{list:flip,sd:-w.sd}].map(o=>({...o,valid:ok(o.list)}));
   let pick=null;if(wantSd!==undefined)pick=opts.find(o=>o.sd===wantSd&&o.valid);
   if(!pick){const v=opts.filter(o=>o.valid);pick=(v.length?v:opts).sort((p,q)=>p.list.length-q.list.length)[0]}
-  const items=[];const base=n.rad+0.05+XW/2;
+  const items=[];const base=((n.arms.find(q=>q.e===(l>>1))||{}).cut||n.rad)+0.05+XW/2;
   // chodec stojí na rohu ramene A na své straně
   const aA=arms[iA];let cur=walkPt(S,n,aA,base+XW,w.sd>0?-1:1);
   for(const a of pick.list){const e=S.edges[a.e];const p1=walkPt(S,n,a,base,1),p2=walkPt(S,n,a,base,-1);

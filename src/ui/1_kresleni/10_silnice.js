@@ -61,7 +61,7 @@ function nodeDiscs(list){const seen=new Set(),out=[];
 function nodePoly(n,d){const key=n._pv===S.netVer?n._pk:null;if(!key){n._pv=S.netVer;n._pk=new Map()}const k=d.toFixed(3);let p=n._pk.get(k);if(p)return p;
   const arms=[...n.arms].sort((a,b)=>Math.atan2(a.hy,a.hx)-Math.atan2(b.hy,b.hx));const R=n.rad,c=[];
   for(const a of arms){const e=S.edges[a.e];const out=e.a===n.id;const er=(out?e.er:e.el)+d,el=(out?e.el:e.er)+d;const rx=-a.hy,ry=a.hx;
-    const bx=n.x+a.hx*R,by=n.y+a.hy*R;c.push({L:[bx-rx*el,by-ry*el],Rt:[bx+rx*er,by+ry*er],h:[a.hx,a.hy]})}
+    const cut=a.cut!==undefined?a.cut:R;const bx=n.x+a.hx*cut,by=n.y+a.hy*cut;c.push({L:[bx-rx*el,by-ry*el],Rt:[bx+rx*er,by+ry*er],h:[a.hx,a.hy]})}
   p=new Path2D();p.moveTo(c[0].L[0],c[0].L[1]);
   for(let i=0;i<c.length;i++){const A=c[i],B=c[(i+1)%c.length];p.lineTo(A.Rt[0],A.Rt[1]);
     // průsečík pravého okraje ramene A s levým okrajem ramene B
@@ -78,7 +78,7 @@ function zebra(x,y,tx,ty,er,el,busy){const nx=-ty,ny=tx;ctx.fillStyle=busy?color
 function drawCrossings(list){const z=cam.z;if(z<9)return;const seen=new Set();
   for(const e of list){const K=RK[e.kind];
     for(const atA of [true,false]){const n=S.nodes[atA?e.a:e.b];if(!crossOn(S,n,e))continue;const key=n.id+"|"+e.id+(atA?"a":"b");if(seen.has(key))continue;seen.add(key);
-      const d=n.rad+0.05+XW/2;const u=atA?d:e.g.len-d;if(u<0||u>e.g.len)continue;const p=pointAt(e.g,u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,n.xBusy&&n.xBusy.get(e.id)>0)}
+      const arm=n.arms.find(q=>q.e===e.id);const d=(arm?arm.cut:n.rad)+0.05+XW/2;const u=atA?d:e.g.len-d;if(u<0||u>e.g.len)continue;const p=pointAt(e.g,u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,n.xBusy&&n.xBusy.get(e.id)>0)}
     if(e.xw)for(const x of e.xw){const p=pointAt(e.g,x.u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,e.mbusy&&e.mbusy.some(u=>Math.abs(u-x.u)<0.05))}}}
 function auxOf(e,d){const m=edgeCache(e);const key="ax"+d;let v=m.get(key);if(v===undefined){v=auxCount(S,e,d);m.set(key,v)}return v}
 function laneDash(aux,lw){if(aux){ctx.lineWidth=lw*2.2;ctx.setLineDash([0.1,0.1])}else{ctx.lineWidth=lw;ctx.setLineDash([0.18,0.2])}}
