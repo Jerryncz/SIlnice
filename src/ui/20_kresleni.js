@@ -13,6 +13,7 @@ function passPair(n){if(n._ppv===S.netVer)return n._pp;n._ppv=S.netVer;n._pp=nul
 function joinAt(e,atA){const nd=S.nodes[atA?e.a:e.b];let oid=-1;
   if(nd.edges.length===2)oid=nd.edges[0]===e.id?nd.edges[1]:nd.edges[0];else{const pp=passPair(nd);if(pp&&pp.has(e.id))for(const id of pp)if(id!==e.id)oid=id}
   const o=S.edges[oid];if(!o||o.dead||o===e)return null;
+  if((atA?e.pa:e.pb)||(o.a===nd.id?o.pa:o.pb))return null;   // napojení na pruh není plynulé navázání os
   const same=atA?o.b===nd.id:o.a===nd.id;const k=atA?0:e.g.n-1,ko=o.a===nd.id?0:o.g.n-1;
   const n1x=e.g.nx[k],n1y=e.g.ny[k],sg=same?1:-1,n2x=o.g.nx[ko]*sg,n2y=o.g.ny[ko]*sg;let mx=n1x+n2x,my=n1y+n2y;const ml=Math.hypot(mx,my)||1;mx/=ml;my/=ml;
   const cos=Math.max(0.35,mx*n1x+my*n1y);return {o,same,nd,mx,my,cos}}
@@ -51,6 +52,7 @@ function asphaltColor(e){if(overlay){const c=Math.max(e.cong[0],e.cong[1]);if(e.
 function nodeDiscs(list){const seen=new Set(),out=[];
   for(const e of list)for(const atA of [true,false]){const nid=atA?e.a:e.b;if(seen.has(nid))continue;seen.add(nid);const n=S.nodes[nid];if(n.dead)continue;
     const arms=n.edges.map(id=>S.edges[id]);let main=arms[0];for(const a of arms)if(a.w>main.w)main=a;
+    if(n.port&&n.edges.length>=2)continue;
     if(n.edges.length>=3){if(passPair(n))continue;out.push({x:n.x,y:n.y,r:n.rad,e:main,side:Math.max(...arms.map(a=>RK[a.kind].side)),node:n});continue}
     if(n.edges.length===1){const a=arms[0],be=bandExt(a),k=a.a===nid?0:a.g.n-1;const R=be.R[k],L=be.L[k],sh=(R-L)/2;out.push({x:n.x+a.g.nx[k]*sh,y:n.y+a.g.ny[k]*sh,r:(R+L)/2,e:a,side:RK[a.kind].side})}}
   return out}
@@ -227,11 +229,12 @@ function drawParked(x0,y0,x1,y1){if(cam.z<6)return;for(const b of S.buildings){c
   if(b.type==="flat"){const n=homeCars(b);const col=b.town?b.town.color:"#888";for(let k=0;k<n;k++){const s=lay.spots[k];drawCarAt(s.x,s.y,s.ang,shade(col,0.75+((k*37)%5)*0.1),false,null)}continue}
   for(const pe of b.parked){if(pe.spot===undefined)continue;const s=lay.spots[pe.spot];if(s)drawCarAt(s.x,s.y,s.ang,pe.color,false,null)}}}
 // ulička parkoviště: páteř od vjezdu a uličky mezi řadami míst
-function drawLot(b){const lay=lotLayout(S,b);if(!lay||cam.z<7)return;const W=lay.W;ctx.strokeStyle=colors.street;ctx.lineWidth=0.44;ctx.lineCap="butt";ctx.beginPath();
-  let a=W(lay.first-0.1,lay.lat0),z=W(lay.last,lay.lat0);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1]);
-  for(const q of lay.aisles){a=W(q.a,q.l0-0.05);z=W(q.a,q.l1+0.05);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}ctx.stroke();
+function drawLot(b){const lay=lotLayout(S,b);if(!lay||cam.z<7)return;const W=lay.W;ctx.strokeStyle=colors.street;ctx.lineCap="butt";let a,z;
+  // příjezd podél silnice k uličkám a uličky kolmo k silnici
+  if(lay.l1-lay.l0>0.05){ctx.lineWidth=0.4;ctx.beginPath();a=W(lay.first,lay.l0-0.2);z=W(lay.first,lay.l1+0.2);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1]);ctx.stroke()}
+  for(const q of lay.aisles){ctx.lineWidth=q.w-0.06;ctx.beginPath();a=W(lay.first-0.25,q.lat);z=W(q.d1,q.lat);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1]);ctx.stroke()}
   // čáry mezi místy
-  if(cam.z>=12){ctx.strokeStyle="rgba(255,255,255,.75)";ctx.lineWidth=0.03;ctx.beginPath();for(const s of lay.spots){for(const dl of [-0.25,0.25]){a=W(s.dep-0.23,s.lat+dl);z=W(s.dep+0.23,s.lat+dl);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}}ctx.stroke()}
+  if(cam.z>=12){ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=0.03;ctx.beginPath();for(const s of lay.spots){for(const dl of [-0.25,0.25]){a=W(s.dep+dl,s.lat-0.23);z=W(s.dep+dl,s.lat+0.23);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}}ctx.stroke()}
   ctx.lineCap="round"}
 function drawZones(x0,y0,x1,y1){if(!zonePattern)return;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=zonePattern;const z=cam.z;
   const c=z*CS;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(S.zone[y*W+x])ctx.fillRect(x*c-cam.x,y*c-cam.y,c,c);ctx.restore()}
@@ -279,7 +282,10 @@ function drawPreview(){const P=UI.plan;const z=cam.z;
   if(UI.tool==="build"&&!UI.rebuild&&z>=8){ctx.fillStyle=colors.accent;ctx.globalAlpha=0.55;for(const n of S.nodes){if(n.dead||n.edges.length!==2||!inView(n.x,n.y,1))continue;for(const p of lanePorts(S,n)){ctx.beginPath();ctx.arc(p.x,p.y,0.09,0,Math.PI*2);ctx.fill()}}ctx.globalAlpha=1}
   // kurzor: křížek na ose budoucí silnice (střed pole), u silnice kroužek přichycení
   if(UI.snapHint&&UI.mouse.in){const q=UI.snapHint;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,2/z);ctx.beginPath();
-    if(q.type==="free"){const s=0.28;ctx.moveTo(q.x-s,q.y);ctx.lineTo(q.x+s,q.y);ctx.moveTo(q.x,q.y-s);ctx.lineTo(q.x,q.y+s)}else ctx.arc(q.x,q.y,q.port?0.16:q.type==="node"?0.3:0.18,0,Math.PI*2);ctx.stroke()}
+    if(q.ext){ctx.save();ctx.setLineDash([0.18,0.14]);ctx.globalAlpha=0.7;ctx.moveTo(q.ext.x,q.ext.y);ctx.lineTo(q.x,q.y);ctx.stroke();ctx.restore();ctx.beginPath();const s=0.2;ctx.moveTo(q.x-s,q.y-s);ctx.lineTo(q.x+s,q.y+s);ctx.moveTo(q.x-s,q.y+s);ctx.lineTo(q.x+s,q.y-s)}
+    else if(q.mid){const s=0.3;ctx.moveTo(q.x,q.y-s);ctx.lineTo(q.x+s*0.87,q.y+s*0.5);ctx.lineTo(q.x-s*0.87,q.y+s*0.5);ctx.closePath()}
+    else if(q.perp){const e=S.edges[q.edge],p=e&&!e.dead?pointAt(e.g,q.u):null;if(p){let nx=p.nx,ny=p.ny;const st=UI.draw&&UI.draw.start;if(st&&(st.x-q.x)*nx+(st.y-q.y)*ny<0){nx=-nx;ny=-ny}const s=0.32;ctx.moveTo(q.x+nx*s,q.y+ny*s);ctx.lineTo(q.x+nx*s+p.tx*s,q.y+ny*s+p.ty*s);ctx.lineTo(q.x+p.tx*s,q.y+p.ty*s);ctx.moveTo(q.x+nx*s*2.2,q.y+ny*s*2.2);ctx.lineTo(q.x,q.y);ctx.lineTo(q.x+p.tx*s*2.2,q.y+p.ty*s*2.2)}}
+    else if(q.type==="free"){const s=0.28;ctx.moveTo(q.x-s,q.y);ctx.lineTo(q.x+s,q.y);ctx.moveTo(q.x,q.y-s);ctx.lineTo(q.x,q.y+s)}else ctx.arc(q.x,q.y,q.port?0.16:q.type==="node"?0.3:0.18,0,Math.PI*2);ctx.stroke()}
   if((UI.tool==="split"||UI.tool==="cross")&&UI.splitHover){const e=S.edges[UI.splitHover.e];if(e&&!e.dead){const p=pointAt(e.g,UI.splitHover.u);ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.06,2/z);
     ctx.beginPath();ctx.moveTo(p.x+p.nx*(e.er+0.2),p.y+p.ny*(e.er+0.2));ctx.lineTo(p.x-p.nx*(e.el+0.2),p.y-p.ny*(e.el+0.2));ctx.stroke()}}
   if(UI.draw&&UI.draw.ghost){const g=UI.draw.ghost;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,1.5/z);ctx.setLineDash([0.2,0.15]);ctx.beginPath();ctx.moveTo(g[0],g[1]);for(let k=2;k<g.length;k+=2)ctx.lineTo(g[k],g[k+1]);ctx.stroke();ctx.setLineDash([])}

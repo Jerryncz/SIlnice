@@ -3,6 +3,14 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.11.0 – 14. 11. 2026
+
+- Jednosměrky napojené na jednotlivé pruhy slepého konce silnice (R74).
+- Křížení mostu jen tam, kde je celé patro místa (R75).
+- Přichytávání: střed úseku, kolmice, prodloužení a průsečík (R76).
+- Parkoviště s uličkou kolmo k silnici a místy po obou stranách, větší
+  u podniků (R77).
+
 ## 0.10.0 – 14. 11. 2026
 
 - Až 10 pruhů v jednom směru (R68).

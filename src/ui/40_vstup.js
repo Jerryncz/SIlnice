@@ -3,8 +3,18 @@
 function local(e){const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]}
 // přichycení: uzel, bod na silnici (ve zvolené výšce, pak v ostatních); volný bod na střed pole
 function snapAny(x,y,pref,raw){const order=[pref,0,1,2].filter((v,k,a)=>a.indexOf(v)===k);
-  if(UI.tool==="build"){for(const l of order){const p=snapPort(S,x,y,l);if(p)return p}}   // konec / začátek pruhu má přednost
-  for(const l of order){const s=snapPoint(S,x,y,l);if(s.type!=="free")return s}return {type:"free",x:raw?x:Math.floor(x)+0.5,y:raw?y:Math.floor(y)+0.5,lvl:pref}}
+  if(UI.tool==="build"){for(const l of order){const p=snapPort(S,x,y,l);if(p){p.cx=x;p.cy=y;return p}}}   // konec / začátek pruhu má přednost
+  for(const l of order){const s=snapPoint(S,x,y,l);if(s.type!=="free"){s.cx=x;s.cy=y;
+    // střed úseku (značka trojúhelník)
+    if(s.type==="edge"){const e=S.edges[s.edge];if(e.g.len>2.4&&Math.abs(s.u-e.g.len/2)<0.45){const p=pointAt(e.g,e.g.len/2);s.u=e.g.len/2;s.x=p.x;s.y=p.y;s.mid=true}}
+    return s}}
+  return {type:"free",x:raw?x:Math.floor(x)+0.5,y:raw?y:Math.floor(y)+0.5,lvl:pref}}
+// prodloužení slepých konců silnic: volný bod se chytí na jejich osu, případně na průsečík s taženou čarou
+function extSnap(st,x,y,lvl){let best=null,bd=0.45;
+  for(const n of S.nodes){if(n.dead||n.edges.length!==1||n.gate>=0||Math.abs(n.lvl-lvl)>0.5||Math.abs(n.x-x)>24||Math.abs(n.y-y)>24)continue;const a=n.arms[0];const dx=-a.hx,dy=-a.hy;
+    const t=(x-n.x)*dx+(y-n.y)*dy;if(t<0.8)continue;const px=n.x+dx*t,py=n.y+dy*t,d=Math.hypot(px-x,py-y);if(d>=bd)continue;bd=d;best={type:"free",x:px,y:py,lvl,ext:{x:n.x,y:n.y}};
+    if(st){const ux=x-st.x,uy=y-st.y,den=ux*dy-uy*dx;if(Math.abs(den)>0.05){const k=((n.x-st.x)*dy-(n.y-st.y)*dx)/den;const ix=st.x+ux*k,iy=st.y+uy*k;if(k>0&&Math.hypot(ix-x,iy-y)<0.6&&(ix-n.x)*dx+(iy-n.y)*dy>0.5){best.x=ix;best.y=iy;best.ext.cross=true}}}}
+  return best}
 // směr silnice v bodě přichycení (úhly se pak drží vůči ní, ne vůči mřížce)
 function baseAngle(sn){if(sn.type==="edge"){const e=S.edges[sn.edge];const p=pointAt(e.g,sn.u);return Math.atan2(p.ty,p.tx)}
   if(sn.type==="node"){const n=S.nodes[sn.node];if(n.arms.length)return Math.atan2(n.arms[0].hy,n.arms[0].hx)}return null}
@@ -13,8 +23,11 @@ function angleSnap(st,wx,wy,free){const sx=st.x,sy=st.y;if(free)return [wx,wy];c
   if(base===null){const a=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4);const ux=Math.round(Math.cos(a)),uy=Math.round(Math.sin(a));
     const diag=ux!==0&&uy!==0;const k=Math.max(1,Math.round(diag?(dx*ux+dy*uy)/2:(dx*ux+dy*uy)));return [sx+ux*k,sy+uy*k]}
   const a=base+Math.round((Math.atan2(dy,dx)-base)/(Math.PI/4))*(Math.PI/4);const len=Math.max(0.5,Math.round(L*2)/2);return [sx+Math.cos(a)*len,sy+Math.sin(a)*len]}
-function endSnap(st,wx,wy,shift){const raw=snapAny(wx,wy,UI.level);if(raw.type!=="free"&&Math.hypot(raw.x-st.x,raw.y-st.y)>0.5)return raw;const [ex,ey]=angleSnap(st,wx,wy,shift);const s=snapAny(ex,ey,UI.level);
-  if(s.type!=="free"&&Math.hypot(s.x-ex,s.y-ey)<0.6)return s;const g=baseAngle(st)===null&&!shift;return {type:"free",x:g?Math.floor(ex)+0.5:ex,y:g?Math.floor(ey)+0.5:ey,lvl:UI.level}}
+// kolmice: konec na silnici se chytí paty kolmice ze začátku (značka pravého úhlu)
+function perpSnap(st,s){if(s.type!=="edge"||s.mid)return s;const e=S.edges[s.edge];const r=nearestOn(e.g,st.x,st.y);if(r.u>0.4&&r.u<e.g.len-0.4&&Math.hypot(r.x-s.x,r.y-s.y)<0.55&&r.d>0.8){s.u=r.u;s.x=r.x;s.y=r.y;s.perp=true}return s}
+function endSnap(st,wx,wy,shift){const raw=snapAny(wx,wy,UI.level);if(raw.type!=="free"&&Math.hypot(raw.x-st.x,raw.y-st.y)>0.5)return perpSnap(st,raw);const [ex,ey]=angleSnap(st,wx,wy,shift);const s=snapAny(ex,ey,UI.level);
+  if(s.type!=="free"&&Math.hypot(s.x-ex,s.y-ey)<0.6){s.cx=wx;s.cy=wy;return perpSnap(st,s)}
+  if(!shift){const x=extSnap({x:st.x,y:st.y},ex,ey,UI.level);if(x)return x}const g=baseAngle(st)===null&&!shift;return {type:"free",x:g?Math.floor(ex)+0.5:ex,y:g?Math.floor(ey)+0.5:ey,lvl:UI.level}}
 function laneSide(e,wx,wy,u){if(e.ring)return undefined;if(e.lf===0||e.lb===0){const p=pointAt(e.g,u),sg=e.lf?1:-1;return ((wx-p.x)*p.nx+(wy-p.y)*p.ny)*sg<(e.sh||0)?1:0}   // jednosměrka: 1 = levý okraj ve směru jízdy
   const p=pointAt(e.g,u);return (wx-p.x)*p.nx+(wy-p.y)*p.ny>=0?0:1}
 function dirName(e,dir){if(dir===undefined)return"";if(e.lf===0||e.lb===0)return dir===1?" (vlevo)":" (vpravo)";const p=pointAt(e.g,e.g.len/2);const hx=dir?-p.tx:p.tx,hy=dir?-p.ty:p.ty;return" (směr "+COMPASS(hx,hy)+")"}
@@ -72,7 +85,7 @@ cv.addEventListener("pointermove",e=>{const [sx,sy]=local(e);const p=ptrs.get(e.
   const h=hitTest(wx,wy);const key=h?h.type+(h.id!==undefined?h.id:h.b?h.b.id:h.c):"";if(key!==UI.hoverKey){UI.hoverKey=key;UI.hover=h;UI.selDirty=true}
   if(UI.draw)refreshPlan();
   if(UI.tool==="build"&&!UI.rebuild&&UI.shape==="template"&&!UI.pending){const k=Math.round(wx*4)+","+Math.round(wy*4);if(k!==UI.tplKey){UI.tplKey=k;UI.plan=planTemplate(S,UI.tpl,wx,wy,UI.kind,UI.lanes)}}
-  UI.snapHint=UI.tool==="build"&&!UI.rebuild&&UI.shape!=="template"?(UI.draw&&UI.draw.end?UI.draw.end:snapAny(wx,wy,UI.level)):null;
+  UI.snapHint=UI.tool==="build"&&!UI.rebuild&&UI.shape!=="template"?(UI.draw&&UI.draw.end?UI.draw.end:(()=>{const s=snapAny(wx,wy,UI.level);return s.type==="free"?(extSnap(null,wx,wy,UI.level)||s):s})()):null;
   if(UI.tool==="lane"){if(UI.laneDrag){const ed=S.edges[UI.laneDrag.e];if(ed&&!ed.dead)UI.laneDrag.u1=nearestOn(ed.g,wx,wy).u}
     else{UI.laneHover=null;if(h&&h.type==="edge"){const ed=S.edges[h.id];const r=nearestOn(ed.g,wx,wy);UI.laneHover={e:h.id,u0:0,u1:0,dir:laneSide(ed,wx,wy,r.u),rem:e.shiftKey}}}}
   if(UI.tool==="split"||UI.tool==="cross"){UI.splitHover=null;if(h&&h.type==="edge"){const ed=S.edges[h.id];UI.splitHover={e:h.id,u:nearestOn(ed.g,wx,wy).u}}}
