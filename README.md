@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.14.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.15.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -34,6 +34,8 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | `napady/` | nápady do budoucna (ukládání hry, křižovatky, železnice …) – nic z nich není ve hře |
 | `poznatky/` | poznatky z jednotlivých chatů, čekající na zapracování |
 | `tests/test_simulace.js` | automatický test simulace (`node tests/test_simulace.js`) |
+| `tests/hlaseni.js` | přečte hlášení ze hry, nahraje stav a pustí ho dál (`node tests/hlaseni.js <složka> [sekund]`) |
+| `tests/kontroly.js` | společné kontroly stavu simulace |
 | `CLAUDE.md` | jak se v repozitáři pracuje (pravidla spolupráce s Claude) |
 | `CHANGELOG.md` | změny podle verzí |
 
@@ -56,7 +58,8 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | Přiblížení | kolečko, `+` / `-`, sevření prstů |
 | Zrušit kreslení / výběr | pravý klik, `Esc` |
 | Pauza, vytížení silnic | mezerník, `V` |
-| Nastavení (zaseknutá auta), peníze na zkoušení | Pravidla → Nastavení, Test |
+| Hlášení pro Claude | `R` nebo tlačítko Hlášení: popis, klik do mapy očísluje prvky, Uložit zapíše snímek, popis a celý stav do složky `hlaseni` |
+| Nastavení (zaseknutá auta), peníze na zkoušení, nahrát stav z hlášení | Pravidla → Nastavení, Test |
 
 Pravidla světa jsou podrobně v `docs/HRA.md`.
 
@@ -68,7 +71,18 @@ Pravidla světa jsou podrobně v `docs/HRA.md`.
 3. `node build.js` a `node tests/test_simulace.js` musí projít; hratelnost ověřuje hraní.
 4. Slučuje se do `main` jen na výslovný souhlas („slouč #N“).
 5. Po každém sestavení (i před sloučením) se přepíše hratelná kopie v OneDrive;
-   `NEEDITOVAT.txt` říká verzi, větev, commit a zda je sloučeno.
+   `NEEDITOVAT.txt` říká verzi, větev, commit, otisk sestavení a zda je sloučeno.
+
+## Hlášení ze hry
+
+Ve hře tlačítko **Hlášení** (klávesa `R`): hra se zastaví, napíšeš, co se
+děje, klikem očísluješ auta, budovy, silnice nebo místa a **Uložit** zapíše
+do složky `OneDrive\GIT\Silnice\hlaseni` podsložku se snímkem
+(`mapa.png`), popisem (`popis.md`), celým stavem hry (`stav.json.gz`)
+a posledními 30 s pohybu (`historie.json.gz`). Složku vybereš při prvním
+uložení (Chrome, Edge); jiný prohlížeč hlášení stáhne jako jeden soubor.
+Až jich nasbíráš víc, napiš Claude, ať je projde (postup v `CLAUDE.md`).
+Uložený stav nahraješ i do hry: Pravidla → Test → Nahrát stav.
 
 ## Ověřené prostředí
 

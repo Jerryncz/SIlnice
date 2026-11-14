@@ -61,7 +61,7 @@ cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);const [s
   if(ptrs.size===2){stroke=null;pan=null;UI.laneDrag=null;if(UI.draw&&UI.draw.tool!=="curve"&&UI.draw.tool!=="connect"){UI.draw=null;UI.plan=null}const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),cx:(a.x+b.x)/2,cy:(a.y+b.y)/2};return}
   if(ptrs.size>2)return;moved=false;downXY=[sx,sy];
   const [wx,wy]=toWorld(sx,sy);UI.mouse.wx=wx;UI.mouse.wy=wy;UI.mouse.shift=e.shiftKey;
-  if(e.button===1||e.button===2||UI.tool==="hand"){pan={x:sx,y:sy,cx:cam.x,cy:cam.y,btn:e.button};return}
+  if(e.button===1||e.button===2||UI.tool==="hand"||UI.report){pan={x:sx,y:sy,cx:cam.x,cy:cam.y,btn:e.button};return}
   const t=UI.tool;
   if(t==="build"&&!UI.rebuild){const sh=UI.shape;
     if(sh==="line"){UI.draw={tool:"line",start:snapAny(wx,wy,UI.level,e.shiftKey)};refreshPlan()}
@@ -98,6 +98,7 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
   if(pinch){if(ptrs.size<2)pinch=null;return}
   if(!had)return;
   if(pan){const click=!moved;const btn=pan.btn;pan=null;
+    if(click&&UI.report&&btn===0){const [wx,wy]=toWorld(sx,sy);reportMark(wx,wy);UI.selDirty=true;return}
     if(click&&btn===2){if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;UI.selDirty=true}
     else if(click&&UI.tool==="hand"){const [wx,wy]=toWorld(sx,sy);UI.pinned=pickMover(wx,wy)||hitTest(wx,wy);UI.selDirty=true}
     return}
@@ -160,9 +161,10 @@ window.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("inp
   else if(shp[k]&&!e.ctrlKey&&!e.metaKey)setShape(shp[k]);
   else if(e.key===" "){e.preventDefault();if(speed){prevSpeed=speed;setSpeed(0)}else setSpeed(prevSpeed||1)}
   else if(k==="v")$("ovl").click();
+  else if(k==="r"&&!e.ctrlKey&&!e.metaKey){if(!UI.report)reportOpen()}
   else if(k==="q"){UI.level=Math.max(0,UI.level-1);lastOptsKey="";updateOpts();refreshPlan()}
   else if(k==="e"){UI.level=Math.min(2,UI.level+1);lastOptsKey="";updateOpts();refreshPlan()}
-  else if(e.key==="Escape"){if(!$("confirm").hidden)hideConfirm();else if(UI.editDrag){UI.editDrag=null;UI.plan=null}else if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;$("help").hidden=true;UI.selDirty=true}
+  else if(e.key==="Escape"){if(!$("confirm").hidden)hideConfirm();else if(UI.report){if(!UI.report.marks.length&&!$("repText").value.trim())reportClose()}else if(UI.editDrag){UI.editDrag=null;UI.plan=null}else if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;$("help").hidden=true;UI.selDirty=true}
   else if(e.key==="Shift"){UI.mouse.shift=true;if(UI.draw)refreshPlan()}
   else if(e.key.startsWith("Arrow")){e.preventDefault();keysDown.add(e.key)}
   else if(e.key==="+"||e.key==="=")zoomAt(vw/2,vh/2,1.2);else if(e.key==="-")zoomAt(vw/2,vh/2,1/1.2)});

@@ -29,7 +29,7 @@ Až je rozhodnuto ji dělat: popis se přenese do `docs/HRA.md`, rozhodnutí do
 
 | Nápad | Stav |
 |---|---|
-| [Ukládání rozehrané hry](ukladani_hry.md) | nápad |
+| [Ukládání rozehrané hry](ukladani_hry.md) | nápad (uložení a nahrání stavu přes hlášení od 0.15) |
 | [Přestavba 0.14: jádro drah](prestavba_drahy.md) | ve hře od 0.14 |
 | [Editor postavených silnic](editor_silnic.md) | ve hře od 0.14 (zbytek nápad) |
 | [Editor spojení pruhů](spojeni_pruhu.md) | ve hře od 0.14 (zbytek nápad) |

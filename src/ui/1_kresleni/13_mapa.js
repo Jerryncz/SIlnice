@@ -115,6 +115,6 @@ function render(){
     if(z>=7){ctx.fillStyle="rgba(255,214,120,"+(na*2.2).toFixed(2)+")";for(const b of S.buildings){if(!isHome(b)||b.away>=b.pop*0.8)continue;const x=tx(b.front),y=ty(b.front);if(x<x0-1||x>x1+1||y<y0-1||y>y1+1)continue;ctx.fillRect(wxOf(b.front)-0.11,wyOf(b.front)-0.11,0.22,0.22)}}}
   ctx.setTransform(dpr*z,0,0,dpr*z,-cam.x*dpr,-cam.y*dpr);
   strokeTarget(UI.pinned,colors.ink);if(UI.hover&&!UI.draw&&!(UI.tool==="build"&&!UI.rebuild))strokeTarget(UI.hover,colors.accent);
-  drawTrace();drawPreview();
+  drawTrace();drawPreview();drawReport();
   if(flash){const age=(performance.now()-flash.t)/1000;if(age>2.4)flash=null;else{ctx.strokeStyle=colors.accent;ctx.globalAlpha=Math.max(0,1-age/2.4);ctx.lineWidth=3/z;ctx.beginPath();ctx.arc(flash.x,flash.y,0.8+age*1.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}}
   drawLabels();drawCursorLabel()}

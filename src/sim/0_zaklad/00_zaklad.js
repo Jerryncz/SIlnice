@@ -2,7 +2,7 @@
 // Osady a cesty – simulace (bez DOM). Soubory v src/sim se skládají v abecedním
 // pořadí do <script id="sim"> v index.html (build.js) a testují se v Node.js.
 
-const GAME_VERSION="0.14.0";
+const GAME_VERSION="0.15.0";
 const MW=128,MH=80;                         // mapa ve světových jednotkách (1 = pole silnice)
 const CS=0.5,W=MW*2,H=MH*2,N=W*H;           // jemná síť terénu a budov: buňka = půl pole
 const STEP=1/30,BASE_SPEED=2.0,MAX_CARS=900,MAX_WALKERS=600;
@@ -13,7 +13,8 @@ const DX=[1,-1,0,0],DY=[0,0,1,-1];
 const NB=new Int32Array(N*4);
 (function(){for(let i=0;i<N;i++){const x=i%W,y=(i/W)|0;for(let d=0;d<4;d++){const nx=x+DX[d],ny=y+DY[d];NB[i*4+d]=(nx<0||ny<0||nx>=W||ny>=H)?-1:ny*W+nx}}})();
 
-function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+// generátor náhody; stav je vidět v f.s, aby šel uložit a nahrát (03_stav.js)
+function mulberry32(a){const f=()=>{let s=f.s;s=s+0x6D2B79F5|0;f.s=s;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};f.s=a|0;return f}
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const tx=i=>i%W, ty=i=>(i/W)|0;
 const wxOf=i=>(i%W+0.5)*CS, wyOf=i=>(((i/W)|0)+0.5)*CS;   // střed buňky ve světě

@@ -95,12 +95,30 @@ Viz `.gitignore`.
 - Zdroj pravdy je tento repozitář na GitHubu. Repozitář (`.git`) nikdy neleží
   ve složce synchronizované OneDrive – synchronizace ho poškodí (převzato
   z BIMPOLIS).
-- `%USERPROFILE%\OneDrive\GIT\Silnice` – **jen hratelná kopie** aktuální
-  verze (`index.html` + `NEEDITOVAT.txt` s verzí, větví, commitem a zda je
-  sloučeno). Přepíše se po každém sestavení, i před sloučením (R59); ručně
-  se v ní needituje.
+- `%USERPROFILE%\OneDrive\GIT\Silnice` – **hratelná kopie** aktuální
+  verze (`index.html` + `NEEDITOVAT.txt` s verzí, větví, commitem, otiskem
+  sestavení a zda je sloučeno). Přepíše se po každém sestavení, i před
+  sloučením (R59); ručně se v ní needituje. Při kopírování každé sestavení
+  do nové podsložky v `outputs` a po zápisu ověřit velikost a verzi.
+- `%USERPROFILE%\OneDrive\GIT\Silnice\hlaseni` – **hlášení ze hry** (R90–R94),
+  vstup od uživatele: sestavení ji nikdy nepřepisuje ani nemaže.
 - Uživatel pracuje na víc počítačích (`C:\Users\jnovotny\…`, `C:\Users\jaros\…`);
   složka je vždy `%USERPROFILE%\OneDrive\GIT\Silnice`.
+
+### Hlášení ze hry
+
+Když uživatel napíše, ať projdeš hlášení:
+1. Přes propojený počítač přečti `hlaseni\*` bez `zpracovano.md`
+   (`popis.md`, `mapa.png`, případně `historie.json.gz`).
+2. Stav zkopíruj k sobě a nahraj: `node tests/hlaseni.js <složka> [sekund]`
+   (vypíše prvky, zkontroluje stav, pustí simulaci dál). Když je hlášení
+   z jiné verze, najdi sestavení podle otisku (`git log -S"<otisk>" --
+   index.html`) a nahraj ho tam.
+3. Shrň zjištění po hlášeních; opravy chyb rovnou (vlastní větev a pull
+   request), změny pravidel jako návrh s otázkami.
+4. Do složky každého zpracovaného hlášení zapiš `zpracovano.md`: co jsi
+   zjistil, co se změnilo a ve kterém pull requestu. Nic nemaž. Uložené
+   stavy do gitu nepatří; do testů jen zmenšená situace, která chybu ukáže.
 
 ## 5. Poznatky
 
