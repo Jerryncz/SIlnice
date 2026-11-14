@@ -19,7 +19,7 @@ function joinAt(e,atA){const nd=S.nodes[atA?e.a:e.b];let oid=-1;
 function endPt(e,atA,off,j){const k=atA?0:e.g.n-1,q=e.g.pts;if(j)return [j.nd.x+j.mx*off/j.cos,j.nd.y+j.my*off/j.cos];return [q[2*k]+e.g.nx[k]*off,q[2*k+1]+e.g.ny[k]*off]}
 // šířka vozovky v bodech úseku [vpravo, vlevo]; u napojení na užší úsek se plynule zúží (náběh pruhu)
 function bandExt(e){edgeCache(e);if(e._be)return e._be;const g=e.g,n=g.n,R=new Float32Array(n).fill(e.er),L=new Float32Array(n).fill(e.el);const be={R,L,ta:null,tb:null,ja:joinAt(e,true),jb:joinAt(e,false)};
-  for(const atA of [true,false]){const j=atA?be.ja:be.jb;if(!j)continue;const o=j.o;
+  for(const atA of [true,false]){const j=atA?be.ja:be.jb;if(!j||j.nd.edges.length>=3)continue;const o=j.o;
     const tr=j.same?o.er:o.el,tl=j.same?o.el:o.er;if(tr>=e.er-1e-3&&tl>=e.el-1e-3)continue;
     const T=Math.min(1.6,g.len*0.45);const t={R:Math.min(tr,e.er),L:Math.min(tl,e.el),T};if(atA)be.ta=t;else be.tb=t;
     for(let k=0;k<n;k++){const d=atA?g.cum[k]:g.len-g.cum[k];if(d>=T)continue;const f=1-d/T,sm=f*f*(3-2*f);R[k]=Math.min(R[k],e.er+(t.R-e.er)*sm);L[k]=Math.min(L[k],e.el+(t.L-e.el)*sm)}}
@@ -78,6 +78,20 @@ function drawCrossings(list){const z=cam.z;if(z<9)return;const seen=new Set();
     for(const atA of [true,false]){const n=S.nodes[atA?e.a:e.b];if(!crossOn(S,n,e))continue;const key=n.id+"|"+e.id+(atA?"a":"b");if(seen.has(key))continue;seen.add(key);
       const d=n.rad+0.05+XW/2;const u=atA?d:e.g.len-d;if(u<0||u>e.g.len)continue;const p=pointAt(e.g,u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,n.xBusy&&n.xBusy.get(e.id)>0)}
     if(e.xw)for(const x of e.xw){const p=pointAt(e.g,x.u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,e.mbusy&&e.mbusy.some(u=>Math.abs(u-x.u)<0.05))}}}
+function auxOf(e,d){const m=edgeCache(e);const key="ax"+d;let v=m.get(key);if(v===undefined){v=auxCount(S,e,d);m.set(key,v)}return v}
+function laneDash(aux,lw){if(aux){ctx.lineWidth=lw*2.2;ctx.setLineDash([0.1,0.1])}else{ctx.lineWidth=lw;ctx.setLineDash([0.18,0.2])}}
+// šipky řazení na pruzích před křižovatkou (bity 1 vlevo, 2 rovně, 4 vpravo)
+function drawLaneArrows(layer){const z=cam.z;if(z<13)return;ctx.lineCap="round";ctx.lineJoin="round";
+  for(const n of S.nodes){if(n.dead||n.edges.length<3||n.port||n.ring||!n.lm)continue;if((n.lvl<0.5?0:n.lvl<1.5?1:2)!==layer)continue;if(!inView(n.x,n.y,3))continue;
+    for(const a of n.arms){const l=a.inLink,L=linkLanes(S,l),ms=n.lm.get(l);if(!L||!ms)continue;const e=S.edges[a.e];const user=e.arw&&e.arw[l&1];if(L<2&&!user)continue;
+      const st=stopS(S,l);if(st<0||st<1.1)continue;
+      for(let k=0;k<L;k++){const m=ms[k];if(!m)continue;const p=lanePose(S,l,k,st-0.55);const fx=Math.cos(p.ang),fy=Math.sin(p.ang),rx=-fy,ry=fx;const P=(f,r)=>[p.x+fx*f+rx*r,p.y+fy*f+ry*r];
+        ctx.strokeStyle=user&&user[k]?colors.accent:colors["road-edge"];ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=0.032;
+        const head=(f,r,df,dr)=>{const a0=P(f+df*0.07,r+dr*0.07),a1=P(f-dr*0.045,r+df*0.045),a2=P(f+dr*0.045,r-df*0.045);ctx.beginPath();ctx.moveTo(a0[0],a0[1]);ctx.lineTo(a1[0],a1[1]);ctx.lineTo(a2[0],a2[1]);ctx.closePath();ctx.fill()};
+        const line=(...q)=>{ctx.beginPath();q.forEach((v,i)=>{const w=P(v[0],v[1]);i?ctx.lineTo(w[0],w[1]):ctx.moveTo(w[0],w[1])});ctx.stroke()};
+        if(m&2){line([-0.2,0],[0.13,0]);head(0.13,0,1,0)}else line([-0.2,0],[-0.02,0]);
+        if(m&1){line([-0.02,0],[0.02,-0.03],[0.02,-0.075]);head(0.02,-0.075,0,-1)}
+        if(m&4){line([-0.02,0],[0.02,0.03],[0.02,0.075]);head(0.02,0.075,0,1)}}}}}
 function drawRoadLayer(list,layer){const z=cam.z;ctx.lineCap="round";ctx.lineJoin="round";const discs=nodeDiscs(list);
   // jednosměrky a nájezdy dospod, dálnice navrch: odbočka se pod průběžnou silnici zasune a vychází z jejího okraje
   const ord=e=>e.kind==="hwy"?2:(RK[e.kind].oneway||e.lf===0||e.lb===0)?0:1;list=[...list].sort((a,b)=>ord(a)-ord(b));
@@ -94,13 +108,13 @@ function drawRoadLayer(list,layer){const z=cam.z;ctx.lineCap="round";ctx.lineJoi
     const one=e.lf===0||e.lb===0;
     if(!one){if(!K.median&&K.line!=="none"){ctx.strokeStyle=colors.mark;ctx.lineWidth=lw;ctx.setLineDash(K.line==="solid"||Math.min(e.lf,e.lb)>=2?[]:[0.22,0.16]);ctx.stroke(offsetPath(e,0,ta,tb))}
       else if(e.kind==="hwy"){ctx.strokeStyle=colors.mark;ctx.lineWidth=lw;ctx.setLineDash([]);ctx.stroke(offsetPath(e,K.median/2,ta,tb));ctx.stroke(offsetPath(e,-K.median/2,ta,tb))}
-      ctx.strokeStyle=colors.lane;ctx.lineWidth=lw;ctx.setLineDash([0.18,0.2]);
-      for(let k=1;k<e.lf;k++)ctx.stroke(offsetPath(e,K.median/2+k*LW,ta,tb));
-      for(let k=1;k<e.lb;k++)ctx.stroke(offsetPath(e,-(K.median/2+k*LW),ta,tb))}
-    else{const L=e.lf+e.lb;ctx.strokeStyle=colors.lane;ctx.lineWidth=lw;ctx.setLineDash([0.18,0.2]);for(let k=1;k<L;k++)ctx.stroke(offsetPath(e,-(L*LW)/2+k*LW,ta,tb))}
+      ctx.strokeStyle=colors.lane;const af=auxOf(e,0),ab=auxOf(e,1);
+      for(let k=1;k<e.lf;k++){laneDash(k>=e.lf-af,lw);ctx.stroke(offsetPath(e,K.median/2+k*LW,ta,tb))}
+      for(let k=1;k<e.lb;k++){laneDash(k>=e.lb-ab,lw);ctx.stroke(offsetPath(e,-(K.median/2+k*LW),ta,tb))}}
+    else{const L=e.lf+e.lb,ax=auxOf(e,e.lf?0:1),sg=e.lf?1:-1;ctx.strokeStyle=colors.lane;for(let k=1;k<L;k++){laneDash(k>=L-ax,lw);ctx.stroke(offsetPath(e,sg*(-(L*LW)/2+k*LW),ta,tb))}}
     if(e.kind==="hwy"){ctx.setLineDash([]);ctx.strokeStyle=colors.lane;ctx.stroke(offsetPath(e,e.er-0.04,ta,tb));ctx.stroke(offsetPath(e,-(e.el-0.04),ta,tb))}}
   ctx.setLineDash([]);
-  drawCrossings(list);
+  drawCrossings(list);drawLaneArrows(layer);
   ctx.lineCap="round";
   if(z>=13){ctx.fillStyle=colors.accent;for(const e of list){if(!(e.lf===0||e.lb===0)||e.ring||e.g.len<1.2)continue;const fwd=e.lf>0;
     for(let u=0.6;u<e.g.len-0.4;u+=2.4){const p=pointAt(e.g,u);const dx=fwd?p.tx:-p.tx,dy=fwd?p.ty:-p.ty,s=0.13;
@@ -109,7 +123,7 @@ function drawRoadLayer(list,layer){const z=cam.z;ctx.lineCap="round";ctx.lineJoi
   if(z>=8){ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,1.6/z);for(const e of list)for(const nid of [e.a,e.b]){const n=S.nodes[nid];if(!n.keep||n.edges[0]!==e.id)continue;
     const k=e.a===nid?0:e.g.n-1;const nx=e.g.nx[k],ny=e.g.ny[k];ctx.beginPath();ctx.moveTo(n.x+nx*(e.er+0.12),n.y+ny*(e.er+0.12));ctx.lineTo(n.x-nx*(e.el+0.12),n.y-ny*(e.el+0.12));ctx.stroke()}}}
 function drawNodes(layer){const z=cam.z;if(z<8)return;
-  for(const n of S.nodes){if(n.dead||n.edges.length<3)continue;if((n.lvl<0.5?0:n.lvl<1.5?1:2)!==layer)continue;if(!inView(n.x,n.y,2))continue;const r=nodeR(n);
+  for(const n of S.nodes){if(n.dead||n.edges.length<3||n.port)continue;if((n.lvl<0.5?0:n.lvl<1.5?1:2)!==layer)continue;if(!inView(n.x,n.y,2))continue;const r=nodeR(n);
     if(n.eff==="light"){const L=n.light;for(const a of n.arms){if(!linkLanes(S,a.inLink))continue;const e=S.edges[a.e];const rx=a.hy,ry=-a.hx;const ex=e.a===n.id?e.el:e.er;const st=linkOut(S,a.inLink),dd=e.g.len-st;const px=n.x+a.hx*(dd+0.12)+rx*(ex*0.6),py=n.y+a.hy*(dd+0.12)+ry*(ex*0.6);
       const col=L&&L.axis===a.axis?(L.amber?colors.warn:colors.good):colors.bad;ctx.fillStyle="#15181a";ctx.beginPath();ctx.arc(px,py,0.12,0,Math.PI*2);ctx.fill();ctx.fillStyle=col;ctx.beginPath();ctx.arc(px,py,0.08,0,Math.PI*2);ctx.fill()}}
     else if(n.eff==="main"||n.eff==="merge"){for(const a of n.arms){if(n.mainEdges.has(a.e)||!linkLanes(S,a.inLink))continue;const e=S.edges[a.e];const rx=a.hy,ry=-a.hx;const ex=e.a===n.id?e.el:e.er;const dd=e.g.len-linkOut(S,a.inLink);const px=n.x+a.hx*(dd+0.2)+rx*(ex+0.05),py=n.y+a.hy*(dd+0.2)+ry*(ex+0.05),s=0.13;

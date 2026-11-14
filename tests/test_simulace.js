@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,cycleArrow,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -147,7 +147,7 @@ function road(S, x0, y0, x1, y1, kind, lvl0, lvl1, lanes) {
 }
 
 // ---- vzory mimoúrovňových křižovatek a odbočka: všechny směry musí jít projet ----
-for (const type of ["diamond", "clover"]) {
+for (const type of ["diamond", "clover", "trumpet"]) {
   const S = A.createSim(11); S.money = 1e8; const y = 40.5, x0 = 20.5, x1 = 106.5, cx = 63.5;
   for (const b of [...S.buildings]) if (Math.abs(A.MW && b.front % (A.W) / 2 - cx) < 30 && Math.abs(Math.floor(b.front / A.W) / 2 - y) < 22) A.demolishBuilding(S, b, true);
   const st = { type: "free", x: x0, y, lvl: 0 }, en = { type: "free", x: x1, y, lvl: 0 };
@@ -156,10 +156,15 @@ for (const type of ["diamond", "clover"]) {
   const p = A.planTemplate(S, type, cx, y, "road", 1); ok(p.ok, type + ": vzor jde naplánovat " + (p.msg || ""));
   if (!p.ok) continue;
   const r = A.commitTemplate(S, p); ok(r.ok && !r.msg, type + ": vzor postaven celý " + (r.msg || ""));
-  const D = type === "clover" ? 17 : 8;
+  const D = type === "clover" ? 22 : type === "trumpet" ? 14 : 9;
   const at = (x, yy) => { const sn = A.snapPoint(S, x, yy, 0); return sn.type === "node" ? { node: sn.node } : sn.type === "edge" ? { e: sn.edge, u: sn.u, side: 1 } : null; };
   const W = at(x0 + 3, y), E = at(x1 - 3, y), N = at(cx, y - D), Sx = at(cx, y + D);
-  const pairs = [[W, E], [E, W], [W, N], [W, Sx], [E, N], [E, Sx], [N, W], [N, E], [Sx, W], [Sx, E], [N, Sx], [Sx, N]];
+  const pairs = type === "trumpet" ? (() => { const R = N || Sx; return [[W, E], [E, W], [W, R], [E, R], [R, W], [R, E]]; })()
+    : [[W, E], [E, W], [W, N], [W, Sx], [E, N], [E, Sx], [N, W], [N, E], [Sx, W], [Sx, E], [N, Sx], [Sx, N]];
+  // rampy se na dálnici napojují na pruh: žádné dávání přednosti, auto z rampy má svůj pruh
+  const ports = S.nodes.filter(n => !n.dead && n.port && Math.abs(n.y - y) < 0.01);
+  const pn = ports.reduce((t, n) => t + n.arms.filter(a => a.port).length, 0); ok(pn >= 4, `${type}: rampy jsou na dálnici napojené na pruh (${pn})`);
+  for (const n of ports) for (const a of n.arms) { if (!a.port || !A.linkLanes(S, a.inLink)) continue; const lc = n.lc.get(a.inLink); ok(lc.every(r => r.length && r.every(q => q.free)), `${type}: nájezd má vlastní pruh bez dávání přednosti`); }
   let good = 0; for (const [a, b] of pairs) if (a && b && A.findPath(S, a, b)) good++;
   ok(good === pairs.length, `${type}: projet jde všemi směry (${good}/${pairs.length})`);
   for (let k = 0; k < 900; k++) A.step(S, A.STEP);
@@ -175,6 +180,46 @@ for (const type of ["diamond", "clover"]) {
     ok(S.edges.some(e => !e.dead && e.kind === "road" && e.lf === 2 && e.lb === 1), "před odbočkou je odbočovací pruh");
     const ow = S.edges.find(e => !e.dead && e.kind === "oneway"); ok(!!ow, "odbočka je jednosměrka");
     const a = A.snapPoint(S, 12.5, y, 0); ok(ow && A.findPath(S, { e: a.edge, u: a.u, side: 1 }, { node: ow.b }), "z hlavní silnice jde odbočit"); }
+}
+
+// ---- pruhy: nájezd a sjezd na dálnici, průpletový pruh, plynulý provoz bez dávání přednosti ----
+{
+  const S = A.createSim(11); S.money = 1e8; const y = 40.5;
+  for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
+  for (const b of [...S.buildings]) A.demolishBuilding(S, b, true);
+  const sp = (x, yy) => { const q = A.snapPoint(S, x, yy, 0); return q.type === "free" ? { type: "free", x, y: yy, lvl: 0 } : q; };
+  const rd = (pts, kind, lanes) => A.buildRoad(S, { pts, kind, lanes, start: sp(pts[0], pts[1]), end: sp(pts[pts.length - 2], pts[pts.length - 1]) });
+  ok(rd(A.mkLine(12.5, y, 58.5, y), "hwy", 2).ok, "pruhy: dálnice");
+  const r1 = rd(A.mkLine(20.5, 47.5, 28.5, y), "ramp", 1), r2 = rd(A.mkCubic(38.5, y, 42, y, 46, 44, 46.5, 47.5), "ramp", 1);
+  ok(r1.ok && r2.ok, "pruhy: nájezd a sjezd postaveny");
+  const hw = S.edges.filter(e => !e.dead && e.kind === "hwy" && Math.abs(e.g.bb[1] - y) < 0.01);
+  const mid = hw.find(e => e.lf === 3 || e.lb === 3); ok(mid && Math.abs(mid.g.len - 10) < 0.01, "pruhy: mezi nájezdem a sjezdem je průpletový pruh");
+  const nIn = S.nodes[r1.edges[r1.edges.length - 1].b], nOut = S.nodes[r2.edges[0].a];
+  ok(nIn.port && nOut.port, "pruhy: rampy jsou napojené na pruh");
+  const rampIn = r1.edges[r1.edges.length - 1].id * 2; ok(nIn.lc.get(rampIn)[0].length === 1 && nIn.lc.get(rampIn)[0][0].free && nIn.lc.get(rampIn)[0][0].lane === 2, "pruhy: nájezd vede do vlastního pruhu");
+  const e1 = r1.edges[0], e2 = r2.edges[r2.edges.length - 1];
+  const west = hw.find(e => Math.min(e.g.pts[0], e.g.pts[e.g.pts.length - 2]) < 13), east = hw.find(e => Math.max(e.g.pts[0], e.g.pts[e.g.pts.length - 2]) > 58);
+  let made = 0, maxWait = 0;
+  const spawn = (from, fu, to, tu) => { const g = { e: to.id, u: tu, dirs: [0, 1] }; const p = A.findPath(S, { e: from.id, u: fu, dirs: [0, 1] }, g); if (!p) return;
+    const c = A.newVehicle(S, { links: p.links, s: p.s0, sEnd: p.sEnd, goalEp: g, trip: { to: { isGate: true } }, state: "exit" }); c.lane = A.chooseLane(S, c, 0); S.exiting.push(c); made++; };
+  for (let t = 0; t < 3600; t++) { if (t % 12 === 0) spawn(west, 1, east, east.g.len - 1); if (t % 20 === 5) spawn(e1, 0.5, east, east.g.len - 1); if (t % 25 === 7) spawn(west, 1, e2, e2.g.len - 0.5);
+    A.updateVehicles(S, 1 / 30); for (const c of S.cars) if (!c.dead && c.wait > maxWait) maxWait = c.wait; }
+  ok(made > 500, "pruhy: auta vyjela (" + made + ")"); ok(S.stuckN === 0 && maxWait < 5, `pruhy: průplet se nezasekne (vzdalo ${S.stuckN}, nejdelší čekání ${maxWait.toFixed(1)} s)`);
+  zkontroluj(S, "pruhy");
+}
+// ---- šipky: hráč změní řazení, spojení pruhů se přepočítá ----
+{
+  const S = A.createSim(11); S.money = 1e8;
+  for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
+  const F = (x, yy) => ({ type: "free", x, y: yy, lvl: 0 });
+  A.buildRoad(S, { pts: A.mkLine(20.5, 40.5, 40.5, 40.5), kind: "road", lanes: 2, start: F(20.5, 40.5), end: F(40.5, 40.5), auto: true });
+  A.buildRoad(S, { pts: A.mkLine(30.5, 32.5, 30.5, 48.5), kind: "road", lanes: 2, start: F(30.5, 32.5), end: F(30.5, 48.5), auto: true });
+  const n = S.nodes.find(n => !n.dead && n.edges.length === 4); ok(!!n, "šipky: křižovatka");
+  const a = n.arms[0], l = a.inLink, e = S.edges[a.e];
+  ok(n.lm.get(l)[0] === 3 && n.lm.get(l)[1] === 6, "šipky: samočinně vlevo+rovně a rovně+vpravo (" + n.lm.get(l) + ")");
+  const r = A.cycleArrow(S, e, l & 1, 0); ok(r.ok && n.lm.get(l)[0] === 1, "šipky: vnitřní pruh jen vlevo");
+  ok(n.lc.get(l)[1].some(q => q.turn === 0) && n.lc.get(l)[0].every(q => q.turn !== 0), "šipky: rovně jen z druhého pruhu");
+  for (const t of n.turns.get(l)) ok(n.lc.get(l).some(row => row.some(q => q.link === t.link)), "šipky: každý směr má pruh");
 }
 
 // ---- napojení na pruh: z konce přidaného pruhu vede jednosměrka, silnice má přednost ----
