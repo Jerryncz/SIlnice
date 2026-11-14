@@ -28,6 +28,11 @@ function bandPath(e,d){const m=edgeCache(e);const key="b"+d.toFixed(3);let p=m.g
   const pt=(k,off)=>k===0&&be.ja?endPt(e,true,off,be.ja):k===g.n-1&&be.jb?endPt(e,false,off,be.jb):[q[2*k]+g.nx[k]*off,q[2*k+1]+g.ny[k]*off];
   for(let k=0;k<g.n;k++){const r=Math.max(0.01,be.R[k]+d),a=pt(k,r);if(k)p.lineTo(a[0],a[1]);else p.moveTo(a[0],a[1])}
   for(let k=g.n-1;k>=0;k--){const l=Math.max(0.01,be.L[k]+d),a=pt(k,-l);p.lineTo(a[0],a[1])}p.closePath();m.set(key,p);return p}
+// stín mostu: posun roste s výškou, u rampy tedy plynule od nuly
+function shadowPath(e){const m=edgeCache(e);let p=m.get("sh");if(p)return p;const be=bandExt(e),g=e.g,q=g.pts;p=new Path2D();const pts=[];
+  for(let k=0;k<g.n;k++){const lv=lvlAt(S,e,g.cum[k]);const r=be.R[k]+0.1;pts.push([q[2*k]+g.nx[k]*r+0.16*lv,q[2*k+1]+g.ny[k]*r+0.26*lv])}
+  for(let k=g.n-1;k>=0;k--){const lv=lvlAt(S,e,g.cum[k]);const l=be.L[k]+0.1;pts.push([q[2*k]-g.nx[k]*l+0.16*lv,q[2*k+1]-g.ny[k]*l+0.26*lv])}
+  pts.forEach((a,i)=>i?p.lineTo(a[0],a[1]):p.moveTo(a[0],a[1]));p.closePath();m.set("sh",p);return p}
 // vodorovná značka: kolik z konce vynechat, když v náběhu pruh končí
 function markTrim(e,o,atA){const be=bandExt(e),t=atA?be.ta:be.tb;if(!t)return 0;const lim=(o>0?t.R:t.L)-RK[e.kind].side;return Math.abs(o)>lim-0.03?t.T:0}
 // konec značení u uzlu: u křižovatky za přechodem, na plynulém spoji nic
@@ -45,10 +50,25 @@ function asphaltColor(e){if(overlay){const c=Math.max(e.cong[0],e.cong[1]);if(e.
 function nodeDiscs(list){const seen=new Set(),out=[];
   for(const e of list)for(const atA of [true,false]){const nid=atA?e.a:e.b;if(seen.has(nid))continue;seen.add(nid);const n=S.nodes[nid];if(n.dead)continue;
     const arms=n.edges.map(id=>S.edges[id]);let main=arms[0];for(const a of arms)if(a.w>main.w)main=a;
-    if(n.edges.length>=3){if(passPair(n))continue;out.push({x:n.x,y:n.y,r:n.rad,e:main,side:Math.max(...arms.map(a=>RK[a.kind].side))});continue}
+    if(n.edges.length>=3){if(passPair(n))continue;out.push({x:n.x,y:n.y,r:n.rad,e:main,side:Math.max(...arms.map(a=>RK[a.kind].side)),node:n});continue}
     if(n.edges.length===1){const a=arms[0],be=bandExt(a),k=a.a===nid?0:a.g.n-1;const R=be.R[k],L=be.L[k],sh=(R-L)/2;out.push({x:n.x+a.g.nx[k]*sh,y:n.y+a.g.ny[k]*sh,r:(R+L)/2,e:a,side:RK[a.kind].side})}}
   return out}
-function fillDiscs(discs,d,colorFn,minSide){for(const q of discs){if(minSide&&!q.side)continue;const r=q.r+d-(minSide===false?q.side:0);if(r<=0.01)continue;ctx.fillStyle=colorFn(q.e);ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill()}}
+// plocha křižovatky podle ramen: rohy ramen na okraji plochy, mezi sousedními rameny oblouk
+// (u rovné strany křižovatky tvaru T zůstane rovná hrana)
+function nodePoly(n,d){const key=n._pv===S.netVer?n._pk:null;if(!key){n._pv=S.netVer;n._pk=new Map()}const k=d.toFixed(3);let p=n._pk.get(k);if(p)return p;
+  const arms=[...n.arms].sort((a,b)=>Math.atan2(a.hy,a.hx)-Math.atan2(b.hy,b.hx));const R=n.rad,c=[];
+  for(const a of arms){const e=S.edges[a.e];const out=e.a===n.id;const er=(out?e.er:e.el)+d,el=(out?e.el:e.er)+d;const rx=-a.hy,ry=a.hx;
+    const bx=n.x+a.hx*R,by=n.y+a.hy*R;c.push({L:[bx-rx*el,by-ry*el],Rt:[bx+rx*er,by+ry*er],h:[a.hx,a.hy]})}
+  p=new Path2D();p.moveTo(c[0].L[0],c[0].L[1]);
+  for(let i=0;i<c.length;i++){const A=c[i],B=c[(i+1)%c.length];p.lineTo(A.Rt[0],A.Rt[1]);
+    // průsečík pravého okraje ramene A s levým okrajem ramene B
+    const den=A.h[0]*B.h[1]-A.h[1]*B.h[0];let ctrl=null;
+    if(Math.abs(den)>0.08){const t=((B.L[0]-A.Rt[0])*B.h[1]-(B.L[1]-A.Rt[1])*B.h[0])/den;const ix=A.Rt[0]+A.h[0]*t,iy=A.Rt[1]+A.h[1]*t;if(Math.hypot(ix-n.x,iy-n.y)<R*2.2+0.5&&t<0.2)ctrl=[ix,iy]}
+    if(ctrl)p.quadraticCurveTo(ctrl[0],ctrl[1],B.L[0],B.L[1]);else p.lineTo(B.L[0],B.L[1])}
+  p.closePath();n._pk.set(k,p);return p}
+function fillDiscs(discs,d,colorFn,minSide){for(const q of discs){if(minSide&&!q.side)continue;const dd=d-(minSide===false?q.side:0);ctx.fillStyle=colorFn(q.e);
+  if(q.node&&q.node.arms.length>=3){ctx.fill(nodePoly(q.node,dd));continue}
+  const r=q.r+dd;if(r<=0.01)continue;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill()}}
 // zebra přes vozovku: střed (x,y), směr silnice (tx,ty), šířky vpravo/vlevo
 function zebra(x,y,tx,ty,er,el,busy){const nx=-ty,ny=tx;ctx.fillStyle=busy?colors.warn:colors["road-edge"];ctx.globalAlpha=busy?0.8:0.55;
   for(let o=-el+0.07;o<=er-0.05;o+=0.11){const cx=x+nx*o,cy=y+ny*o;ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.atan2(ty,tx));ctx.fillRect(-XW*0.42,-0.03,XW*0.84,0.06);ctx.restore()}ctx.globalAlpha=1}
@@ -59,7 +79,7 @@ function drawCrossings(list){const z=cam.z;if(z<9)return;const seen=new Set();
     if(e.xw)for(const x of e.xw){const p=pointAt(e.g,x.u);zebra(p.x,p.y,p.tx,p.ty,e.er-K.side,e.el-K.side,e.mbusy&&e.mbusy.some(u=>Math.abs(u-x.u)<0.05))}}}
 function drawRoadLayer(list,layer){const z=cam.z;ctx.lineCap="round";ctx.lineJoin="round";const discs=nodeDiscs(list);
   list=[...list].sort((a,b)=>(a.kind==="hwy")-(b.kind==="hwy"));   // dálnice navrch: napojení z boku se pod ni zasune
-  if(layer>0){ctx.save();ctx.translate(0.16,0.26);ctx.fillStyle="rgba(0,0,0,.22)";for(const e of list)ctx.fill(bandPath(e,0.1));fillDiscs(discs,0.1,()=>"rgba(0,0,0,.22)");ctx.restore()}
+  if(layer>0){ctx.fillStyle="rgba(0,0,0,.22)";for(const e of list)ctx.fill(shadowPath(e));ctx.save();ctx.translate(0.16*layer,0.26*layer);fillDiscs(discs,0.1,()=>"rgba(0,0,0,.22)");ctx.restore()}
   const cd=layer>0?0.08:Math.max(0.04,0.8/z);const edgeCol=e=>layer>0?colors["bridge-edge"]:(e.kind==="hwy"||e.kind==="ramp")?colors["hwy-edge"]:colors["road-edge"];
   for(const e of list){ctx.fillStyle=edgeCol(e);ctx.fill(bandPath(e,cd))}fillDiscs(discs,cd,edgeCol);
   ctx.fillStyle=colors.sidewalk;for(const e of list){if(!RK[e.kind].side)continue;ctx.fill(bandPath(e,0))}fillDiscs(discs,0,()=>colors.sidewalk,true);
@@ -128,13 +148,27 @@ function drawBuildings(vis){const ins=0.07,z=cam.z;
       else if(r===R_GAR){const q=mergedRect(j,b,ins*0.6);ctx.fillStyle=colors["road-edge"];ctx.fillRect(...q);ctx.fillStyle=colors.lot;ctx.fillRect(q[0]+0.05,q[1]+0.05,q[2]-0.1,q[3]-0.1)}
       else{const q=mergedRect(j,b,0.04);ctx.fillStyle=r===R_YARD?(b.type==="school"?"rgba(201,149,42,.28)":shade(K.color,1.9).replace(/rgb\((\d+),(\d+),(\d+)\)/,(m,a,b2,c)=>`rgba(${a},${b2},${c},.55)`)):colors.lot;ctx.fillRect(...q);
         const x=tx(j)*CS,y=ty(j)*CS;
+        if(r===R_YARD&&AMEN_YARD[b.type]){AMEN_YARD[b.type](j,b,q,x,y,z)}
         if(r===R_LOT&&z>=9){ctx.strokeStyle=colors["lot-line"];ctx.lineWidth=Math.max(0.03,1/z);ctx.beginPath();ctx.moveTo(x+0.02,y+0.06);ctx.lineTo(x+0.02,y+0.44);ctx.stroke()}
         if(r===R_FORE){ctx.fillStyle=colors.canopy;ctx.globalAlpha=0.75;ctx.fillRect(x+0.04,y+0.04,0.42,0.42);ctx.globalAlpha=1;if((tx(j)+ty(j))%2===0){ctx.fillStyle=KIND.gas.color;ctx.fillRect(x+0.2,y+0.12,0.1,0.26)}}
         if(r===R_YARD&&K.out&&z>=10&&j===b.tiles.find(t=>S.role[t]===R_YARD)){const n=Math.min(4,Math.ceil(b.out/2));ctx.fillStyle=GOODS[K.out].color;for(let s=0;s<n;s++)ctx.fillRect(x+0.08+s*0.18,y+0.15,0.13,0.28)}}}
     if(b.type==="flat"&&b.access){const fx=wxOf(b.front),fy=wyOf(b.front);const dx=b.access.x-fx,dy=b.access.y-fy,l=Math.hypot(dx,dy)||1;
       ctx.fillStyle="rgba(10,12,10,.85)";ctx.save();ctx.translate(fx+dx/l*0.16,fy+dy/l*0.16);ctx.rotate(Math.atan2(dy,dx));ctx.fillRect(-0.08,-0.17,0.16,0.34);ctx.restore()}
+    if(b.lay||KIND[b.type]||b.type==="flat")drawLot(b);
     if(K){if(b.type==="park"){const [x,y]=bCenter(b);drawSign(x,y,0.36,colors.sign,"P",true)}
       else{const [x,y]=bCenter(b,r=>r===R_BLD);drawSign(x,y,b.type==="mall"||b.type==="hyper"||b.type==="steel"?0.46:0.36,shade(K.color,0.8),K.letter,false)}}}}
+// plochy vybavenosti: park se stromy, náměstí s dlažbou a kašnou, hřiště, terasa kavárny, zahrada kostela
+const AMEN_YARD={
+  parkland:(j,b,q,x,y,z)=>{ctx.fillStyle="#a9cc94";ctx.fillRect(...q);if((tx(j)+ty(j))%2===0){ctx.fillStyle=colors.tree;ctx.beginPath();ctx.arc(x+0.25+(hash(j,1)-0.5)*0.12,y+0.25+(hash(j,2)-0.5)*0.12,0.17,0,Math.PI*2);ctx.fill()}
+    else if(z>=10){ctx.fillStyle="rgba(240,232,210,.9)";ctx.fillRect(x+0.2,y,0.1,CS)}},
+  square:(j,b,q,x,y,z)=>{ctx.fillStyle="#dcd0b6";ctx.fillRect(...q);if(z>=10){ctx.strokeStyle="rgba(150,135,110,.35)";ctx.lineWidth=0.02;ctx.strokeRect(x+0.02,y+0.02,CS-0.04,CS-0.04)}
+    if(j===b.tiles[Math.floor(b.tiles.length/2)]){const [cx,cy]=bCenter(b);ctx.fillStyle="#9fb7c9";ctx.beginPath();ctx.arc(cx,cy,0.32,0,Math.PI*2);ctx.fill();ctx.fillStyle=colors.water;ctx.beginPath();ctx.arc(cx,cy,0.22,0,Math.PI*2);ctx.fill()}},
+  playground:(j,b,q,x,y,z)=>{ctx.fillStyle="#ead7a6";ctx.fillRect(...q);if(z>=9){const c=["#d0543a","#3a7ad0","#3aa05a"][j%3];ctx.fillStyle=c;ctx.fillRect(x+0.16,y+0.16,0.18,0.18)}},
+  cafe:(j,b,q,x,y,z)=>{ctx.fillStyle="#e3d5c0";ctx.fillRect(...q);if(z>=9){ctx.fillStyle="#9a5b3f";for(const [a,c] of [[0.15,0.15],[0.35,0.35]]){ctx.beginPath();ctx.arc(x+a,y+c,0.07,0,Math.PI*2);ctx.fill()}}},
+  church:(j,b,q,x,y,z)=>{ctx.fillStyle="#b9cfa6";ctx.fillRect(...q)}};
+// aleje: stromy podél chodníků ulic v obcích
+function drawAlleys(list){if(cam.z<6)return;ctx.fillStyle=colors.tree;
+  for(const e of list){if(!e.alej||isRampEdge(S,e))continue;for(let u=0.6;u<e.g.len-0.5;u+=1.1){const p=pointAt(e.g,u);for(const sg of [1,-1]){const o=sg>0?e.er+0.13:-(e.el+0.13);ctx.beginPath();ctx.arc(p.x+p.nx*o,p.y+p.ny*o,0.11,0,Math.PI*2);ctx.fill()}}}}
 function lotSlots(b){const out=[];for(const j of b.tiles){const r=S.role[j];if(r===R_LOT||r===R_YARD||r===R_GAR||r===R_FORE&&(tx(j)+ty(j))%2)out.push([wxOf(j),wyOf(j)])}return out}
 function drawCarAt(x,y,ang,color,truck,cargo){const l=truck?0.62:0.4,w=truck?0.24:0.2;ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.fillStyle=color;ctx.fillRect(-l/2,-w/2,l,w);
   if(truck&&cargo){ctx.fillStyle=GOODS[cargo].color;ctx.fillRect(-l/2+0.03,-w/2+0.03,l*0.6,w-0.06)}
@@ -142,7 +176,9 @@ function drawCarAt(x,y,ang,color,truck,cargo){const l=truck?0.62:0.4,w=truck?0.2
 const _p={};
 const doorXY=b=>b&&b.front!==undefined?[wxOf(b.front),wyOf(b.front)]:null;
 function carPose(c){
+  if((c.state==="enter"||c.state==="unpark")&&c.path){const q=pathPose(c.path,c.ps);return {x:q.x,y:q.y,ang:q.ang,lvl:0}}
   if(c.state==="exit"){const l=c.links[0],e=S.edges[l>>1];if(!e||e.dead)return null;const d=l&1;const u=d?e.g.len-c.s:c.s;const p=pointAt(e.g,clamp(u,0,e.g.len),_p);
+    if(c.ux!==undefined)return {x:c.ux,y:c.uy,ang:Math.atan2(p.y-c.uy,p.x-c.ux),lvl:0};
     const dr=doorXY(c.trip&&c.trip.from)||[p.x,p.y];
     return {x:p.x+(dr[0]-p.x)*0.55,y:p.y+(dr[1]-p.y)*0.55,ang:Math.atan2(p.y-dr[1],p.x-dr[0]),lvl:0}}
   if(c.state==="enter"){const dr=doorXY(c.trip&&c.trip.to)||[c.ex,c.ey];const f=Math.min(1,c.t)*0.72;
@@ -152,7 +188,7 @@ function carPose(c){
   const u=clamp(d?e.g.len-c.s:c.s,0,e.g.len);const p=pointAt(e.g,u,_p);
   // boční posun do nového pruhu plynule
   const off0=laneOffset(e,d,c.lane);if(c._o===undefined||Math.abs(c._o-off0)>0.9)c._o=off0;else c._o+=(off0-c._o)*0.18;
-  const off=c._o,sg=d?-1:1;return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),lvl:lvlAt(S,e,u)}}
+  const off=c._o,sg=d?-1:1;return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),lvl:lvlAt(S,e,u),L:edgeLayer(e)}}
 function walkerPose(w){
   if(w.ph==="cross"&&w.cur){const x=w.cur,t=x.go?clamp(w.t,0,1):0;return [x.x0+(x.x1-x.x0)*t,x.y0+(x.y1-x.y0)*t]}
   const l=w.links[w.li],e=S.edges[l>>1];if(!e||e.dead)return null;const d=l&1;const u=clamp(d?e.g.len-w.s:w.s,0,e.g.len);
@@ -160,13 +196,20 @@ function walkerPose(w){
   if(w.ph==="out"||w.ph==="in"){const dr=doorXY(w.ph==="out"?w.trip.from:w.trip.to);if(dr){const f=w.ph==="out"?1-w.t:w.t;x+=(dr[0]-x)*f*0.85;y+=(dr[1]-y)*f*0.85}}
   return [x,y]}
 function drawVehicles(layer){if(cam.z<3)return;
-  for(const c of S.cars){if(c.dead)continue;const q=carPose(c);if(!q)continue;const L=q.lvl<0.5?0:q.lvl<1.5?1:2;if(L!==layer||!inView(q.x,q.y,1))continue;
+  for(const c of S.cars){if(c.dead)continue;const q=carPose(c);if(!q)continue;const L=q.L!==undefined?q.L:q.lvl<0.5?0:q.lvl<1.5?1:2;if(L!==layer||!inView(q.x,q.y,1))continue;
     if(cam.z<6){ctx.fillStyle=c.trip&&c.trip.truck?"#3b4148":c.color;ctx.fillRect(q.x-0.2,q.y-0.2,0.4,0.4);continue}
     drawCarAt(q.x,q.y,q.ang,c.trip&&c.trip.truck?"#3b4148":c.color,c.trip&&c.trip.truck,c.trip&&c.trip.cargo)}
   if(layer===0&&cam.z>=8){for(const w of S.walkers){if(w.dead)continue;const q=walkerPose(w);if(!q)continue;const [x,y]=q;if(!inView(x,y,1))continue;
     ctx.fillStyle=w.kid?"#e0752d":w.trip.purpose==="senior"?"#7a6aa8":"#3b4a5a";ctx.beginPath();ctx.arc(x,y,w.kid?0.06:0.075,0,Math.PI*2);ctx.fill()}}}
-function drawParked(x0,y0,x1,y1){if(cam.z<6)return;for(const b of S.buildings){if(!b.parked.length||isHome(b))continue;const x=tx(b.front),y=ty(b.front);if(x<x0-4||x>x1+4||y<y0-4||y>y1+4)continue;
-  const sl=lotSlots(b);if(!sl.length)continue;for(let k=0;k<Math.min(b.parked.length,sl.length);k++){const s=sl[k];drawCarAt(s[0],s[1],Math.PI/2,b.parked[k].color,false,null)}}}
+// zaparkovaná auta na svých místech; u bytovek auta obyvatel, kteří jsou doma
+function drawParked(x0,y0,x1,y1){if(cam.z<6)return;for(const b of S.buildings){const x=tx(b.front),y=ty(b.front);if(x<x0-6||x>x1+6||y<y0-6||y>y1+6)continue;
+  const lay=lotLayout(S,b);if(!lay)continue;
+  if(b.type==="flat"){const n=homeCars(b);const col=b.town?b.town.color:"#888";for(let k=0;k<n;k++){const s=lay.spots[k];drawCarAt(s.x,s.y,s.ang,shade(col,0.75+((k*37)%5)*0.1),false,null)}continue}
+  for(const pe of b.parked){if(pe.spot===undefined)continue;const s=lay.spots[pe.spot];if(s)drawCarAt(s.x,s.y,s.ang,pe.color,false,null)}}}
+// ulička parkoviště: páteř od vjezdu a uličky mezi řadami míst
+function drawLot(b){const lay=lotLayout(S,b);if(!lay||cam.z<7)return;const W=lay.W;ctx.strokeStyle=colors["road-edge"];ctx.globalAlpha=0.38;ctx.lineWidth=0.2;ctx.lineCap="butt";ctx.beginPath();
+  let a=W(lay.first-0.1,lay.lat0),z=W(lay.last,lay.lat0);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1]);
+  for(const q of lay.aisles){a=W(q.a,q.l0);z=W(q.a,q.l1);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}ctx.stroke();ctx.globalAlpha=1;ctx.lineCap="round"}
 function drawZones(x0,y0,x1,y1){if(!zonePattern)return;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=zonePattern;const z=cam.z;
   const c=z*CS;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(S.zone[y*W+x])ctx.fillRect(x*c-cam.x,y*c-cam.y,c,c);ctx.restore()}
 function nightAlpha(){const h=hourOf(S);if(h>=21||h<4.5)return 0.32;if(h>=19)return 0.32*(h-19)/2;if(h<6.5)return 0.32*(6.5-h)/2;return 0}
@@ -199,8 +242,10 @@ function drawPreview(){const P=UI.plan;const z=cam.z;
     ctx.beginPath();ctx.moveTo(p.x+p.nx*(e.er+0.2),p.y+p.ny*(e.er+0.2));ctx.lineTo(p.x-p.nx*(e.el+0.2),p.y-p.ny*(e.el+0.2));ctx.stroke()}}
   if(UI.draw&&UI.draw.ghost){const g=UI.draw.ghost;ctx.strokeStyle=colors.accent;ctx.lineWidth=Math.max(0.05,1.5/z);ctx.setLineDash([0.2,0.15]);ctx.beginPath();ctx.moveTo(g[0],g[1]);for(let k=2;k<g.length;k+=2)ctx.lineTo(g[k],g[k+1]);ctx.stroke();ctx.setLineDash([])}
   if(!P)return;
-  if(P.g&&!P.rebuild){ctx.lineCap="round";ctx.lineJoin="round";const p=new Path2D();const q=P.g.pts;p.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)p.lineTo(q[k],q[k+1]);
-    const w=P.round?(P.lanes*LW+0.24):P.spec?(P.lanes*(RK[P.spec.kind].oneway?1:2)*LW+RK[P.spec.kind].median+2*RK[P.spec.kind].side):0.6;
+  if(P.gs){ctx.lineCap="round";ctx.globalAlpha=0.5;ctx.strokeStyle=P.ok?colors.accent:colors.bad;ctx.lineWidth=0.5;for(const g of P.gs){const p=new Path2D();const q=g.pts;p.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)p.lineTo(q[k],q[k+1]);ctx.stroke(p)}ctx.globalAlpha=1}
+  if(P.lanes&&P.lanes.ok&&P.lanes.range){const lp=P.lanes;drawLaneHint({e:lp.e.id,u0:lp.range[0],u1:lp.range[1],dir:lp.dir,rem:false})}
+  if(P.g&&!P.rebuild&&!P.gs){ctx.lineCap="round";ctx.lineJoin="round";const p=new Path2D();const q=P.g.pts;p.moveTo(q[0],q[1]);for(let k=2;k<q.length;k+=2)p.lineTo(q[k],q[k+1]);
+    const w=P.branch?(P.road.lanes*LW+0.2):P.round?(P.lanes*LW+0.24):P.spec?(P.lanes*(RK[P.spec.kind].oneway?1:2)*LW+RK[P.spec.kind].median+2*RK[P.spec.kind].side):0.6;
     ctx.globalAlpha=0.55;ctx.strokeStyle=P.ok?colors.accent:colors.bad;ctx.lineWidth=w;ctx.stroke(p);ctx.globalAlpha=1}
   if(P.rebuild){ctx.globalAlpha=0.5;ctx.fillStyle=colors.accent;for(const r of P.rebuild){if(r.e.dead)continue;const g=geom(subPts(r.e.g,r.u0,r.u1));const ext=edgeExt({kind:P.spec.kind,lf:r.lf,lb:r.lb});
     const p=new Path2D();for(let k=0;k<g.n;k++){const x=g.pts[2*k]+g.nx[k]*ext[0],y=g.pts[2*k+1]+g.ny[k]*ext[0];if(k)p.lineTo(x,y);else p.moveTo(x,y)}for(let k=g.n-1;k>=0;k--)p.lineTo(g.pts[2*k]-g.nx[k]*ext[1],g.pts[2*k+1]-g.ny[k]*ext[1]);p.closePath();ctx.fill(p)}ctx.globalAlpha=1}
@@ -220,7 +265,7 @@ function render(){
   ctx.setTransform(dpr*z,0,0,dpr*z,-cam.x*dpr,-cam.y*dpr);
   const layers=[[],[],[]];for(const e of S.edges){if(e.dead||!edgeVisible(e))continue;layers[edgeLayer(e)].push(e)}
   const vis=visBuildings(x0,y0,x1,y1);drawDriveways(vis);
-  drawRoadLayer(layers[0],0);drawRings(layers[0]);drawNodes(0);
+  drawRoadLayer(layers[0],0);drawRings(layers[0]);drawNodes(0);drawAlleys(layers[0]);
   drawBuildings(vis);drawParked(x0,y0,x1,y1);drawVehicles(0);
   for(let L=1;L<3;L++){if(!layers[L].length)continue;drawRoadLayer(layers[L],L);drawNodes(L);drawVehicles(L)}
   const na=nightAlpha();if(na>0){ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=na;ctx.fillStyle=colors.night;ctx.fillRect(0,0,vw,vh);ctx.restore();

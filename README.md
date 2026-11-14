@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.6.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.7.0** (13. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -35,7 +35,7 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 
 | Akce | Ovládání |
 |---|---|
-| Stavět silnici | `1`; tvar `A` rovně (tah), `S` oblouk (3 kliky), `D` kruh (tah od středu), `F` napojit (2 kliky); tah po silnici ji přestaví |
+| Stavět silnici | `1`; tvar `A` rovně (tah), `S` oblouk (3 kliky), `D` kruh (tah od středu), `F` napojit (2 kliky), `G` odbočka / nájezd (tah ze silnice), `H` vzor křižovatky (klik na dálnici); tah po silnici ji přestaví |
 | Druh, pruhy, tvar, výška | panel nad nástroji; výška také `Q` / `E`; zaškrtávátko „Přestavět kliknutím“ |
 | Pruhy | `2`, klik na polovinu silnice = pruh v tom směru, tah podél = jen kus úseku, Shift ubere |
 | Pravidlo křižovatky | `3`, klik na křižovatku |
@@ -48,7 +48,7 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | Přiblížení | kolečko, `+` / `-`, sevření prstů |
 | Zrušit kreslení / výběr | pravý klik, `Esc` |
 | Pauza, vytížení silnic | mezerník, `V` |
-| Nastavení (zaseknutá auta) | Pravidla → Nastavení |
+| Nastavení (zaseknutá auta), peníze na zkoušení | Pravidla → Nastavení, Test |
 
 Pravidla světa jsou podrobně v `docs/HRA.md`.
 

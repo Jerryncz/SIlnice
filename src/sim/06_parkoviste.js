@@ -1,0 +1,30 @@
+// Parkoviště: ulička (páteř od vjezdu a řady uliček) a jednotlivá místa. Auto zajede po uličce na volné
+// místo a odjíždí zase po ní. Místa se přidělují (b.spotUsed), takže dvě auta nikdy nestojí na jednom.
+
+const isParkRole=(b,r)=>r===R_LOT||r===R_GAR||(r===R_YARD&&KIND[b.type]&&KIND[b.type].industry);
+// rozvržení parkoviště podle vjezdu: místa po buňkách, uličky mezi dvojicemi řad
+function lotLayout(S,b){if(!b.access)return null;const key=b.access.e+":"+b.access.u.toFixed(2);if(b._lk===key)return b.lay;b._lk=key;b.lay=null;
+  const cells=b.tiles.filter(j=>isParkRole(b,S.role[j]));if(!cells.length)return null;
+  const ax=b.access.x,ay=b.access.y;let dx=wxOf(b.front)-ax,dy=wyOf(b.front)-ay;
+  const d=Math.abs(dx)>=Math.abs(dy)?[Math.sign(dx)||1,0]:[0,Math.sign(dy)||1],p=[-d[1],d[0]];
+  const loc=cells.map(j=>{const cx=wxOf(j),cy=wyOf(j);return {j,x:cx,y:cy,dep:Math.round(((cx-ax)*d[0]+(cy-ay)*d[1])*2)/2,lat:Math.round(((cx-ax)*p[0]+(cy-ay)*p[1])*2)/2}});
+  const rows=[...new Set(loc.map(q=>q.dep))].sort((a,b)=>a-b);
+  const aisleOf=new Map();for(let i=0;i<rows.length;i+=2){const a=i+1<rows.length?(rows[i]+rows[i+1])/2:rows[i]-0.25;aisleOf.set(rows[i],a);if(i+1<rows.length)aisleOf.set(rows[i+1],a)}
+  const lats=[...new Set(loc.map(q=>q.lat))];let lat0=lats[0];for(const l of lats)if(Math.abs(l)<Math.abs(lat0))lat0=l;
+  // páteř vede mezi buňkami, ne středem místa
+  lat0+=lat0>=0?-0.25:0.25;
+  const W2=(dep,lat)=>[ax+d[0]*dep+p[0]*lat,ay+d[1]*dep+p[1]*lat];
+  const spots=loc.map(q=>{const a=aisleOf.get(q.dep);const s=q.dep>a?1:-1;return {x:q.x,y:q.y,ang:Math.atan2(d[1]*s,d[0]*s),aisle:a,lat:q.lat}});
+  spots.sort((u,v)=>Math.abs(u.lat-lat0)+u.aisle*0.01-(Math.abs(v.lat-lat0)+v.aisle*0.01));
+  const aisles=[...new Set(spots.map(s=>s.aisle))].map(a=>{const ls=spots.filter(s=>s.aisle===a).map(s=>s.lat);return {a,l0:Math.min(lat0,...ls)-0.2,l1:Math.max(lat0,...ls)+0.2}});
+  const lay={spots,aisles,d,p,lat0,ax,ay,W:W2,first:rows[0]-0.3,last:Math.max(...aisles.map(q=>q.a))};
+  b.lay=lay;if(!b.spotUsed||b.spotUsed.length!==spots.length)b.spotUsed=new Array(spots.length).fill(null);return lay}
+// cesta z vjezdu (bod na silnici) na místo i
+function spotPath(lay,i){const s=lay.spots[i],W=lay.W;return [[lay.ax,lay.ay],W(lay.first,lay.lat0),W(s.aisle,lay.lat0),W(s.aisle,s.lat),[s.x,s.y]]}
+function pathLen(pts){let L=0;for(let k=1;k<pts.length;k++)L+=Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]);return L}
+function pathPose(pts,s){for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(s<=l||k===pts.length-1){const t=l?clamp(s/l,0,1):1;return {x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,ang:Math.atan2(b[1]-a[1],b[0]-a[0])}}s-=l}
+  const z=pts[pts.length-1];return {x:z[0],y:z[1],ang:0}}
+function freeSpot(S,b){const lay=lotLayout(S,b);if(!lay)return -1;for(let i=0;i<b.spotUsed.length;i++)if(!b.spotUsed[i])return i;return -1}
+function releaseSpot(b,i,owner){if(b&&b.spotUsed&&i>=0&&i<b.spotUsed.length&&(!owner||b.spotUsed[i]===owner))b.spotUsed[i]=null}
+// místa obsazená u bytovky: auta obyvatel, kteří jsou doma (jen vzhled)
+function homeCars(b){if(b.type!=="flat"||!b.lay)return 0;return Math.min(b.lay.spots.length,Math.round(Math.max(0,b.pop-b.away)/4))}

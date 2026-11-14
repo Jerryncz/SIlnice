@@ -4,7 +4,7 @@ function createSim(seed){
   const R=mulberry32(seed);
   const S={R,seed,version:GAME_VERSION,terrain:new Uint8Array(N),zone:new Uint8Array(N),role:new Uint8Array(N),bld:new Array(N).fill(null),
     roadCnt:new Uint16Array(N),bridgeCnt:new Uint16Array(N),cellG:new Array(N).fill(null),cellB:new Array(N).fill(null),
-    nodes:[],edges:[],towns:[],buildings:[],cars:[],exiting:[],entering:[],walkers:[],gates:[],returns:new Heap(),reroute:[],rings:[],work:[],zones:[],regrow:[],problems:[],log:[],dirty:[],
+    nodes:[],edges:[],towns:[],buildings:[],cars:[],exiting:[],entering:[],unparking:[],walkers:[],gates:[],returns:new Heap(),reroute:[],rings:[],work:[],zones:[],regrow:[],problems:[],log:[],dirty:[],
     money:2000,time:0,trips:0,transits:0,exported:0,cancelled:0,turnedAway:0,earned:0,income:0,
     netDirty:true,usedNames:new Set(),secAcc:0,svcTick:0,homesteadAcc:0,congTick:0,pTick:0,zoneTick:0,nextId:1,netVer:0,cfg:{stuck:40},stuck:[],stuckN:0,lastJamAny:-99,vid:0,sid:0,curDay:1};
   genTerrain(S);

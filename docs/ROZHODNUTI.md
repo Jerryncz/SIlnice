@@ -53,3 +53,11 @@ nepřepisuje, ale označí „nahrazeno R<číslo>“ a připíše se nové.
 | R45 | 13. 11. 2026 | Nástroj Stavět s volbou druhu, tvaru (Rovně, Oblouk, Kruh, Napojit) a výšky; Přestavět kliknutím. | Přání uživatele: jeden panel na druh, druhý na tvar, třetí na výšku. | Samostatné nástroje Rovně / Oblouk / Kruháč (do 0.5). |
 | R46 | 13. 11. 2026 | Most se zvolenou výškou má na koncích rampu 3 pole na úroveň; na most a rampu se nic nepřipojí kromě konců. | Přání uživatele: přechodová silnice a obce se nemají napojit na most. | Rampa přes celou délku silnice (do 0.5). |
 | R47 | 13. 11. 2026 | Celá verze 0.6 v jednom pull requestu. | Volba uživatele. | Tři verze 0.6 / 0.7 / 0.8 – doporučeno, zamítnuto. |
+| R48 | 13. 11. 2026 | Celá verze 0.7 v jednom pull requestu. | Volba uživatele. | 0.7 silnice a doprava, 0.8 obce – doporučeno, zamítnuto. |
+| R49 | 13. 11. 2026 | Budova bez příjezdu po 60 s zanikne (zdarma, zápis do kroniky). | Přání uživatele: domy u silnice změněné na dálnici mají mizet. | Zůstanou bez vjezdu (do 0.6); zbourat hned. |
+| R50 | 13. 11. 2026 | Odbočka a nájezd jako tvar stavění: odbočovací / připojovací pruh 4 pole s náběhem a plynulé odpojení; vzory Kosodélník a Čtyřlístek. | Volba uživatele (odbočky a vzory); zachová model uzlů a pruhů. | Pruhy jako samostatné objekty (styl CS2) – velká přestavba, odloženo. |
+| R51 | 13. 11. 2026 | Parkoviště s uličkou a místy, místa se při příjezdu zamlouvají; u bytovek venkovní stání. | Volba uživatele. | Jen animace na místo. |
+| R52 | 13. 11. 2026 | Vybavenost obcí (hřiště, park, kavárna, kostel, náměstí, aleje): vzniká sama, vycházky pěšky, každý druh zrychlí růst o 6 % (nejvýš 4). | Volba uživatele: vzhled i vliv. | Jen vzhled; jen nápad. |
+| R53 | 13. 11. 2026 | Přechod na rameni křižovatky jen tam, kde se vejde (délka ramene, úhel k sousednímu rameni aspoň ~50°); ne u dálnice. | Přechody ležely přes jiné silnice nebo dálnici. | – |
+| R54 | 13. 11. 2026 | Dálnice smí ústit do kruhového objezdu (kromě dálnice do světa). | Přání uživatele. | Zákaz (do 0.6). |
+| R55 | 13. 11. 2026 | Tlačítka Test (+10 000 / +100 000 Kč) v okně Pravidla. | Přání uživatele pro zkoušení. | Neomezené peníze. |

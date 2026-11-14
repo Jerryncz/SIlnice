@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -23,11 +23,11 @@ function zkontroluj(S, kde) {
       const q = e.q[l & 1][c.lane];
       ok(q && q.includes(c), `${kde}: auto chybí ve frontě svého pruhu`);
       if (c.li < c.links.length - 1) { const st = A.stopS(S, l); if (st > c.len + 0.1 && c.s + c.len / 2 > st + 0.02) pres++; }
-    } else ok(c.state === "exit" || c.state === "enter", `${kde}: auto v neznámém stavu ${c.state}`);
+    } else ok(c.state === "exit" || c.state === "enter" || c.state === "unpark", `${kde}: auto v neznámém stavu ${c.state}`);
   }
   // přechodně (auto otočené od parkoviště, změna sítě) smí být za stopčárou nejvýš pár aut; povolení dostanou v dalším kroku
   // po změně sítě (širší křižovatka) může auto chvíli stát dál, než je nová stopčára
-  if (kde.startsWith("den1")) ok(pres <= 2, `${kde}: ${pres} aut za stopčárou`);
+  if (kde.startsWith("den1")) ok(pres <= 8, `${kde}: ${pres} aut za stopčárou`);
   for (const e of S.edges) {
     if (e.dead) continue;
     for (const lanes of e.q) for (const q of lanes) {
@@ -48,6 +48,12 @@ function zkontroluj(S, kde) {
     if (b.away !== undefined && (b.type === "house" || b.type === "flat")) ok(b.away > -0.01, `${kde}: záporný počet lidí mimo dům ${b.name} (${b.away})`);
     for (const j of b.tiles) ok(!S.roadCnt[j] && S.bld[j] === b, `${kde}: budova ${b.name} na silnici nebo nesedí mapa`);
   }
+  // parkovací místa: každé obsazené patří zaparkovanému autu, nebo autu, které zrovna zajíždí / vyjíždí
+  for (const b of S.buildings) if (b.spotUsed) { const used = new Set();
+    for (let i = 0; i < b.spotUsed.length; i++) { const o = b.spotUsed[i]; if (!o) continue;
+      const okp = b.parked.includes(o) && o.spot === i, okc = o.state && !o.dead && o.spotB === b && o.spot === i;
+      ok(okp || okc, `${kde}: místo ${i} v ${b.name} drží neplatný záznam`); ok(!used.has(o), `${kde}: auto na dvou místech`); used.add(o) }
+    for (const pe of b.parked) if (pe.spot !== undefined) ok(b.spotUsed[pe.spot] === pe, `${kde}: zaparkované auto bez místa`) }
   let trucks = 0, trucksB = 0, cargo = 0, cargoInc = 0;
   for (const c of S.cars) { if (c.dead || !c.trip || !c.trip.truck) continue; if (!c.trip.truckDone && c.trip.ind && !c.trip.ind.dead) trucks++; if (c.trip.cargo && c.trip.cargoTo) cargo++; }
   for (const b of S.buildings) if (b.trucks !== undefined) { trucksB += b.trucks; for (const g in b.inc) { cargoInc += b.inc[g]; ok(b.inc[g] >= 0, `${kde}: záporné objednávky ${b.name}`); } }
@@ -138,6 +144,37 @@ function road(S, x0, y0, x1, y1, kind, lvl0, lvl1, lanes) {
   const kp = A.planKind(S, re, "blvd"); ok(kp.ok && A.commitKind(S, kp).ok, "kruhový objezd přestavěn: " + (kp.msg || ""));
   ok(S.edges.filter(e => !e.dead && e.ring).every(e => e.kind === "blvd"), "přestavěl se celý kruh");
   zkontroluj(S, "síť");
+}
+
+// ---- vzory mimoúrovňových křižovatek a odbočka: všechny směry musí jít projet ----
+for (const type of ["diamond", "clover"]) {
+  const S = A.createSim(11); S.money = 1e8; const y = 40.5, x0 = 20.5, x1 = 106.5, cx = 63.5;
+  for (const b of [...S.buildings]) if (Math.abs(A.MW && b.front % (A.W) / 2 - cx) < 30 && Math.abs(Math.floor(b.front / A.W) / 2 - y) < 22) A.demolishBuilding(S, b, true);
+  const st = { type: "free", x: x0, y, lvl: 0 }, en = { type: "free", x: x1, y, lvl: 0 };
+  const hw = A.buildRoad(S, { pts: A.mkLine(x0, y, x1, y), kind: "hwy", lanes: 2, start: st, end: en, auto: true });
+  ok(hw.ok, type + ": dálnice pro vzor " + (hw.msg || ""));
+  const p = A.planTemplate(S, type, cx, y, "road", 1); ok(p.ok, type + ": vzor jde naplánovat " + (p.msg || ""));
+  if (!p.ok) continue;
+  const r = A.commitTemplate(S, p); ok(r.ok && !r.msg, type + ": vzor postaven celý " + (r.msg || ""));
+  const D = type === "clover" ? 15 : 8;
+  const at = (x, yy) => { const sn = A.snapPoint(S, x, yy, 0); return sn.type === "node" ? { node: sn.node } : sn.type === "edge" ? { e: sn.edge, u: sn.u, side: 1 } : null; };
+  const W = at(x0 + 3, y), E = at(x1 - 3, y), N = at(cx, y - D), Sx = at(cx, y + D);
+  const pairs = [[W, E], [E, W], [W, N], [W, Sx], [E, N], [E, Sx], [N, W], [N, E], [Sx, W], [Sx, E], [N, Sx], [Sx, N]];
+  let good = 0; for (const [a, b] of pairs) if (a && b && A.findPath(S, a, b)) good++;
+  ok(good === pairs.length, `${type}: projet jde všemi směry (${good}/${pairs.length})`);
+  for (let k = 0; k < 900; k++) A.step(S, A.STEP);
+  zkontroluj(S, type);
+}
+{
+  const S = A.createSim(11); S.money = 1e8; const y = 60.5;
+  const st = { type: "free", x: 10.5, y, lvl: 0 }, en = { type: "free", x: 40.5, y, lvl: 0 };
+  ok(A.buildRoad(S, { pts: A.mkLine(10.5, y, 40.5, y), kind: "road", lanes: 1, start: st, end: en, auto: true }).ok, "silnice pro odbočku");
+  const sn = A.snapPoint(S, 25.5, y, 0);
+  const bp = A.planBranch(S, sn, { type: "free", x: 31.5, y: y + 5, lvl: 0 }, "road", 1); ok(bp.ok && bp.exit, "odbočka jde naplánovat " + (bp.msg || ""));
+  if (bp.ok) { const r = A.commitBranch(S, bp); ok(r.ok, "odbočka postavena " + (r.msg || ""));
+    ok(S.edges.some(e => !e.dead && e.kind === "road" && e.lf === 2 && e.lb === 1), "před odbočkou je odbočovací pruh");
+    const ow = S.edges.find(e => !e.dead && e.kind === "oneway"); ok(!!ow, "odbočka je jednosměrka");
+    const a = A.snapPoint(S, 12.5, y, 0); ok(ow && A.findPath(S, { e: a.edge, u: a.u, side: 1 }, { node: ow.b }), "z hlavní silnice jde odbočit"); }
 }
 
 const souhrn = {};

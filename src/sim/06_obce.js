@@ -19,12 +19,12 @@ function createBuilding(S,type,town,tiles,front,name){
     born:S.time,dead:false,staff:0,staffInc:0,guests:0,kidsIn:0,away:0};
   let lots=0;
   for(const [j,r] of tiles){if(S.terrain[j]!==GRASS){S.terrain[j]=GRASS;S.dirty.push(j)}S.bld[j]=b;
-    S.role[j]=type==="house"?R_HOUSE:type==="flat"?R_FLAT:ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
+    S.role[j]=type==="house"?R_HOUSE:type==="flat"?(r==="p"?R_LOT:R_FLAT):ROLE_OF[r];if(r==="p"||r==="f"||r==="y")lots++}
   const K=KIND[type];
   if(type==="house"){b.pop=housePop(units(b));fillHousehold(S,b)}
-  else if(type==="flat"){b.pop=Math.round(10*units(b));fillHousehold(S,b)}
+  else if(type==="flat"){b.pop=Math.round(10*b.tiles.filter(j=>S.role[j]===R_FLAT).length/4);fillHousehold(S,b)}
   else if(type==="park")b.cap=K.cap;
-  else b.cap=Math.max(Math.round(lots/4*K.slots),type==="office"?Math.round(units(b)*3):0);
+  else b.cap=Math.max(Math.round(lots/4*(K.slots||0)),type==="office"?Math.round(units(b)*3):0);
   b.jobs=jobsOf(b);if(type==="house"&&units(b)>=3)b.jobs=Math.round(units(b)); // statky dávají práci na poli
   if(K&&K.industry){b.stock={};b.inc={};b.out=0;b.prod=0;b.trucks=0;b.work=0;b.short=null;b.res=null;b.resT=-99;b.made=0;b.color=K.color}
   if(isHome(b))newDay(S,b);
@@ -55,9 +55,14 @@ function foundTown(S,front,roadBorn){let r=-1;for(let d=0;d<4;d++){const n=NB[fr
   if(!b.access){demolishBuilding(S,b,true);return null}S.netDirty=true;return t}
 function updateTownStats(S){
   for(const b of S.buildings)refreshAccess(S,b);
+  // budova bez vjezdu (silnice zbouraná nebo změněná na dálnici) po 60 s zanikne
+  for(const b of [...S.buildings]){if(b.access||b.dead){b.noAccT=null;continue}if(b.noAccT==null){b.noAccT=S.time;continue}
+    if(S.time-b.noAccT>60){addLog(S,(isHome(b)?b.name:KIND[b.type].name)+(b.town?" v obci "+b.town.name:"")+": bez příjezdu, budova zanikla",b.front);demolishBuilding(S,b,true)}}
   for(const t of S.towns){t.accessList=[];t.comps=new Set();let pop=0,tiles=0,kids=0,workers=0;
     for(const b of t.homes){pop+=b.pop;tiles+=units(b);kids+=b.kids;workers+=b.workers-b.ho;if(b.access){t.accessList.push(b);t.comps.add(edgeComp(S,b.access.e))}}
     t.pop=pop;t.tileCount=tiles;t.kids=kids;t.workers=workers;t.world=S.gates.some(g=>t.comps.has(S.nodes[g.node].comp))}}
+const AMENITIES=["playground","parkland","cafe","church","square"];
+function amenityTypes(S,t){const r=townRadius(t)+4;const set=new Set();for(const s of S.buildings){if(!KIND[s.type]||!KIND[s.type].amenity)continue;if(Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<=r)set.add(s.type)}return [...set]}
 function shares(a,b){for(const c of a)if(b.has(c))return true;return false}
 function calcRates(S){
   for(const t of S.towns){t.why=[];
@@ -66,6 +71,8 @@ function calcRates(S){
     for(const g of S.gates){const n=S.nodes[g.node];if(!t.comps.has(n.comp))continue;reach+=150/(1+Math.hypot(n.x-t.cx,n.y-t.cy)/40)}
     const r=townRadius(t)+4;let svc=0;for(const s of S.buildings)if(!isHome(s)&&Math.hypot(wxOf(s.front)-t.cx,wyOf(s.front)-t.cy)<=r)svc++;
     let rate=0.012+0.012*Math.log2(1+reach/15)+0.005*Math.min(svc,5);
+    // vybavenost: každý druh (hřiště, park, kavárna, kostel, náměstí) zrychlí růst, nejvýš 4 druhy
+    t.amen=amenityTypes(S,t);rate*=1+0.06*Math.min(4,t.amen.length);
     const jam=clamp((t.delay-1.35)/1.2,0,1),cf=clamp(t.cancel/3,0,1),ef=clamp(t.exitFail/2,0,1);
     const jobF=t.workers>0?clamp(1-t.jobless/Math.max(4,t.workers*0.5),0.3,1):1;
     rate*=(1-0.85*jam)*(1-0.6*cf)*(1-0.7*ef)*jobF;rate*=Math.max(0.1,1-t.pop/450);rate*=1+0.4*Math.min(1,t.material/3);
@@ -111,6 +118,9 @@ function buildTownStreet(S,t){
           if(S.roadCnt[c]){if(k>=2&&frontEdgeAt(S,c))loop={x:qx,y:qy};break}
           let free=true;forCells(qx,qy,0.45,j=>{if(!freeForBuild(S,j)&&!S.roadCnt[j]||S.terrain[j]===WATER)free=false});if(!free)break;
           if(Math.hypot(qx-t.cx,qy-t.cy)>r+2||nearestTown(S,qx,qy)[0]!==t)break;len=k}
+        // rozestup: souběžná silnice nesmí být blíž než 4 pole (mezi nimi se musí vejít domy)
+        let near=false;for(let k=1.5;k<=len-(loop?1:0)&&!near;k+=1){const qx=p.x+nx*k,qy=p.y+ny*k;for(const o of edgesNear(S,qx,qy,4)){if(o===e||loop&&nearestOn(o.g,loop.x,loop.y).d<0.6)continue;if(nearestOn(o.g,qx,qy).d<3.6){near=true;break}}}
+        if(near)continue;
         if(len>=3||loop&&len>=1)opts.push({x0:p.x,y0:p.y,x1:loop?loop.x:p.x+nx*len,y1:loop?loop.y:p.y+ny*len,loop:!!loop,w:(loop?2.5:1)*len*(1+Math.min(along,10)/3)/(1+Math.hypot(p.x-t.cx,p.y-t.cy)*0.3)})}}}
   if(!opts.length)return false;
   for(let tries=0;tries<5&&opts.length;tries++){const o=pickW(S,opts,q=>q.w);opts.splice(opts.indexOf(o),1);

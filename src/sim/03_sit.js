@@ -18,7 +18,9 @@ function netChanged(S){S.netDirty=true;S.netVer=(S.netVer||0)+1}
 // vrací {g: buňky na zemi, b: buňky pod mostem}
 const RMARG=0.2;
 function bandCells(S,g,er,el,lvlFn,m){m=m===undefined?RMARG:m;const G=new Set(),B=new Set();const p=g.pts,R=Math.max(er,el)+m;
-  for(let k=0;k<g.n;k++){const x=p[2*k],y=p[2*k+1],nx=g.nx[k],ny=g.ny[k],dx=ny,dy=-nx,lv=lvlFn(g.cum[k]);const end=k===0||k===g.n-1;
+  // vzorky po 0,2 pole (i dlouhé rovné kusy bez mezilehlých bodů)
+  const us=[];for(let u=0;u<g.len;u+=0.2)us.push(u);us.push(g.len);const q={};
+  for(let k=0;k<us.length;k++){pointAt(g,us[k],q);const x=q.x,y=q.y,nx=q.nx,ny=q.ny,dx=ny,dy=-nx,lv=lvlFn(us[k]);const end=k===0||k===us.length-1;
     forCells(x,y,R+0.3,c=>{const px=wxOf(c)-x,py=wyOf(c)-y;const al=px*dx+py*dy,of=px*nx+py*ny;
       if(Math.abs(al)<=0.2&&of<=er+m&&of>=-el-m||end&&Math.hypot(px,py)<=R)(lv<0.5?G:B).add(c)})}
   for(const c of B)if(G.has(c))B.delete(c);return {g:G,b:B}}
@@ -119,7 +121,9 @@ function remapEdges(S,map){
 // rameno uzlu: směr ven podél úseku, příjezdový a odjezdový směr (link = id úseku*2 + směr)
 function armOf(S,n,eid){const e=S.edges[eid];const atA=e.a===n.id;const g=e.g;const u=atA?Math.min(0.5,g.len*0.3):Math.max(g.len-0.5,g.len*0.7);
   const p=pointAt(g,u);let hx=p.x-n.x,hy=p.y-n.y;const l=Math.hypot(hx,hy)||1;hx/=l;hy/=l;
-  return {e:eid,hx,hy,inLink:eid*2+(atA?1:0),outLink:eid*2+(atA?0:1),axis:Math.abs(hx)>=Math.abs(hy)?0:1}}
+  // vzdálenější směr ramene: strana, na kterou plynulá odbočka odchází (u tečného napojení je blízký směr skoro rovný)
+  const uf=atA?Math.min(2.5,g.len*0.45):Math.max(g.len-2.5,g.len*0.55);const pf=pointAt(g,uf);let sx=pf.x-n.x,sy=pf.y-n.y;const lf=Math.hypot(sx,sy)||1;sx/=lf;sy/=lf;
+  return {e:eid,hx,hy,sx,sy,inLink:eid*2+(atA?1:0),outLink:eid*2+(atA?0:1),axis:Math.abs(hx)>=Math.abs(hy)?0:1}}
 const linkLanes=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.lb:e.lf};
 const linkFrom=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.b:e.a};
 const linkTo=(S,l)=>{const e=S.edges[l>>1];return (l&1)?e.a:e.b};
@@ -138,8 +142,8 @@ function topoNode(S,n){
       const turn=ao.e===ai.e?2:(cr>0.35?1:cr<-0.35?-1:0);
       if(isH(ei)&&isH(eo)&&dt<0.3)continue;
       if(hw>=2){ // napojení z boku dálnice: sjet jen vpravo, najet jen ve směru jízdy, dálnici nepřejet
-        if(isH(ei)&&!isH(eo)&&cr<0.05)continue;
-        if(!isH(ei)&&isH(eo)&&(ai.hx*(-ao.hy)+ai.hy*ao.hx)<0.05)continue;
+        if(isH(ei)&&!isH(eo)&&(hix*ao.sy-hiy*ao.sx)<0.02)continue;
+        if(!isH(ei)&&isH(eo)&&(ai.sx*(-ao.hy)+ai.sy*ao.hx)<0.02)continue;
         if(!isH(ei)&&!isH(eo))continue}
       if(n.ring&&!ei.ring&&!eo.ring)continue;
       list.push({link:ao.outLink,turn})}
@@ -165,7 +169,6 @@ const isRampEdge=(S,e)=>Math.abs(S.nodes[e.a].lvl-S.nodes[e.b].lvl)>0.01;
 function joinedTo(S,sn,e){return sn.type==="edge"&&sn.edge===e.id||sn.type==="node"&&(e.a===sn.node||e.b===sn.node)}
 function checkJoin(S,sn,kind){
   if(kind!=="hwy")return null;
-  if(sn.type==="edge"&&S.edges[sn.edge].ring||sn.type==="node"&&S.nodes[sn.node].ring)return "Dálnice nemůže vést do kruhového objezdu.";
   return null}
 // buňky na zemi, které by silnice o šířce ext=[vpravo, vlevo] zabrala
 function cellsAlong(S,g,ext,lvlFn){return [...bandCells(S,g,ext[0],ext[1],lvlFn).g]}
@@ -257,7 +260,7 @@ function commitRoad(S,plan){
   const sp=plan.spec;
   if(plan.rebuild){const touched=[];
     for(const s of plan.rebuild){if(s.e.dead)continue;const t=cutSection(S,s.e,s.u0,s.u1);
-      reshapeEdge(S,t,()=>{t.kind=sp.kind;t.lf=s.lf;t.lb=s.lb;t.owState=0});touched.push(S.nodes[t.a],S.nodes[t.b])}
+      reshapeEdge(S,t,()=>{t.kind=sp.kind;t.lf=s.lf;t.lb=s.lb;t.owState=0;if(!RK[sp.kind].walk||!RK[sp.kind].side)t.xw=null});touched.push(S.nodes[t.a],S.nodes[t.b])}
     tidyNodes(S,touched);return {ok:true,edges:[],rebuilt:true}}
   const g0=plan.g,K=RK[sp.kind],lanes=plan.lanes;
   const seq=[{u:0,node:resolvePoint(S,plan.start.x,plan.start.y,plan.start.lvl)}];
@@ -284,7 +287,7 @@ function planRoundabout(S,cx,cy,r,kind,lanes){kind=kind||"road";
   plan.cross=[];
   for(const e of S.edges){if(e.dead||!bbOverlap(e.g.bb,g.bb,0.2))continue;
     const xs=polyInter(g,e.g).filter(x=>lvlAt(S,e,x.ub)<0.5);
-    if(xs.length&&e.kind==="hwy"){plan.msg="Kruhový objezd nejde postavit na dálnici.";return plan}
+    if(xs.length&&e.gateEdge){plan.msg="Kruhový objezd nejde postavit na dálnici do světa.";return plan}
     for(const x of xs)plan.cross.push({x:x.x,y:x.y})}
   const cells=cellsAlong(S,g,edgeExt({kind,lf:lanes,lb:0}),()=>0);
   plan.demolish=bldOn(S,cells);plan.cells=cells;
@@ -361,7 +364,7 @@ function planKind(S,e,kind,lanes){if(e.gateEdge)return {ok:false,msg:"Dálnici d
   const dem=bldOn(S,cells);cost+=dem.reduce((s,b)=>s+demolishCost(b),0);
   return {ok:true,e,kind,items,cost,demolish:dem,kindPlan:true}}
 function commitKind(S,p){if(!p.ok)return p;if(S.money<p.cost)return {ok:false,msg:"Málo peněz v pokladně."};S.money-=p.cost;for(const b of p.demolish)if(!b.dead)demolishBuilding(S,b,true);
-  const touched=[];for(const it of p.items){if(it.e.dead)continue;const t=it.e;reshapeEdge(S,t,()=>{t.kind=p.kind;t.lf=it.lf;t.lb=it.lb});touched.push(S.nodes[t.a],S.nodes[t.b])}
+  const touched=[];for(const it of p.items){if(it.e.dead)continue;const t=it.e;reshapeEdge(S,t,()=>{t.kind=p.kind;t.lf=it.lf;t.lb=it.lb;if(!RK[p.kind].walk||!RK[p.kind].side)t.xw=null});touched.push(S.nodes[t.a],S.nodes[t.b])}
   tidyNodes(S,touched);return {ok:true}}
 function setKind(S,e,kind){return commitKind(S,planKind(S,e,kind))}
 // otočí směr jednosměrky (druh Jednosměrka nebo Nájezd); auta na úseku se zruší

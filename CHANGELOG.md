@@ -3,6 +3,29 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.7.0 – 13. 11. 2026
+
+- Odbočka a nájezd (tvar G): odbočovací / připojovací pruh s náběhem
+  a plynulé napojení (R50).
+- Vzory mimoúrovňových křižovatek (tvar H): Kosodélník a Čtyřlístek (R50).
+- Parkoviště s uličkou a místy, auta zajíždějí na zamluvené místo a vyjíždějí
+  po uličce; venkovní stání u bytovek (R51).
+- Vybavenost obcí: hřiště, park, kavárna, kostel, náměstí s pěší zónou, aleje;
+  vycházky pěšky, rychlejší růst (R52).
+- Budova bez příjezdu po 60 s zanikne (R49).
+- Přechody jen tam, kde se vejdou, nikdy na dálnici (R53); obce staví uličky
+  aspoň 4 pole od souběžné silnice.
+- Dálnice může ústit do kruhového objezdu (R54).
+- Plocha křižovatky podle tvaru ramen (křižovatka tvaru T má rovnou stranu).
+- Auta na rampě mostu se kreslí nad terénem, stín rampy roste s výškou.
+- Tlačítka Test pro přidání peněz (R55).
+- Oprava: auto se mohlo ztratit z fronty, když auto před ním zrušila změna
+  sítě (vyřadilo se o jedno auto víc).
+- Oprava: silnice bez mezilehlých bodů (dlouhá rovná) zabírala jen buňky
+  na koncích.
+- Oprava: tečně napojená odbočka z dálnice (jen vpravo) se brala jako rovně
+  a nedala se použít.
+
 ## 0.6.0 – 13. 11. 2026
 
 - Jemná síť po půl poli pro terén a budovy; silnice zabírá každou dotčenou

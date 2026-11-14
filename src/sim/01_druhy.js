@@ -31,6 +31,12 @@ const KIND={
   park:{name:"Parkovací dům",letter:"P",color:"#2b5fa8",cap:20,pay:2,demolish:120,jobs:0},
   office:{name:"Kanceláře",letter:"K",color:"#3f6f9e",slots:4,pay:0,demolish:160,jobsPerTile:10},
   school:{name:"Škola",letter:"Š",color:"#c9952a",slots:2,pay:0,demolish:200,jobs:6,kids:150},
+  // vybavenost obcí (vzniká sama podle velikosti obce); leisure = kdo sem chodí na vycházku
+  playground:{name:"Hřiště",letter:"Hř",color:"#d0943a",slots:0,pay:0,demolish:60,jobs:0,leisure:"kids",amenity:true},
+  parkland:{name:"Park",letter:"Pa",color:"#5f9a52",slots:0,pay:0,demolish:60,jobs:1,leisure:"adults",amenity:true},
+  cafe:{name:"Kavárna",letter:"Ka",color:"#9a5b3f",slots:2,pay:3,pull:4,demolish:120,jobs:3,amenity:true},
+  church:{name:"Kostel",letter:"Ko",color:"#8a8478",slots:2,pay:1,pull:3,seniorOnly:true,demolish:300,jobs:1,amenity:true},
+  square:{name:"Náměstí",letter:"Ná",color:"#b9a98a",slots:0,pay:0,demolish:200,jobs:0,leisure:"all",amenity:true},
   logging:{name:"Těžba dřeva",letter:"D",color:"#55702f",slots:3,pay:0,jobs:6,out:"wood",res:FOREST,demolish:150,industry:true},
   quarry:{name:"Lom",letter:"L",color:"#77736a",slots:3,pay:0,jobs:8,out:"stone",res:ROCK,demolish:150,industry:true},
   mine:{name:"Důl na železo",letter:"Ž",color:"#8a4b3a",slots:3,pay:0,jobs:10,out:"ore",res:ORE,demolish:200,industry:true},
@@ -49,10 +55,11 @@ const HOUSE_SHAPES=[
   {name:"Statek do Z",w:1.2,min:24,cells:[[0,0],[1,0],[1,1],[2,1]]},
   {name:"Statek do U",w:1,min:40,cells:[[0,0],[0,1],[1,1],[2,1],[2,0]]}
 ];
+// bytovky mají před domem venkovní stání (p)
 const FLAT_SHAPES=[
-  {name:"Bytový dům",w:3,cells:[[0,0],[1,0],[0,1],[1,1]]},
-  {name:"Panelový dům",w:2,cells:[[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]]},
-  {name:"Bytový blok",w:1.5,cells:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]]}
+  {name:"Bytový dům",w:3,cells:[[0,0,"p"],[1,0,"p"],[0,1],[1,1]]},
+  {name:"Panelový dům",w:2,cells:[[0,0,"p"],[1,0,"p"],[2,0,"p"],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2]]},
+  {name:"Bytový blok",w:1.5,cells:[[0,0,"p"],[1,0,"p"],[0,1],[0,2],[1,1],[1,2]]}
 ];
 const row=(v,n,r)=>Array.from({length:n},(_,u)=>[u,v,r]);
 const SVC_SHAPES={
@@ -64,6 +71,11 @@ const SVC_SHAPES={
   park:[[[0,0,"g"],[1,0,"g"],[0,1,"g"],[1,1,"g"]],[[0,0,"g"],[1,0,"g"],[2,0,"g"]]],
   office:[[...row(0,2,"p"),...row(1,2,"b"),...row(2,2,"b")],[...row(0,3,"p"),...row(1,3,"b")],[[0,0,"p"],[0,1,"b"],[1,1,"b"]]],
   school:[[...row(0,3,"y"),...row(1,3,"b")],[...row(0,2,"y"),...row(1,2,"b")]],
+  playground:[[[0,0,"y"],[1,0,"y"],[0,1,"y"],[1,1,"y"]],[[0,0,"y"],[1,0,"y"]]],
+  parkland:[[...row(0,3,"y"),...row(1,3,"y"),...row(2,3,"y")],[...row(0,2,"y"),...row(1,2,"y"),...row(2,2,"y")],[...row(0,2,"y"),...row(1,2,"y")]],
+  cafe:[[[0,0,"y"],[1,0,"p"],[0,1,"b"],[1,1,"b"]],[[0,0,"y"],[0,1,"b"]]],
+  church:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"],[0,2,"b"],[1,2,"b"]],[[0,0,"y"],[0,1,"b"],[0,2,"b"]]],
+  square:[[...row(0,3,"y"),...row(1,3,"y"),...row(2,3,"y")],[...row(0,3,"y"),...row(1,3,"y")]],
   logging:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"y"]],[[0,0,"y"],[0,1,"b"]]],
   quarry:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]],[[0,0,"y"],[0,1,"b"]]],
   mine:[[[0,0,"y"],[1,0,"y"],[0,1,"b"],[1,1,"b"]],[[0,0,"y"],[0,1,"b"]]],
