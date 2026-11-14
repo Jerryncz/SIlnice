@@ -4,7 +4,7 @@
 se jezdí. Hráč staví jen silnice; domy, pumpy, hospody, obchody, parkoviště
 i nové vesnice vznikají ze simulace provozu.
 
-Aktuální verze: **0.9.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
+Aktuální verze: **0.10.0** (14. 11. 2026) – prototyp. Změny v `CHANGELOG.md`.
 
 ## Spuštění
 
@@ -37,14 +37,14 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 |---|---|
 | Stavět silnici | `1`; tvar `A` rovně (tah), `S` oblouk (3 kliky), `D` kruh (tah od středu), `F` napojit (2 kliky), `G` odbočka / nájezd (tah ze silnice), `H` vzor křižovatky (klik na dálnici); tah po silnici ji přestaví |
 | Druh, pruhy, tvar, výška | panel nad nástroji; výška také `Q` / `E`; zaškrtávátko „Přestavět kliknutím“ |
-| Pruhy | `2`, klik na polovinu silnice = pruh v tom směru, tah podél = jen kus úseku, Shift ubere |
+| Pruhy | `2`, klik na polovinu silnice = pruh v tom směru (u jednosměrky na tom okraji), tah podél = jen kus úseku, Shift ubere |
 | Pravidlo křižovatky | `3`, klik na křižovatku |
 | Šipky pruhů | `9`, klik na pruh před křižovatkou přepíná vlevo / rovně / vpravo |
 | Přechod pro chodce | `4`, klik u křižovatky přepne, jinde přidá / zruší |
 | Rozdělit úsek | `5`, klik na silnici; klik na značku rozdělení ho zruší |
 | Bourat | `6`, tah přes silnice nebo budovy |
 | Stavební uzávěra | `7` (po celých polích) |
-| Ruka (posun, výběr) | `8` |
+| Ruka (posun, výběr) | `8`; klik na auto, chodce, budovu nebo silnici ukáže trasy |
 | Posun mapy | pravé nebo prostřední tlačítko, Ruka, šipky, dva prsty |
 | Přiblížení | kolečko, `+` / `-`, sevření prstů |
 | Zrušit kreslení / výběr | pravý klik, `Esc` |

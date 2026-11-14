@@ -7,7 +7,7 @@ const B = require("../build.js");
 
 const ctx = { console };
 vm.createContext(ctx);
-vm.runInContext(B.simSource() + "\nthis.A={linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,cycleArrow,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
+vm.runInContext(B.simSource() + "\nthis.A={lanePose,planLanes,commitLanes,linkLanes,eraseEdge,newVehicle,chooseLane,updateVehicles,cycleArrow,mkCubic,lanePorts,snapPort,W,planTemplate,commitTemplate,planBranch,commitBranch,toggleCross,toggleMidCross,isRampEdge,unitFree,MW,MH,createSim,step,STEP,N,W,NB,DAY,buildRoad,planRoad,snapPoint,mkLine,mkBezier,planRoundabout,commitRoundabout,findPath,gridPath,buildCellPath,eraseEdge,demolishBuilding,planLanes,commitLanes,planKind,commitKind,splitAt,unsplit,stopS,cycleOneway,setControl,setKind,hourOf,cellAt,GAME_VERSION};", ctx);
 const A = ctx.A;
 
 let chyby = 0, kontroly = 0;
@@ -207,6 +207,25 @@ for (const type of ["diamond", "clover", "trumpet"]) {
   ok(made > 500, "pruhy: auta vyjela (" + made + ")"); ok(S.stuckN === 0 && maxWait < 5, `pruhy: průplet se nezasekne (vzdalo ${S.stuckN}, nejdelší čekání ${maxWait.toFixed(1)} s)`);
   zkontroluj(S, "pruhy");
 }
+// ---- jednosměrka: pruh navíc na zvoleném okraji, původní zůstane na místě; dvoupruhový sjezd z dálnice ----
+{
+  const S = A.createSim(11); S.money = 1e8; const y = 40.5;
+  for (const e of [...S.edges]) if (!e.dead && !e.gateEdge) A.eraseEdge(S, e);
+  for (const b of [...S.buildings]) A.demolishBuilding(S, b, true);
+  const sp = (x, yy) => { const q = A.snapPoint(S, x, yy, 0); return q.type === "free" ? { type: "free", x, y: yy, lvl: 0 } : q; };
+  const rd = (pts, kind, lanes) => A.buildRoad(S, { pts, kind, lanes, start: sp(pts[0], pts[1]), end: sp(pts[pts.length - 2], pts[pts.length - 1]) });
+  rd(A.mkLine(12.5, y, 58.5, y), "hwy", 2); const r2 = rd(A.mkCubic(38.5, y, 42, y, 46, 44, 46.5, 47.5), "ramp", 1);
+  let ramp = r2.edges[0]; const p0 = A.lanePose(S, ramp.id * 2, 0, 0);
+  ok(A.commitLanes(S, A.planLanes(S, ramp, 1, 0)).ok, "jednosměrka: pruh vpravo");
+  ramp = S.edges.find(e => !e.dead && e.kind === "ramp"); const p1 = A.lanePose(S, ramp.id * 2, 0, 0), p2 = A.lanePose(S, ramp.id * 2, 1, 0);
+  ok(Math.hypot(p0.x - p1.x, p0.y - p1.y) < 0.01 && p2.y > p1.y + 0.2, "jednosměrka: původní pruh zůstal na místě, nový je vpravo");
+  const dec = S.edges.find(e => !e.dead && e.kind === "hwy" && e.lf === 3); ok(dec && A.commitLanes(S, A.planLanes(S, dec, 1, 0)).ok, "dálnice: druhý odbočovací pruh");
+  const n = S.nodes[ramp.a]; const lcs = [...n.lc.values()].find(lc => lc.length === 4);
+  ok(lcs && lcs[2].length === 1 && lcs[3].length === 1 && lcs[2][0].lane === 0 && lcs[3][0].lane === 1 && lcs[2][0].link === ramp.id * 2, "dálnice: dva odbočovací pruhy vedou do dvou pruhů sjezdu");
+  ok(A.commitLanes(S, A.planLanes(S, ramp, 1, 1)).ok, "jednosměrka: pruh vlevo"); ramp = S.edges.find(e => !e.dead && e.kind === "ramp");
+  const p3 = A.lanePose(S, ramp.id * 2, 1, 0); ok(ramp.lf === 3 && Math.hypot(p3.x - p0.x, p3.y - p0.y) < 0.01, "jednosměrka: po přidání vlevo je původní pruh druhý a na místě");
+  ok(A.planLanes(S, S.edges.find(e => !e.dead && !e.gateEdge && e.kind === "hwy" && e.lf === 2), 8, 0).ok, "dálnice: až 10 pruhů v jednom směru");
+}
 // ---- šipky: hráč změní řazení, spojení pruhů se přepočítá ----
 {
   const S = A.createSim(11); S.money = 1e8;
@@ -306,7 +325,7 @@ for (const seed of [1, 4242, 98765]) {
   ok(S.trips > 50, `lidé dojíždějí do cíle (${S.trips})`);
   ok(S.transits > 0, `projíždí tranzit (${S.transits})`);
   ok((S.xCount || 0) > 0, `chodci přecházejí po přechodech (${S.xCount || 0})`);
-  souhrn.prechody = (souhrn.prechody || 0) + (S.xCount || 0); souhrn.vzdali = (souhrn.vzdali || 0) + S.stuckN;
+  souhrn.prechody = (souhrn.prechody || 0) + (S.xCount || 0); souhrn.vzdali = (souhrn.vzdali || 0) + S.stuckN; souhrn.minuli = (souhrn.minuli || 0) + (S.missed || 0); souhrn.preplanovali = (souhrn.preplanovali || 0) + (S.replanned || 0);
   const typy = {}; for (const b of S.buildings) typy[b.type] = (typy[b.type] || 0) + 1;
   for (const t in typy) souhrn[t] = (souhrn[t] || 0) + typy[t];
   // bourání za jízdy
@@ -318,6 +337,6 @@ for (const seed of [1, 4242, 98765]) {
   console.log(`  ${S.towns.length} obcí, ${pop1} obyvatel, ${S.buildings.length} budov, ${S.trips} cest, ${S.transits} tranzitů, vývoz ${S.exported} Kč, aut ${S.cars.length}, chodců ${S.walkers.length}`);
   console.log("  " + JSON.stringify(typy));
 }
-console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, prechody: souhrn.prechody, vzdali: souhrn.vzdali }));
+console.log('  souhrn: ' + JSON.stringify({ kruh: souhrn.kruh, rozdeleno: souhrn.rozdeleno, prechody: souhrn.prechody, vzdali: souhrn.vzdali, minuli: souhrn.minuli, preplanovali: souhrn.preplanovali }));
 console.log(`verze ${A.GAME_VERSION}: ${kontroly} kontrol, ${chyby} chyb`);
 process.exit(chyby ? 1 : 0);

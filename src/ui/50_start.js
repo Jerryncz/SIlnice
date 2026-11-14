@@ -11,4 +11,4 @@ function frame(now){const dt=Math.min(0.1,(now-lastT)/1000);lastT=now;
   try{render()}catch(err){console.error(err)}
   if(now-lastUI>300||UI.selDirty){updateUI();lastUI=now;UI.selDirty=false}requestAnimationFrame(frame)}
 updateUI();requestAnimationFrame(frame);
-window.__osady={get S(){return S},cam,UI};
+window.__osady={get S(){return S},cam,UI,carPose:c=>carPose(c)};

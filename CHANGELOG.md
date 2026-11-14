@@ -3,6 +3,19 @@
 Verze `hlavní.vedlejší.oprava`: vedlejší = nová mechanika nebo změna pravidel
 světa, oprava = ladění čísel a opravy chyb. Dokud je hra prototyp, hlavní je 0.
 
+## 0.10.0 – 14. 11. 2026
+
+- Až 10 pruhů v jednom směru (R68).
+- Jednosměrka: pruh navíc vlevo nebo vpravo, ostatní zůstanou na místě;
+  dvoupruhový sjezd navazuje na dva odbočovací pruhy (R69).
+- Auta přeplánují trasu po stavbě silnic a v koloně (R70).
+- Trasy na mapě po kliknutí na auto, chodce, budovu nebo silnici (R71).
+- Tři a více pruhů: vlevo / rovně / vpravo zvlášť (R72).
+- Parkoviště s uličkou a místy vedle ní, větší u podniků (R73).
+- Blinkry při odbočování a přejíždění mezi pruhy.
+- Oprava: auto vyjíždějící z budovy se do stojící kolony nezařadilo, i když
+  mělo místo; čekající auto už nestojí ve vozovce.
+
 ## 0.9.0 – 14. 11. 2026
 
 Přestavba dopravy na pruhy (R60–R67).

@@ -73,3 +73,9 @@ nepřepisuje, ale označí „nahrazeno R<číslo>“ a připíše se nové.
 | R65 | 14. 11. 2026 | Vzory Kosodélník, Čtyřlístek a nová Trubka se skládají jen z nájezdů napojených na pruh. | Volba uživatele. | Křižovatka se semafory na mostě – nevybráno. |
 | R66 | 14. 11. 2026 | Odbočovací pruhy v křižovatce nevznikají samy; přidá je hráč (Pruhy) a šipky se přerozdělí. | Volba uživatele. | Samy u silnic se dvěma a více pruhy. |
 | R67 | 14. 11. 2026 | Celá přestavba na pruhy v jedné verzi 0.9. | Volba uživatele. | Dvě etapy (0.9 pruhy, 0.10 šipky a semafory) – doporučeno, zamítnuto. |
+| R68 | 14. 11. 2026 | Druhy s více pruhy mají až 10 pruhů v jednom směru. | Přání uživatele. | Dosavadní 3–4. |
+| R69 | 14. 11. 2026 | U jednosměrky se pruh přidává na zvoleném okraji a ostatní pruhy zůstávají na místě (pruhy mohou být posunuté od osy úseku). | Přání uživatele: dvoupruhový sjezd zarovnaný se dvěma odbočovacími pruhy. | Pruhy vždy souměrně kolem osy (do 0.9). |
+| R70 | 14. 11. 2026 | Auta přeplánují trasu po stavbě silnic a při stání v koloně; přejdou jen na trasu aspoň o 10 % rychlejší. | Přání uživatele: nová silnice má kolonám pomoci hned. | Trasa pevná od výjezdu (do 0.9); přejít na každou lepší – přelévání. |
+| R71 | 14. 11. 2026 | Výběr auta, chodce, budovy a silnice ukazuje trasy na mapě. | Přání uživatele (tři způsoby, jak zjistit, kdo kam jede). | – |
+| R72 | 14. 11. 2026 | Se třemi a více pruhy: vnitřní jen vlevo, krajní jen vpravo, ostatní rovně; hráč mění nástrojem Šipky. | Přání uživatele. | Sdílené pruhy vlevo+rovně a rovně+vpravo (zůstává u dvou pruhů). |
+| R73 | 14. 11. 2026 | Parkoviště s plnou uličkou a místy vedle ní; hlubší tvary podniků; kapacita = počet míst. | Přání uživatele: auta nemají stát v uličce. | Ulička mezi dvěma řadami bez vlastní šířky (do 0.9). |

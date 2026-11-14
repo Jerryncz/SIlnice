@@ -9,15 +9,21 @@ function lotLayout(S,b){if(!b.access)return null;const key=b.access.e+":"+b.acce
   const d=Math.abs(dx)>=Math.abs(dy)?[Math.sign(dx)||1,0]:[0,Math.sign(dy)||1],p=[-d[1],d[0]];
   const loc=cells.map(j=>{const cx=wxOf(j),cy=wyOf(j);return {j,x:cx,y:cy,dep:Math.round(((cx-ax)*d[0]+(cy-ay)*d[1])*2)/2,lat:Math.round(((cx-ax)*p[0]+(cy-ay)*p[1])*2)/2}});
   const rows=[...new Set(loc.map(q=>q.dep))].sort((a,b)=>a-b);
-  const aisleOf=new Map();for(let i=0;i<rows.length;i+=2){const a=i+1<rows.length?(rows[i]+rows[i+1])/2:rows[i]-0.25;aisleOf.set(rows[i],a);if(i+1<rows.length)aisleOf.set(rows[i+1],a)}
+  // řady od silnice: místa – ulička – místa (po třech), zbylé dvě řady ulička – místa, zbylá jedna zeleň
+  const kind=new Map(),aisleOf=new Map();let i=0;const n=rows.length;
+  while(n-i>=3){kind.set(rows[i],"s");kind.set(rows[i+1],"a");kind.set(rows[i+2],"s");aisleOf.set(rows[i],rows[i+1]);aisleOf.set(rows[i+2],rows[i+1]);i+=3}
+  if(n-i===2){kind.set(rows[i],"a");kind.set(rows[i+1],"s");aisleOf.set(rows[i+1],rows[i])}else if(n-i===1){if(n===1){kind.set(rows[i],"s");aisleOf.set(rows[i],rows[i]-0.5)}else kind.set(rows[i],"g")}
   const lats=[...new Set(loc.map(q=>q.lat))];let lat0=lats[0];for(const l of lats)if(Math.abs(l)<Math.abs(lat0))lat0=l;
-  // páteř vede mezi buňkami, ne středem místa
-  lat0+=lat0>=0?-0.25:0.25;
   const W2=(dep,lat)=>[ax+d[0]*dep+p[0]*lat,ay+d[1]*dep+p[1]*lat];
-  const spots=loc.map(q=>{const a=aisleOf.get(q.dep);const s=q.dep>a?1:-1;return {x:q.x,y:q.y,ang:Math.atan2(d[1]*s,d[0]*s),aisle:a,lat:q.lat}});
+  const lastA=Math.max(...aisleOf.values());
+  // páteř od vjezdu k uličkám vede sloupcem lat0; místa v něm před poslední uličkou odpadnou
+  const spots=loc.filter(q=>kind.get(q.dep)==="s"&&!(Math.abs(q.lat-lat0)<0.01&&q.dep<lastA)).map(q=>{const a=aisleOf.get(q.dep);const sg=q.dep>a?1:-1;return {x:q.x,y:q.y,ang:Math.atan2(d[1]*sg,d[0]*sg),aisle:a,lat:q.lat,dep:q.dep}});
+  if(!spots.length)return null;
   spots.sort((u,v)=>Math.abs(u.lat-lat0)+u.aisle*0.01-(Math.abs(v.lat-lat0)+v.aisle*0.01));
-  const aisles=[...new Set(spots.map(s=>s.aisle))].map(a=>{const ls=spots.filter(s=>s.aisle===a).map(s=>s.lat);return {a,l0:Math.min(lat0,...ls)-0.2,l1:Math.max(lat0,...ls)+0.2}});
-  const lay={spots,aisles,d,p,lat0,ax,ay,W:W2,first:rows[0]-0.3,last:Math.max(...aisles.map(q=>q.a))};
+  const aisles=[...new Set(spots.map(s=>s.aisle))].map(a=>{const ls=loc.filter(q=>Math.abs(q.dep-a)<0.01).map(q=>q.lat).concat(spots.filter(s=>s.aisle===a).map(s=>s.lat));return {a,l0:Math.min(lat0,...ls)-0.2,l1:Math.max(lat0,...ls)+0.2}});
+  const lay={spots,aisles,d,p,lat0,ax,ay,W:W2,first:rows[0]-0.3,last:lastA};
+  // kapacita parkoviště nepřesáhne počet vyznačených míst
+  if(b.cap0===undefined)b.cap0=b.cap;if(!isHome(b)&&!(KIND[b.type]&&KIND[b.type].industry))b.cap=Math.min(b.cap0,spots.length);
   b.lay=lay;if(!b.spotUsed||b.spotUsed.length!==spots.length)b.spotUsed=new Array(spots.length).fill(null);return lay}
 // cesta z vjezdu (bod na silnici) na místo i
 function spotPath(lay,i){const s=lay.spots[i],W=lay.W;return [[lay.ax,lay.ay],W(lay.first,lay.lat0),W(s.aisle,lay.lat0),W(s.aisle,s.lat),[s.x,s.y]]}
