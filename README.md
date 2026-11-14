@@ -29,6 +29,7 @@ Hratelná kopie aktuální verze je i v `%USERPROFILE%\OneDrive\GIT\Silnice`.
 | `napady/` | nápady do budoucna (ukládání hry, křižovatky, železnice …) – nic z nich není ve hře |
 | `poznatky/` | poznatky z jednotlivých chatů, čekající na zapracování |
 | `tests/test_simulace.js` | automatický test simulace (`node tests/test_simulace.js`) |
+| `tests/krizovatky/` | zkouška 30 křižovatek pod provozem (`node tests/krizovatky/zkouska.js`) a jejich snímky (`snimky.js`) |
 | `CLAUDE.md` | jak se v repozitáři pracuje (pravidla spolupráce s Claude) |
 | `CHANGELOG.md` | změny podle verzí |
 
