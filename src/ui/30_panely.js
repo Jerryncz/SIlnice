@@ -24,7 +24,7 @@ const SHAPE_HINT={line:"Táhni po mapě. Ze silnice se úhly drží vůči ní, 
   connect:"Klikni na dvě místa: z boku silnice se napojí kolmo, z konce silnice v jejím směru, mezi nimi plynulá křivka.",
   branch:"Táhni ze silnice: ve směru jízdy vznikne odbočka, proti směru nájezd. Silnice dostane odbočovací nebo připojovací pruh s náběhem. Strana tahu určuje jízdní pás.",
   template:"Najeď na rovnou dálnici a klikni: postaví se celá mimoúrovňová křižovatka se silnicí přes dálnici (druh a pruhy silnice podle volby vlevo)."};
-const TOOL_HINT={lane:"Klikni na polovinu silnice: přidá pruh v tom směru. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
+const TOOL_HINT={lane:"Klikni na polovinu silnice: přidá pruh v tom směru. U jednosměrky přidá pruh na tom okraji, kam klikneš; ostatní pruhy zůstanou na místě. Tahem podél silnice jen na kus úseku (vznikne náběh). Shift ubírá.",
   split:"Klikni na silnici: rozdělí úsek, aby šel kus přestavět nebo rozšířit zvlášť. Klik na značku rozdělení úseky zase spojí.",
   cross:"Klikni u křižovatky: přechod přes rameno zruší nebo vrátí. Klik jinde na silnici přidá přechod doprostřed úseku (10 Kč), klik na něj ho zruší.",
   arrow:"Klikni na pruh před křižovatkou: přepíná, kam se z pruhu smí jet (vlevo, rovně, vpravo). Modrá šipka je nastavená ručně, další kliky vrátí samočinnou.",
@@ -67,9 +67,28 @@ function runPlan(plan,commit,what){
 // ---- výběr ----
 const COMPASS=(hx,hy)=>{const a=Math.atan2(-hy,hx)*180/Math.PI;const n=["V","SV","S","SZ","Z","JZ","J","JV"];return n[((Math.round(a/45)%8)+8)%8]};
 function growthLabel(t){if(!t.accessList.length)return"bez silnice";if(t.jam>0.4)return"brzdí ji zácpy";if(t.rate>0.04)return"roste rychle";if(t.rate>0.018)return"roste";if(t.rate>0.005)return"roste pomalu";return"stojí"}
+// odkud kam: jméno místa pro výpis trasy
+function placeName(b){if(!b)return"–";if(b.isGate)return"za hranicí mapy"+(b.name?" ("+b.name+")":"");if(b.dead)return"zbouraná budova";if(isHome(b))return b.name+(b.town?" · "+b.town.name:"");return KIND[b.type].name+(b.town?" · "+b.town.name:"")}
+// auta a chodci, kterých se výběr týká: {m, car, cls} (cls 0 = sem / přes, 1 = odtud)
+function traceSet(t){const out=[];if(!t)return out;
+  if(t.type==="car"){if(!t.c.dead)out.push({m:t.c,car:true,cls:0})}
+  else if(t.type==="walker"){if(!t.w.dead)out.push({m:t.w,car:false,cls:0})}
+  else if(t.type==="bld"){const b=t.b;for(const c of S.cars){if(c.dead||!c.trip)continue;if(c.trip.to===b)out.push({m:c,car:true,cls:0});else if(c.trip.from===b)out.push({m:c,car:true,cls:1})}
+    for(const w of S.walkers){if(w.dead||!w.trip)continue;if(w.trip.to===b)out.push({m:w,car:false,cls:0});else if(w.trip.from===b)out.push({m:w,car:false,cls:1})}}
+  else if(t.type==="edge"){const id=t.id;for(const c of S.cars){if(c.dead||!c.links)continue;const k=c.links.findIndex(l=>(l>>1)===id);if(k>=0)out.push({m:c,car:true,cls:0,past:k<c.li})}
+    for(const w of S.walkers){if(w.dead||!w.links)continue;const k=w.links.findIndex(l=>(l>>1)===id);if(k>=0)out.push({m:w,car:false,cls:0,past:k<w.li})}}
+  return out}
 function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;const A=(label,act,pressed,group)=>acts.push({label,act,pressed,group});
-  if(t.type==="edge"){const e=S.edges[t.id];if(!e||e.dead)return"";const K=RK[e.kind];const lv=Math.max(S.nodes[e.a].lvl,S.nodes[e.b].lvl);
+  if(t.type==="car"){const c=t.c;if(c.dead)return"";const tr=c.trip||{};title=tr.truck?"Nákladní auto":"Auto";
+    sub={exit:"vyjíždí",drive:"jede",enter:"zajíždí k cíli",unpark:"vyjíždí z parkoviště"}[c.state]||"";
+    rows.push(["Odkud",placeName(tr.from)],["Kam",placeName(tr.to)]);if(tr.cargo)rows.push(["Veze",GOODS[tr.cargo].name]);
+    rows.push(["Zbývá úseků",String(Math.max(0,c.links.length-1-c.li))]);if(c.wait>1)rows.push(["Stojí",Math.round(c.wait)+" s"]);
+    why="Trasa je vyznačená na mapě: plně kudy pojede, slabě kudy už jelo.";ok=true}
+  else if(t.type==="walker"){const w=t.w;if(w.dead)return"";const tr=w.trip||{};title=w.kid?"Dítě pěšky":tr.purpose==="senior"?"Senior pěšky":"Chodec";
+    rows.push(["Odkud",placeName(tr.from)],["Kam",placeName(tr.to)]);why="Trasa je vyznačená na mapě.";ok=true}
+  else if(t.type==="edge"){const e=S.edges[t.id];if(!e||e.dead)return"";const K=RK[e.kind];const lv=Math.max(S.nodes[e.a].lvl,S.nodes[e.b].lvl);
     title=(e.ring?"Kruhový objezd · "+K.name.toLowerCase():K.name)+(lv>=1.5?" · vysoký most":lv>=0.5?" · most":"");
+    {const ts=traceSet(t);const cars=ts.filter(q=>q.car);rows.push(["Trasy přes úsek",cars.filter(q=>!q.past).length+" aut pojede, "+cars.filter(q=>q.past).length+" projelo, "+ts.filter(q=>!q.car).length+" chodců"])}
     const one=e.lf===0||e.lb===0;const pr=n=>n+" "+(n===1?"pruh":n<5?"pruhy":"pruhů");const mid=pointAt(e.g,e.g.len/2);const c0=COMPASS(mid.tx,mid.ty),c1=COMPASS(-mid.tx,-mid.ty);
     sub=one?pr(e.lf+e.lb)+", jednosměrně":e.lf===e.lb?pr(e.lf)+" v každém směru":pr(e.lf)+" směr "+c0+", "+pr(e.lb)+" směr "+c1;if(e.auto)sub+=" · postavila obec";
     const c=Math.max(e.cong[0],e.cong[1]);rows.push(["Provoz",fmt(e.flow)+" aut/min"],["Vytížení",Math.round(Math.min(1,c)*100)+" %"],["Délka",e.g.len.toFixed(1)+" polí"]);
@@ -77,7 +96,8 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
       if(!S.towns.some(tt=>tt.comps.has(S.nodes[g.node].comp)))why="Zatím vede do prázdna. Na konci ji napoj silnicí, nebo k ní postav nájezd."}}
     if(c>0.75)why="Tvoří se tu kolona. Pomůže pruh navíc, objížďka nebo úprava křižovatky na konci úseku.";
     if(!e.gateEdge){for(const k of ROAD_KINDS)if(k!==e.kind)A(RK[k].name,"kind:"+k,false,e.ring?"Celý kruh změnit na":"Změnit na");
-      if(one){A("Přidat pruh","lane:1",false,"Pruhy");A("Ubrat pruh","lane:-1",false,"Pruhy")}
+      if(one&&e.ring){A("Přidat pruh","lane:1",false,"Pruhy");A("Ubrat pruh","lane:-1",false,"Pruhy")}
+      else if(one){A("+ vpravo","lane:1:0",false,"Pruhy");A("− vpravo","lane:-1:0",false,"Pruhy");A("+ vlevo","lane:1:1",false,"Pruhy");A("− vlevo","lane:-1:1",false,"Pruhy")}
       else{A("+ oba směry","lane:1",false,"Pruhy");A("− oba směry","lane:-1",false,"Pruhy");A("+ směr "+c0,"lane:1:0",false,"Pruhy");A("− směr "+c0,"lane:-1:0",false,"Pruhy");A("+ směr "+c1,"lane:1:1",false,"Pruhy");A("− směr "+c1,"lane:-1:1",false,"Pruhy")}
       if(!e.ring&&one)A("Otočit směr","ow",false,"Pruhy")}
     if(!e.gateEdge)A("Zbourat úsek","erase",false,"Úsek")}
@@ -108,6 +128,7 @@ function selHTML(t){const acts=[];let title,sub="",rows=[],why=null,ok=false;con
         if(b.short)why=m[b.short];else{why="Vyrábí.";ok=true}}
       if(K.pull&&b.ofRecent>1)why="Parkoviště nestačí, auta čekají na silnici.";
       if(!b.access)why="Budova ztratila vjezd na silnici."}
+    {const ts=traceSet(t);const n=(cls,car)=>ts.filter(q=>q.cls===cls&&q.car===car).length;rows.push(["Na cestě sem",n(0,true)+" aut, "+n(0,false)+" pěšky"],["Na cestě odtud",n(1,true)+" aut, "+n(1,false)+" pěšky"])}
     A("Zbourat "+fmt(demolishCost(b))+" Kč","demolish",false,"Budova")}
   else if(t.type==="cell"){const i=t.c,k=S.terrain[i];title=["Louka","Voda","Les","Skály","Ložisko železné rudy"][k];if(S.zone[i])sub="stavební uzávěra";
     for(const kk of ["street","road","blvd","hwy"])rows.push([RK[kk].name,fmt(roadCostPerTile(kk,RK[kk].lanes,0)+(k===WATER?(kk==="hwy"?20:8):k!==GRASS?3:0))+" Kč/pole"]);

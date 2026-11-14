@@ -4,11 +4,11 @@
 const RK={
   alley:{name:"Ulička",lanes:1,min:1,max:1,speed:0.6,median:0,side:0.08,cost:4,laneCost:0,front:true,walk:true,rank:0,line:"none"},
   street:{name:"Ulice",lanes:1,min:1,max:1,speed:0.8,median:0,side:0.1,cost:6,laneCost:0,front:true,walk:true,rank:1,line:"dash"},
-  road:{name:"Silnice",lanes:1,min:1,max:3,speed:1.0,median:0,side:0.12,cost:10,laneCost:8,front:true,walk:true,rank:2,line:"solid"},
-  oneway:{name:"Jednosměrka",lanes:1,min:1,max:3,speed:0.9,median:0,side:0.12,cost:8,laneCost:7,front:true,walk:true,oneway:true,rank:2,line:"none"},
-  blvd:{name:"Bulvár",lanes:2,min:2,max:3,speed:1.25,median:0.34,side:0.14,cost:22,laneCost:10,front:true,walk:true,rightOnly:true,rank:3},
-  hwy:{name:"Dálnice",lanes:2,min:2,max:4,speed:1.9,median:0.24,side:0,cost:36,laneCost:14,front:false,walk:false,rank:5},
-  ramp:{name:"Nájezd",lanes:1,min:1,max:2,speed:1.3,median:0,side:0,cost:14,laneCost:8,front:false,walk:false,oneway:true,rank:4}
+  road:{name:"Silnice",lanes:1,min:1,max:10,speed:1.0,median:0,side:0.12,cost:10,laneCost:8,front:true,walk:true,rank:2,line:"solid"},
+  oneway:{name:"Jednosměrka",lanes:1,min:1,max:10,speed:0.9,median:0,side:0.12,cost:8,laneCost:7,front:true,walk:true,oneway:true,rank:2,line:"none"},
+  blvd:{name:"Bulvár",lanes:2,min:2,max:10,speed:1.25,median:0.34,side:0.14,cost:22,laneCost:10,front:true,walk:true,rightOnly:true,rank:3},
+  hwy:{name:"Dálnice",lanes:2,min:2,max:10,speed:1.9,median:0.24,side:0,cost:36,laneCost:14,front:false,walk:false,rank:5},
+  ramp:{name:"Nájezd",lanes:1,min:1,max:10,speed:1.3,median:0,side:0,cost:14,laneCost:8,front:false,walk:false,oneway:true,rank:4}
 };
 const ROAD_KINDS=["alley","street","road","oneway","blvd","hwy","ramp"];
 const LEVEL_NAMES=["Zem","Most","Vysoký most"];
@@ -63,10 +63,10 @@ const FLAT_SHAPES=[
 ];
 const row=(v,n,r)=>Array.from({length:n},(_,u)=>[u,v,r]);
 const SVC_SHAPES={
-  pub:[[[0,0,"p"],[1,0,"p"],[0,1,"b"],[1,1,"b"]],[[0,0,"p"],[0,1,"b"]]],
-  shop:[[[0,0,"p"],[1,0,"p"],[0,1,"b"],[1,1,"b"]],[[0,0,"p"],[0,1,"b"],[1,1,"b"]]],
-  mall:[[...row(0,3,"p"),...row(1,3,"p"),...row(2,3,"b")],[...row(0,2,"p"),...row(1,2,"p"),...row(2,2,"b")]],
-  hyper:[[...row(0,4,"p"),...row(1,4,"p"),...row(2,4,"b"),...row(3,4,"b")],[...row(0,3,"p"),...row(1,3,"p"),...row(2,3,"b"),...row(3,3,"b")]],
+  pub:[[...row(0,2,"p"),...row(1,2,"p"),...row(2,2,"b")],[[0,0,"p"],[1,0,"p"],[0,1,"b"],[1,1,"b"]],[[0,0,"p"],[0,1,"b"]]],
+  shop:[[...row(0,2,"p"),...row(1,2,"p"),...row(2,2,"b")],[[0,0,"p"],[1,0,"p"],[0,1,"b"],[1,1,"b"]],[[0,0,"p"],[0,1,"b"],[1,1,"b"]]],
+  mall:[[...row(0,3,"p"),...row(1,3,"p"),...row(2,3,"p"),...row(3,3,"b")],[...row(0,3,"p"),...row(1,3,"p"),...row(2,3,"b")],[...row(0,2,"p"),...row(1,2,"p"),...row(2,2,"b")]],
+  hyper:[[...row(0,4,"p"),...row(1,4,"p"),...row(2,4,"p"),...row(3,4,"b"),...row(4,4,"b")],[...row(0,4,"p"),...row(1,4,"p"),...row(2,4,"b"),...row(3,4,"b")],[...row(0,3,"p"),...row(1,3,"p"),...row(2,3,"b"),...row(3,3,"b")]],
   gas:[[[0,0,"f"],[1,0,"f"],[0,1,"b"],[1,1,"b"]],[[0,0,"f"],[1,0,"f"],[0,1,"b"]]],
   park:[[[0,0,"g"],[1,0,"g"],[0,1,"g"],[1,1,"g"]],[[0,0,"g"],[1,0,"g"],[2,0,"g"]]],
   office:[[...row(0,2,"p"),...row(1,2,"b"),...row(2,2,"b")],[...row(0,3,"p"),...row(1,3,"b")],[[0,0,"p"],[0,1,"b"],[1,1,"b"]]],

@@ -8,7 +8,7 @@
 
 const XW=0.32;   // šířka přechodu pro chodce
 // odsazení pruhu od osy úseku doprava ve směru jízdy; k=0 je vnitřní (levý) pruh
-function laneOffset(e,d,k){const L=d?e.lb:e.lf;if(e.lb===0||e.lf===0)return -(L*LW)/2+(k+0.5)*LW;return RK[e.kind].median/2+(k+0.5)*LW}
+function laneOffset(e,d,k){const L=d?e.lb:e.lf;if(e.lb===0||e.lf===0)return -(L*LW)/2+(k+0.5)*LW+(e.sh||0);return RK[e.kind].median/2+(k+0.5)*LW}
 // poloha auta v pruhu: x, y, úhel
 function lanePose(S,l,lane,s,out){const e=S.edges[l>>1],d=l&1;const u=clamp(d?e.g.len-s:s,0,e.g.len);const p=pointAt(e.g,u,out||{});const off=laneOffset(e,d,lane),sg=d?-1:1;
   return {x:p.x+p.nx*off*sg,y:p.y+p.ny*off*sg,ang:Math.atan2(p.ty*sg,p.tx*sg),u,off}}
@@ -46,14 +46,14 @@ function chooseLane(S,c,li){const g=goodLanes(S,c.links,li,2);if(c.state==="driv
 // přeřazení do sousedního pruhu t, když je vedle místo
 function laneShift(S,e,d,c,t){const q2=e.q[d][t];if(!q2)return false;
   for(const o of q2){const dz=o.s-c.s,need=(o.len+c.len)/2+0.12;if(Math.abs(dz)<need)return false;if(dz<0){if(o.v>0.3&&-dz<need+0.25)return false;break}}
-  c.lane=t;insertQ(q2,c);c.lcT=1.0;c.zip=0;return true}
+  c.lcD=Math.sign(t-c.lane);c.lane=t;insertQ(q2,c);c.lcT=1.0;c.zip=0;return true}
 // dvě auta vedle sebe, každé chce do pruhu toho druhého: vymění si pruhy (průplet)
 function laneSwap(S,e,d,c,i,t){const k=c.lane,q=e.q[d][k],q2=e.q[d][t];if(!q2||q[i]!==c)return false;
   for(let j=0;j<q2.length;j++){const o=q2[j];if(o.s<c.s-0.5)break;if(Math.abs(o.s-c.s)>0.5||o.conn||o.lcT>0||!o.need||o.needL!==c.needL||o.need.includes(t))continue;
     let b=o.need[0];for(const x of o.need)if(Math.abs(x-t)<Math.abs(b-t))b=x;if(Math.sign(b-t)!==Math.sign(k-t))continue;
     const fit=(qq,m,x)=>{const up=qq[m-1],dn=qq[m+1];return (!up||up.s-x.s>=(up.len+x.len)/2+0.1)&&(!dn||x.s-dn.s>=(dn.len+x.len)/2+0.1)};
     if(!fit(q2,j,c)||!fit(q,i,o))continue;
-    q[i]=o;q2[j]=c;o.lane=k;c.lane=t;o.lcT=c.lcT=1.0;o.zip=c.zip=0;o.sid=c.sid;return true}
+    q[i]=o;q2[j]=c;o.lane=k;c.lane=t;c.lcD=Math.sign(t-k);o.lcD=-c.lcD;o.lcT=c.lcT=1.0;o.zip=c.zip=0;o.sid=c.sid;return true}
   return false}
 function armApproaching(S,a,d){const e=S.edges[a.e],lanes=e.q[a.inLink&1];if(!lanes)return false;const so=linkOut(S,a.inLink);for(const q of lanes){const f=q[0];if(f&&so-f.s<d)return true}return false}
 // přednost podle pravidla křižovatky (po 3,5 s čekání se přednost pustí, plocha křižovatky se hlídá vždy)
@@ -116,7 +116,7 @@ function tryTransition(S,c,l){
     const a=lanePose(S,l,c.lane,c.s),b=lanePose(S,nl,lane,sIn);const cn=mkConn(a,b);
     if(!boxFree(S,n,l,nl,lane,cn))continue;
     cn.node=n.id;cn.from=l;cn.to=nl;cn.s0=sIn-cn.len;cn.s1=sIn;
-    c.li++;c.lane=lane;c.s=cn.s0;c.conn=cn;q.push(c);n.box.push(c);c.sid=S.sid;e2.passes++;c.wait=0;c.zip=0;return true}
+    cn.turn=x.turn;c.li++;c.lane=lane;c.s=cn.s0;c.conn=cn;q.push(c);n.box.push(c);c.sid=S.sid;e2.passes++;c.wait=0;c.zip=0;return true}
   return false}
 function leaveBox(S,c){if(!c.conn)return;const n=S.nodes[c.conn.node];const k=n.box.indexOf(c);if(k>=0)n.box.splice(k,1);c.conn=null}
 // dojel k cíli: zajede do vjezdu (domy, parkoviště), u hranice mapy rovnou zmizí
@@ -129,7 +129,7 @@ function startEnter(S,c,l){const to=c.trip&&c.trip.to;leaveBox(S,c);
   S.entering.push(c)}
 function tryExit(S,c){const l=c.links[0];const e=S.edges[l>>1];if(e.dead){killVehicle(S,c);return true}
   const q=e.q[l&1][c.lane];if(!q){killVehicle(S,c);return true}
-  for(const o of q){if(o.s>c.s+o.len/2+c.len/2+0.25)continue;if(o.s<c.s-1.1)break;return false}
+  for(const o of q){const need=(o.len+c.len)/2+0.12;if(o.s>c.s+need+0.1)continue;if(o.s<c.s-1.1)break;if(o.s<c.s-need&&o.v<0.25)break;return false}
   insertQ(q,c);c.state="drive";c.sid=S.sid;c.wait=0;e.passes++;return true}
 // auto, které stojí déle než nastavený limit, to vzdá (zablokovaná síť)
 function giveUp(S,c){const p=c.state==="drive"?lanePose(S,c.links[c.li],c.lane,c.s):null;
@@ -185,6 +185,21 @@ function rerouteVehicle(S,c){
   const u=(l&1)?e.g.len-c.s:c.s;const p=findPath(S,{e:e.id,u:clamp(u,0,e.g.len),dirs:[l&1]},c.goalEp);
   if(!p||p.links[0]!==l){killVehicle(S,c);return}
   c.links=p.links;c.li=0;c.needLi=-1;const lz=p.links[p.links.length-1];c.sEnd=clamp(p.sEnd,linkIn(S,lz)+0.3,Math.max(linkIn(S,lz)+0.3,linkOut(S,lz)-0.3));if(p.links.length===1)c.sEnd=Math.max(c.sEnd,c.s)}
+// auto zváží, jestli není lepší cesta (po stavbě nové silnice, nebo když dlouho stojí); historie trasy zůstává
+function replanVehicle(S,c){if(c.dead||c.state!=="drive"||c.conn||!c.goalEp)return false;const l=c.links[c.li],e=S.edges[l>>1];if(!e||e.dead)return false;
+  if(c.li<c.links.length-1&&linkOut(S,l)-c.s<2.5)return false;   // těsně před křižovatkou už se neřadí jinam
+  const u=(l&1)?e.g.len-c.s:c.s;const p=findPath(S,{e:e.id,u:clamp(u,0,e.g.len),dirs:[l&1]},c.goalEp);if(!p||p.links[0]!==l)return false;
+  let same=p.links.length===c.links.length-c.li;if(same)for(let k=0;k<p.links.length;k++)if(p.links[k]!==c.links[c.li+k]){same=false;break}
+  if(same)return false;
+  // jen když je nová cesta znatelně rychlejší (jinak by se všichni naráz přelili jinam)
+  let co=0,cn=0;for(let k=c.li+1;k<c.links.length;k++){const x=S.edges[c.links[k]>>1];if(!x||x.dead){co=1e9;break}co+=linkCost(S,c.links[k])}for(let k=1;k<p.links.length;k++)cn+=linkCost(S,p.links[k]);
+  if(cn>co*0.9)return false;
+  c.links=c.links.slice(0,c.li).concat(p.links);c.needLi=-1;const lz=p.links[p.links.length-1];c.sEnd=clamp(p.sEnd,linkIn(S,lz)+0.3,Math.max(linkIn(S,lz)+0.3,linkOut(S,lz)-0.3));if(p.links.length===1)c.sEnd=Math.max(c.sEnd,c.s);return true}
+function updateReplan(S,dt){
+  if(S.rpVer!==S.netVer){S.rpVer=S.netVer;S.rpT=1.5}
+  if(S.rpT>0){S.rpT-=dt;if(S.rpT<=0)S.rpQ=S.cars.filter(c=>!c.dead&&c.state==="drive")}
+  S.rpJam=(S.rpJam||0)+dt;if(S.rpJam>6&&!(S.rpQ&&S.rpQ.length)){S.rpJam=0;S.rpQ=S.cars.filter(c=>!c.dead&&c.state==="drive"&&c.wait>4)}
+  if(S.rpQ&&S.rpQ.length){for(let k=0;k<25&&S.rpQ.length;k++){if(replanVehicle(S,S.rpQ.pop()))S.replanned=(S.replanned||0)+1}}}
 function killOnEdge(S,eid){
   for(const c of S.cars){if(c.dead)continue;
     if(c.state==="drive"&&(c.links[c.li]>>1)===eid){removeQ(S,c);leaveBox(S,c);c.state="gone";c.dead=true;releaseVehicle(S,c);continue}

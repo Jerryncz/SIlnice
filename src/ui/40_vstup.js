@@ -15,8 +15,9 @@ function angleSnap(st,wx,wy,free){const sx=st.x,sy=st.y;if(free)return [wx,wy];c
   const a=base+Math.round((Math.atan2(dy,dx)-base)/(Math.PI/4))*(Math.PI/4);const len=Math.max(0.5,Math.round(L*2)/2);return [sx+Math.cos(a)*len,sy+Math.sin(a)*len]}
 function endSnap(st,wx,wy,shift){const raw=snapAny(wx,wy,UI.level);if(raw.type!=="free"&&Math.hypot(raw.x-st.x,raw.y-st.y)>0.5)return raw;const [ex,ey]=angleSnap(st,wx,wy,shift);const s=snapAny(ex,ey,UI.level);
   if(s.type!=="free"&&Math.hypot(s.x-ex,s.y-ey)<0.6)return s;const g=baseAngle(st)===null&&!shift;return {type:"free",x:g?Math.floor(ex)+0.5:ex,y:g?Math.floor(ey)+0.5:ey,lvl:UI.level}}
-function laneSide(e,wx,wy,u){if(e.lf===0||e.lb===0)return undefined;const p=pointAt(e.g,u);return (wx-p.x)*p.nx+(wy-p.y)*p.ny>=0?0:1}
-function dirName(e,dir){if(dir===undefined)return"";const p=pointAt(e.g,e.g.len/2);const hx=dir?-p.tx:p.tx,hy=dir?-p.ty:p.ty;return" (směr "+COMPASS(hx,hy)+")"}
+function laneSide(e,wx,wy,u){if(e.ring)return undefined;if(e.lf===0||e.lb===0){const p=pointAt(e.g,u),sg=e.lf?1:-1;return ((wx-p.x)*p.nx+(wy-p.y)*p.ny)*sg<(e.sh||0)?1:0}   // jednosměrka: 1 = levý okraj ve směru jízdy
+  const p=pointAt(e.g,u);return (wx-p.x)*p.nx+(wy-p.y)*p.ny>=0?0:1}
+function dirName(e,dir){if(dir===undefined)return"";if(e.lf===0||e.lb===0)return dir===1?" (vlevo)":" (vpravo)";const p=pointAt(e.g,e.g.len/2);const hx=dir?-p.tx:p.tx,hy=dir?-p.ty:p.ty;return" (směr "+COMPASS(hx,hy)+")"}
 const spec=(pts,st,en)=>({pts,kind:UI.kind,lanes:UI.lanes,start:st,end:en,level:UI.level});
 function planLine(st,en){return planRoad(S,spec(mkLine(st.x,st.y,en.x,en.y),st,en))}
 function planCurve(st,cx,cy,en){return planRoad(S,spec(mkBezier(st.x,st.y,cx,cy,en.x,en.y),st,en))}
@@ -81,7 +82,7 @@ function endPtr(e){const [sx,sy]=local(e);const had=ptrs.has(e.pointerId);ptrs.d
   if(!had)return;
   if(pan){const click=!moved;const btn=pan.btn;pan=null;
     if(click&&btn===2){if(UI.draw){UI.draw=null;UI.plan=null}else UI.pinned=null;UI.selDirty=true}
-    else if(click&&UI.tool==="hand"){const [wx,wy]=toWorld(sx,sy);UI.pinned=hitTest(wx,wy);UI.selDirty=true}
+    else if(click&&UI.tool==="hand"){const [wx,wy]=toWorld(sx,sy);UI.pinned=pickMover(wx,wy)||hitTest(wx,wy);UI.selDirty=true}
     return}
   const [wx,wy]=toWorld(sx,sy);const t=UI.tool,d=UI.draw;
   if(stroke){if(stroke.spent)toast("Zbouráno za "+fmt(stroke.spent)+" Kč");stroke=null;return}

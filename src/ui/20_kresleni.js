@@ -111,7 +111,7 @@ function drawRoadLayer(list,layer){const z=cam.z;ctx.lineCap="round";ctx.lineJoi
       ctx.strokeStyle=colors.lane;const af=auxOf(e,0),ab=auxOf(e,1);
       for(let k=1;k<e.lf;k++){laneDash(k>=e.lf-af,lw);ctx.stroke(offsetPath(e,K.median/2+k*LW,ta,tb))}
       for(let k=1;k<e.lb;k++){laneDash(k>=e.lb-ab,lw);ctx.stroke(offsetPath(e,-(K.median/2+k*LW),ta,tb))}}
-    else{const L=e.lf+e.lb,ax=auxOf(e,e.lf?0:1),sg=e.lf?1:-1;ctx.strokeStyle=colors.lane;for(let k=1;k<L;k++){laneDash(k>=L-ax,lw);ctx.stroke(offsetPath(e,sg*(-(L*LW)/2+k*LW),ta,tb))}}
+    else{const L=e.lf+e.lb,ax=auxOf(e,e.lf?0:1),sg=e.lf?1:-1;ctx.strokeStyle=colors.lane;for(let k=1;k<L;k++){laneDash(k>=L-ax,lw);ctx.stroke(offsetPath(e,sg*(-(L*LW)/2+k*LW+(e.sh||0)),ta,tb))}}
     if(e.kind==="hwy"){ctx.setLineDash([]);ctx.strokeStyle=colors.lane;ctx.stroke(offsetPath(e,e.er-0.04,ta,tb));ctx.stroke(offsetPath(e,-(e.el-0.04),ta,tb))}}
   ctx.setLineDash([]);
   drawCrossings(list);drawLaneArrows(layer);
@@ -196,7 +196,7 @@ function carPose(c){
   if(c.state==="exit"){const l=c.links[0],e=S.edges[l>>1];if(!e||e.dead)return null;const d=l&1;const u=d?e.g.len-c.s:c.s;const p=pointAt(e.g,clamp(u,0,e.g.len),_p);
     if(c.ux!==undefined)return {x:c.ux,y:c.uy,ang:Math.atan2(p.y-c.uy,p.x-c.ux),lvl:0};
     const dr=doorXY(c.trip&&c.trip.from)||[p.x,p.y];
-    return {x:p.x+(dr[0]-p.x)*0.55,y:p.y+(dr[1]-p.y)*0.55,ang:Math.atan2(p.y-dr[1],p.x-dr[0]),lvl:0}}
+    const dd=Math.hypot(dr[0]-p.x,dr[1]-p.y)||1,k=Math.min(dd,Math.max(e.er,e.el)+0.3)/dd;return {x:p.x+(dr[0]-p.x)*k,y:p.y+(dr[1]-p.y)*k,ang:Math.atan2(p.y-dr[1],p.x-dr[0]),lvl:0}}
   if(c.state==="enter"){const dr=doorXY(c.trip&&c.trip.to)||[c.ex,c.ey];const f=Math.min(1,c.t)*0.72;
     return {x:c.ex+(dr[0]-c.ex)*f,y:c.ey+(dr[1]-c.ey)*f,ang:Math.atan2(dr[1]-c.ey,dr[0]-c.ex),lvl:0}}
   const l=c.links[c.li],e=S.edges[l>>1];if(!e||e.dead)return null;const d=l&1;
@@ -211,10 +211,14 @@ function walkerPose(w){
   if(lvlAt(S,e,u)>=0.5)return null;const p=pointAt(e.g,u,_p);const sd=RK[e.kind].side/2;const side=w.sd*(d?-1:1);const off=side>0?e.er-sd:-(e.el-sd);let x=p.x+p.nx*off,y=p.y+p.ny*off;
   if(w.ph==="out"||w.ph==="in"){const dr=doorXY(w.ph==="out"?w.trip.from:w.trip.to);if(dr){const f=w.ph==="out"?1-w.t:w.t;x+=(dr[0]-x)*f*0.85;y+=(dr[1]-y)*f*0.85}}
   return [x,y]}
-function drawVehicles(layer){if(cam.z<3)return;
+function drawVehicles(layer){if(cam.z<3)return;const blinkOn=((performance.now()/380)|0)%2===0;
   for(const c of S.cars){if(c.dead)continue;const q=carPose(c);if(!q)continue;const L=q.L!==undefined?q.L:q.lvl<0.5?0:q.lvl<1.5?1:2;if(L!==layer||!inView(q.x,q.y,1))continue;
     if(cam.z<6){ctx.fillStyle=c.trip&&c.trip.truck?"#3b4148":c.color;ctx.fillRect(q.x-0.2,q.y-0.2,0.4,0.4);continue}
-    drawCarAt(q.x,q.y,q.ang,c.trip&&c.trip.truck?"#3b4148":c.color,c.trip&&c.trip.truck,c.trip&&c.trip.cargo)}
+    drawCarAt(q.x,q.y,q.ang,c.trip&&c.trip.truck?"#3b4148":c.color,c.trip&&c.trip.truck,c.trip&&c.trip.cargo)
+    if(cam.z>=10&&c.state==="drive"&&blinkOn){let sg=0;if(c.conn)sg=c.conn.turn===2?-1:c.conn.turn;else if(c.lcT>0&&c.lcD)sg=c.lcD;
+      else{const l=c.links[c.li],nl=c.links[c.li+1];if(nl!==undefined){const e=S.edges[l>>1];if(e&&e.g.len-c.s<3.5){const t=turnOf(S,l,nl);sg=t===2?-1:t}}}
+      if(sg){const tr=c.trip&&c.trip.truck,l=tr?0.62:0.4,w=tr?0.24:0.2,ca=Math.cos(q.ang),sa=Math.sin(q.ang);ctx.fillStyle="#ff9d1c";
+        for(const f of [l/2-0.04,-l/2+0.04]){ctx.beginPath();ctx.arc(q.x+ca*f-sa*sg*w/2,q.y+sa*f+ca*sg*w/2,0.055,0,Math.PI*2);ctx.fill()}}}}
   if(layer===0&&cam.z>=8){for(const w of S.walkers){if(w.dead)continue;const q=walkerPose(w);if(!q)continue;const [x,y]=q;if(!inView(x,y,1))continue;
     ctx.fillStyle=w.kid?"#e0752d":w.trip.purpose==="senior"?"#7a6aa8":"#3b4a5a";ctx.beginPath();ctx.arc(x,y,w.kid?0.06:0.075,0,Math.PI*2);ctx.fill()}}}
 // zaparkovaná auta na svých místech; u bytovek auta obyvatel, kteří jsou doma
@@ -223,9 +227,12 @@ function drawParked(x0,y0,x1,y1){if(cam.z<6)return;for(const b of S.buildings){c
   if(b.type==="flat"){const n=homeCars(b);const col=b.town?b.town.color:"#888";for(let k=0;k<n;k++){const s=lay.spots[k];drawCarAt(s.x,s.y,s.ang,shade(col,0.75+((k*37)%5)*0.1),false,null)}continue}
   for(const pe of b.parked){if(pe.spot===undefined)continue;const s=lay.spots[pe.spot];if(s)drawCarAt(s.x,s.y,s.ang,pe.color,false,null)}}}
 // ulička parkoviště: páteř od vjezdu a uličky mezi řadami míst
-function drawLot(b){const lay=lotLayout(S,b);if(!lay||cam.z<7)return;const W=lay.W;ctx.strokeStyle=colors["road-edge"];ctx.globalAlpha=0.38;ctx.lineWidth=0.2;ctx.lineCap="butt";ctx.beginPath();
+function drawLot(b){const lay=lotLayout(S,b);if(!lay||cam.z<7)return;const W=lay.W;ctx.strokeStyle=colors.street;ctx.lineWidth=0.44;ctx.lineCap="butt";ctx.beginPath();
   let a=W(lay.first-0.1,lay.lat0),z=W(lay.last,lay.lat0);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1]);
-  for(const q of lay.aisles){a=W(q.a,q.l0);z=W(q.a,q.l1);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}ctx.stroke();ctx.globalAlpha=1;ctx.lineCap="round"}
+  for(const q of lay.aisles){a=W(q.a,q.l0-0.05);z=W(q.a,q.l1+0.05);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}ctx.stroke();
+  // čáry mezi místy
+  if(cam.z>=12){ctx.strokeStyle="rgba(255,255,255,.75)";ctx.lineWidth=0.03;ctx.beginPath();for(const s of lay.spots){for(const dl of [-0.25,0.25]){a=W(s.dep-0.23,s.lat+dl);z=W(s.dep+0.23,s.lat+dl);ctx.moveTo(a[0],a[1]);ctx.lineTo(z[0],z[1])}}ctx.stroke()}
+  ctx.lineCap="round"}
 function drawZones(x0,y0,x1,y1){if(!zonePattern)return;ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=zonePattern;const z=cam.z;
   const c=z*CS;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(S.zone[y*W+x])ctx.fillRect(x*c-cam.x,y*c-cam.y,c,c);ctx.restore()}
 function nightAlpha(){const h=hourOf(S);if(h>=21||h<4.5)return 0.32;if(h>=19)return 0.32*(h-19)/2;if(h<6.5)return 0.32*(6.5-h)/2;return 0}
@@ -251,6 +258,21 @@ function drawLaneHint(L){const e=S.edges[L.e];if(!e||e.dead)return;const z=cam.z
   const sd=RK[e.kind].side,one=e.lf===0||e.lb===0;const o=one||L.dir!==1?e.er-sd+(L.rem?-LW/2:LW/2):-(e.el-sd+(L.rem?-LW/2:LW/2));const g=geom(subPts(e.g,u0,u1));
   const p=new Path2D();for(let k=0;k<g.n;k++){const x=g.pts[2*k]+g.nx[k]*o,y=g.pts[2*k+1]+g.ny[k]*o;if(k)p.lineTo(x,y);else p.moveTo(x,y)}
   ctx.globalAlpha=0.6;ctx.strokeStyle=L.rem?colors.bad:colors.accent;ctx.lineWidth=LW*0.9;ctx.lineCap="butt";ctx.stroke(p);ctx.globalAlpha=1;ctx.lineCap="round"}
+// výběr auta / chodce kliknutím (nástroj Ruka)
+function pickMover(x,y){let best=null,bd=0.32;for(const c of S.cars){if(c.dead)continue;const q=carPose(c);if(!q)continue;const d=Math.hypot(q.x-x,q.y-y);if(d<bd){bd=d;best={type:"car",c}}}
+  if(cam.z>=8)for(const w of S.walkers){if(w.dead)continue;const q=walkerPose(w);if(!q)continue;const d=Math.hypot(q[0]-x,q[1]-y);if(d<Math.min(bd,0.2)){bd=d;best={type:"walker",w}}}
+  return best}
+// trasy k výběru: auto / chodec (jeho trasa), budova (kdo jede sem modře a odtud oranžově), úsek (všichni, kdo přes něj mají trasu)
+let traceTick=0;
+function drawTrace(){const t=UI.pinned;if(!t||!(t.type==="car"||t.type==="walker"||t.type==="bld"||t.type==="edge"))return;const ts=traceSet(t);if((traceTick++%30)===0)UI.selDirty=true;if(!ts.length)return;
+  const acc=[new Map(),new Map(),new Map()];   // sem / odtud / už projeto
+  for(const q of ts){const m=q.m,li=m.li||0;if(!m.links)continue;for(let k=0;k<m.links.length;k++){const id=m.links[k]>>1;const M=k<li?acc[2]:acc[q.cls];M.set(id,(M.get(id)||0)+1)}}
+  ctx.lineCap="round";ctx.lineJoin="round";const cols=["#1f6fe0","#e0752d","#1f6fe0"],al=[0.75,0.75,0.25];
+  for(const k of [2,1,0]){ctx.strokeStyle=cols[k];ctx.globalAlpha=al[k];for(const [id,n] of acc[k]){const e=S.edges[id];if(!e||e.dead)continue;ctx.lineWidth=Math.min(0.6,0.12+0.035*n)+(k===1?0:0.04);ctx.stroke(edgePath(e))}}
+  ctx.globalAlpha=1;ctx.lineWidth=Math.max(0.05,2/cam.z);
+  const mark=(b,col)=>{if(!b||b.isGate||b.dead||b.front===undefined)return;ctx.strokeStyle=col;ctx.beginPath();ctx.arc(wxOf(b.front),wyOf(b.front),0.45,0,Math.PI*2);ctx.stroke()};
+  const ends=new Set();for(const q of ts){const tr=q.m.trip;if(!tr)continue;if(t.type!=="bld"||q.cls===1){if(!ends.has(tr.to)){ends.add(tr.to);mark(tr.to,"#1f6fe0")}}if(t.type!=="bld"||q.cls===0){if(!ends.has(tr.from)){ends.add(tr.from);mark(tr.from,"#e0752d")}}
+    const p=q.car?carPose(q.m):null,w=q.car?null:walkerPose(q.m);const x=p?p.x:w?w[0]:null,y=p?p.y:w?w[1]:null;if(x!==null&&(ts.length<=60)){ctx.strokeStyle="#111";ctx.beginPath();ctx.arc(x,y,q.car?0.32:0.16,0,Math.PI*2);ctx.stroke()}}}
 function drawPreview(){const P=UI.plan;const z=cam.z;
   if(UI.tool==="lane"&&(UI.laneDrag||UI.laneHover))drawLaneHint(UI.laneDrag||UI.laneHover);
   // místa napojení na pruh (konce přidaných pruhů)
@@ -292,6 +314,6 @@ function render(){
     if(z>=7){ctx.fillStyle="rgba(255,214,120,"+(na*2.2).toFixed(2)+")";for(const b of S.buildings){if(!isHome(b)||b.away>=b.pop*0.8)continue;const x=tx(b.front),y=ty(b.front);if(x<x0-1||x>x1+1||y<y0-1||y>y1+1)continue;ctx.fillRect(wxOf(b.front)-0.11,wyOf(b.front)-0.11,0.22,0.22)}}}
   ctx.setTransform(dpr*z,0,0,dpr*z,-cam.x*dpr,-cam.y*dpr);
   strokeTarget(UI.pinned,colors.ink);if(UI.hover&&!UI.draw&&!(UI.tool==="build"&&!UI.rebuild))strokeTarget(UI.hover,colors.accent);
-  drawPreview();
+  drawTrace();drawPreview();
   if(flash){const age=(performance.now()-flash.t)/1000;if(age>2.4)flash=null;else{ctx.strokeStyle=colors.accent;ctx.globalAlpha=Math.max(0,1-age/2.4);ctx.lineWidth=3/z;ctx.beginPath();ctx.arc(flash.x,flash.y,0.8+age*1.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}}
   drawLabels();drawCursorLabel()}

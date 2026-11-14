@@ -86,6 +86,7 @@ function oldRoad(S,A,B){const ea=A.homes[0].access,eb=B.homes[0].access;if(!ea||
 function step(S,dt){
   S.time+=dt;
   if(S.netDirty){computeNet(S);updateTownStats(S)}
+  updateReplan(S,dt);
   if(S.reroute.length){const list=S.reroute;S.reroute=[];for(const c of list)if(!c.dead)rerouteVehicle(S,c)}
   if(++S.pTick>=15){S.pTick=0;peopleTick(S,dt*15)}
   processReturns(S);

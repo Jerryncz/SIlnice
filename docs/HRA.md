@@ -141,7 +141,11 @@ křivky. Auta jezdí po skutečných čarách jednotlivých pruhů.
 - **Náhled** ukazuje trasu, cenu, nové křižovatky a budovy v cestě. Když se
   silnice nevejde, hra nabídne „Postavit a zbourat“ za cenu silnice
   i bourání; bez potvrzení se nic nezbourá.
-- **Pruhy po směrech**: každý směr má svůj počet pruhů (v mezích druhu).
+- **Pruhy po směrech**: každý směr má svůj počet pruhů (v mezích druhu;
+  Silnice, Jednosměrka, Bulvár, Dálnice a Nájezd až 10 v jednom směru).
+  U **jednosměrky** se pruh přidá na tom okraji, kam hráč klikne (ve výběru
+  „+ vlevo“ / „+ vpravo“); ostatní pruhy zůstanou na místě, takže dvoupruhový
+  sjezd navazuje na dva odbočovací pruhy silnice.
   Nástroj Pruhy: klik na polovinu silnice přidá pruh v tom směru, tah podél
   silnice přidá pruh jen na kus úseku (úsek se na koncích tahu rozdělí),
   Shift ubírá. Mezi širším a užším úsekem je náběh – vozovka se plynule
@@ -208,6 +212,8 @@ Každý pruh má v uzlu dané, do kterých pruhů z něj jde pokračovat:
   pruh žádné pokračování nemá);
 - **vlevo** se jede z vnitřního pruhu, **vpravo** z krajního; na křižovatce
   tvaru T se pruhy rozdělí napůl;
+- se **třemi a více pruhy** je vnitřní pruh jen vlevo, krajní jen vpravo
+  a pruhy mezi nimi rovně (pokud ty směry v křižovatce jsou);
 - hráč to změní nástrojem **Šipky** (klávesa 9): klik na pruh před
   křižovatkou přepíná vlevo / rovně / vpravo a jejich kombinace; ručně
   nastavená šipka je modrá, poslední klik vrátí samočinnou. Každý směr si
@@ -219,9 +225,17 @@ dopředu), a **přeřazuje se už na úseku**: do sousedního pruhu přejede, kd
 je vedle místo. Kdo stojí na konci končícího pruhu, toho auta vedle pustí
 před sebe (zip); dvě auta, která chtějí každé do pruhu toho druhého, si je
 vymění. V koloně auto přejede i do volnějšího pruhu, pokud z něj jeho směr
-jde. Auto, které se před křižovatkou do svého pruhu nedostane, po 1,5 s
+jde. Auto bliká, když odbočuje nebo přejíždí do jiného pruhu. Auto, které se před křižovatkou do svého pruhu nedostane, po 1,5 s
 čekání **odbočku mine**: pojede, kam jeho pruh vede, a najde si odtud novou
 cestu. Jen když jiná cesta není, přejede křižovatkou z nesprávného pruhu.
+
+**Přeplánování**: po každé stavbě nebo úpravě silnic si auta na cestě
+spočítají trasu znovu, stejně tak auto, které déle než 4 s stojí v koloně.
+Na novou trasu přejde, jen když je aspoň o desetinu rychlejší (jinak by se
+všichni naráz přelili jinam) a když není těsně před křižovatkou.
+
+**Výjezd z budovy**: auto čeká mimo vozovku a vjede do pruhu, až se do něj
+vejde; do stojící kolony mu stačí mezera na délku auta.
 - **Pojistka proti zaseknutí**: po 3,5 s čekání auto pustí pravidlo
   přednosti (plochu křižovatky a přechody ale hlídá dál). Auto, které stojí
   déle než nastavený limit, to vzdá: zmizí, lidé to vzdají a dojdou pěšky,
@@ -311,7 +325,10 @@ cestu. Jen když jiná cesta není, přejede křižovatkou z nesprávného pruhu
 - **Hospoda** (od 24 obyvatel), **obchod** (od 40), **nákupní centrum**
   (od 90), **obchodní zóna** (od 150, nebo od 100 při napojení na svět).
   Všechny s parkovištěm.
-- **Parkoviště** má uličku (od vjezdu podél řad míst) a jednotlivá místa.
+- **Parkoviště** má od silnice řady: místa – ulička – místa (u mělkého
+  ulička – místa). Ulička je celé půlpole široká, auta stojí vedle ní, ne
+  v ní; od vjezdu k uličkám vede příčná ulička. Větší podniky mají hlubší
+  parkoviště; kapacita je počet vyznačených míst.
   Auto zajede po uličce na volné místo, které si při příjezdu zamluví,
   a při odjezdu po ní vyjede k silnici. Dvě auta nikdy nestojí na jednom
   místě. Parkovací dům má víc míst (patra), než je vidět.
@@ -362,6 +379,17 @@ cestu. Jen když jiná cesta není, přejede křižovatkou z nesprávného pruhu
 - **Kronika** (sbalená): události s odkazem na místo.
 - Peníze: z cest, z návštěv služeb, z tranzitu, z dodávek a vývozu zboží
   a malá daň z obyvatel. Ukazuje se i příjem za minutu.
+
+### Kdo kam jede
+
+Nástroj Ruka ukáže trasy na mapě:
+
+- klik na **auto nebo chodce**: odkud a kam jde; trasa plně, kudy půjde,
+  slabě, kudy už šel; kroužky u výchozí (oranžově) a cílové (modře) budovy;
+- klik na **budovu**: modře trasy všech, kdo jsou na cestě sem, oranžově
+  všech, kdo odtud právě odjeli nebo odešli; počty v panelu;
+- klik na **silnici**: trasy všech aut a chodců, kteří přes úsek pojedou,
+  jedou nebo už projeli; šířka čáry podle počtu.
 
 ## 10. Co hra zatím nedělá
 
