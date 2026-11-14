@@ -5,7 +5,7 @@ const TS0=12,tc=document.createElement("canvas"),tctx=tc.getContext("2d");tc.wid
 let S=createSim((Math.random()*1e9)|0);
 const cam={x:0,y:0,z:10};let vw=0,vh=0,dpr=1,zmin=4;
 let colors={},speed=1,overlay=false,zonePattern=null,flash=null;
-const UI={connNode:null,connDrag:null,editEdge:null,editDrag:null,tool:"build",shape:"line",tpl:"diamond",tplKey:"",rebuild:false,kind:"road",lanes:1,level:0,snapHint:null,hover:null,pinned:null,draw:null,plan:null,pending:null,mouse:{x:0,y:0,wx:0,wy:0,in:false},selDirty:true};
+const UI={ringTurbo:false,connNode:null,connDrag:null,editEdge:null,editDrag:null,tool:"build",shape:"line",tpl:"diamond",tplKey:"",rebuild:false,kind:"road",lanes:1,level:0,snapHint:null,hover:null,pinned:null,draw:null,plan:null,pending:null,mouse:{x:0,y:0,wx:0,wy:0,in:false},selDirty:true};
 
 function readColors(){const cs=getComputedStyle(document.documentElement);
   for(const k of["land","forest","tree","water","water-edge","rock","rock-dot","ore","ore-dot","outside","road","road-edge","sidewalk","street","hwy","hwy-edge","median","mark","lane","bridge-edge","label","halo","good","warn","bad","accent","ink","panel","lot","lot-line","canopy","zone","sign","night"])colors[k]=cs.getPropertyValue("--"+k).trim();

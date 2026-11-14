@@ -98,6 +98,7 @@ function laneLinks(S,n){n.lc=new Map();n.lm=new Map();const deg=n.arms.length,cn
     const through=deg<3||n.port;const user=null;
     const ov=!through&&ei.uc&&ei.uc[d]&&ei.uc[d].length===L?ei.uc[d]:null;
     if(ov){for(let k=0;k<L;k++)for(const q of ov[k]){const x=exitByDir(S,n,exits,q.h);if(x)add(k,x,Math.min(q.m,linkLanes(S,x.link)-1))}n.lc.set(l,lc);continue}
+    if(n.ring&&deg>=3){ringLinks(S,n,ai,ei,L,exits,add);n.lc.set(l,lc);continue}
     const al=[];for(let k=0;k<L;k++)al.push(geo.some(G=>G.byK[k].d<TOL));
     const anyAl=al.some(v=>v);
     // samočinné šipky
@@ -128,11 +129,24 @@ function laneLinks(S,n){n.lc=new Map();n.lm=new Map();const deg=n.arms.length,cn
   const soft=deg<3||n.pass||n.port;if(soft)for(const lc of n.lc.values())for(const r of lc)for(const q of r)if(q.turn===0&&cnt.get(q.link*16+q.lane)===1)q.free=true;
   // odbočení bez spojení se z hledání cest vyřadí (n.turnsAll zůstane pro nástroj Spojení)
   n.turnsAll=n.turns;n.turns=new Map();for(const [l,list] of n.turnsAll){const lc=n.lc.get(l);n.turns.set(l,lc?list.filter(x=>lc.some(r=>r.some(q=>q.link===x.link))):list)}}
+// samočinná spojení na kruhovém objezdu (pruh 0 = vnitřní, poslední = vnější; R99)
+//  vjezd: pravý pruh do vnějšího, ostatní do vnitřních (jediný pruh do všech); auto si vybere pruh podle výjezdu
+//  v kruhu: Běžný – pruh pokračuje svým pruhem; Turbo – kde je výjezd, se pruhy posunou o jeden ven (spirála)
+//  výjezd: z vnějších pruhů kruhu do pruhů výjezdu zprava
+function ringLinks(S,n,ai,ei,L,exits,add){const turbo=!!(ei.ring?ei.turbo:n.arms.some(a=>S.edges[a.e].ring&&S.edges[a.e].turbo));
+  const hasExit=exits.some(x=>!S.edges[x.link>>1].ring);
+  for(const x of exits){const eo=S.edges[x.link>>1],M=linkLanes(S,x.link);if(!M)continue;
+    if(ei.ring&&eo.ring){for(let k=0;k<L;k++){if(turbo&&hasExit){if(k<L-1)add(k,x,Math.min(k+1,M-1))}else add(k,x,Math.min(k,M-1))}}
+    else if(ei.ring){const m=Math.min(M,L);for(let i=0;i<m;i++)add(L-1-i,x,M-1-i)}
+    else if(eo.ring){
+      if(L===1){for(let m=0;m<M;m++)add(0,x,m)}
+      else{add(L-1,x,M-1);const R=M-1;for(let k=0;k<L-1;k++){const a=Math.floor(k*R/(L-1)),b=Math.max(a,Math.floor((k+1)*R/(L-1))-1);for(let m=a;m<=Math.min(b,R-1);m++)add(k,x,m);if(R===0)add(k,x,0)}}}
+    else{const m=Math.min(M,L);for(let i=0;i<m;i++)add(L-1-i,x,M-1-i)}}}
 // výjezd z uzlu ve směru h (směr ramene ven z uzlu)
 function exitByDir(S,n,exits,h){let best=null,bd=0.85;for(const x of exits){const a=n.arms.find(q=>q.outLink===x.link);if(!a)continue;const d=a.hx*h[0]+a.hy*h[1];if(d>bd){bd=d;best=x}}return best}
 const armDirOut=(n,link)=>{const a=n.arms.find(q=>q.outLink===link);return a?[a.hx,a.hy]:[0,0]};
 // ---- nástroj Spojení: hráč přidává a ruší spojení pruh → pruh ----
-const connNodeOk=n=>n&&!n.dead&&n.edges.length>=3&&!n.port&&!n.ring;
+const connNodeOk=n=>n&&!n.dead&&n.edges.length>=3&&!n.port;
 // spojení příjezdu l převezme jako ruční (podle současných), aby šlo upravit
 function connMaterialize(S,n,l){const e=S.edges[l>>1],d=l&1;if(!e.uc)e.uc=[null,null];if(e.uc[d]&&e.uc[d].length===linkLanes(S,l))return e.uc[d];
   const lc=n.lc.get(l)||[];e.uc[d]=lc.map(r=>r.map(q=>({h:armDirOut(n,q.link),m:q.lane})));return e.uc[d]}

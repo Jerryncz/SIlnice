@@ -35,7 +35,7 @@ function rasterEdge(S,e,add){
 function buildQueues(e){e.q=[[],[]];for(let k=0;k<e.lf;k++)e.q[0].push([]);for(let k=0;k<e.lb;k++)e.q[1].push([])}
 function addEdge(S,a,b,kind,pts,lf,lb,opts){opts=opts||{};
   const e={id:S.edges.length,a:a.id,b:b.id,kind,lf,lb,g:geom(pts),ring:opts.ring||0,auto:!!opts.auto,gateEdge:!!opts.gate,dead:false,
-    q:null,cong:[0,0],flow:0,passes:0,cellsG:[],cellsB:[],born:S.time,owState:opts.owState||0,pa:!!opts.pa,pb:!!opts.pb,sh:opts.sh||0};
+    q:null,cong:[0,0],flow:0,passes:0,cellsG:[],cellsB:[],born:S.time,owState:opts.owState||0,pa:!!opts.pa,pb:!!opts.pb,sh:opts.sh||0,turbo:!!opts.turbo};
   buildQueues(e);setWidth(e);a.dead=false;b.dead=false;
   S.edges.push(e);a.edges.push(e.id);b.edges.push(e.id);
   rasterEdge(S,e,true);topoNode(S,a);topoNode(S,b);netChanged(S);return e}
@@ -43,7 +43,7 @@ function addEdge(S,a,b,kind,pts,lf,lb,opts){opts=opts||{};
 function removeEdge(S,e,quiet){if(e.dead)return;if(!quiet)killOnEdge(S,e.id);rasterEdge(S,e,false);e.dead=true;
   for(const nid of [e.a,e.b]){const n=S.nodes[nid];n.edges=n.edges.filter(x=>x!==e.id);if(!n.edges.length&&n.gate<0)n.dead=true;else topoNode(S,n)}
   netChanged(S)}
-const edgeProps=e=>({ring:e.ring,auto:e.auto,gate:e.gateEdge,owState:e.owState,sh:e.sh||0});
+const edgeProps=e=>({ring:e.ring,auto:e.auto,gate:e.gateEdge,owState:e.owState,sh:e.sh||0,turbo:e.turbo});
 // rozdělí úsek v bodě u; auta a chodci zůstanou, kde jsou. Vrací uzel a oba nové kusy.
 function splitEdgeR(S,e,u,keep){
   if(u<0.3)return {node:S.nodes[e.a],e1:null,e2:e};if(e.g.len-u<0.3)return {node:S.nodes[e.b],e1:e,e2:null};
